@@ -32,12 +32,12 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="New Today" value={newToday} icon={Users} />
-        <StatCard label="New This Week" value={newThisWeek} icon={TrendingUp} />
-        <StatCard label="Needs Follow-Up" value={needsFollowUp} icon={Clock} accent="amber" />
-        <StatCard label="Unassigned" value={unassigned} icon={AlertTriangle} accent="red" />
-        <StatCard label="Do Not Contact" value={dncCount} icon={ShieldOff} accent="slate" />
-        <StatCard label="Win Rate" value={`${conversionRate}%`} icon={TrendingUp} accent="primary" />
+        <StatCard testId="stat-new-today" label="New Today" value={newToday} icon={Users} />
+        <StatCard testId="stat-new-this-week" label="New This Week" value={newThisWeek} icon={TrendingUp} />
+        <StatCard testId="stat-needs-follow-up" label="Needs Follow-Up" value={needsFollowUp} icon={Clock} accent="amber" />
+        <StatCard testId="stat-unassigned" label="Unassigned" value={unassigned} icon={AlertTriangle} accent="red" />
+        <StatCard testId="stat-do-not-contact" label="Do Not Contact" value={dncCount} icon={ShieldOff} accent="slate" />
+        <StatCard testId="stat-win-rate" label="Win Rate" value={`${conversionRate}%`} icon={TrendingUp} accent="primary" />
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">

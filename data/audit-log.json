@@ -1,0 +1,20 @@
+[
+  {
+    "entity": "lead",
+    "entityId": "lead_1783455003252_tlxs5l",
+    "action": "lead_created",
+    "actor": "public_form",
+    "details": "New lead captured via consultation form (2 product(s) selected).",
+    "id": "audit_1783455003262_yeazyx",
+    "timestamp": "2026-07-07T20:10:03.262Z"
+  },
+  {
+    "entity": "lead",
+    "entityId": "lead_1783454196926_08mebg",
+    "action": "lead_created",
+    "actor": "public_form",
+    "details": "New lead captured via consultation form (2 product(s) selected).",
+    "id": "audit_1783454196942_qaqjj2",
+    "timestamp": "2026-07-07T19:56:36.942Z"
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "leadId": "lead_1783455003252_tlxs5l",
+    "privacyNoticeAccepted": true,
+    "contactConsent": true,
+    "marketingConsent": false,
+    "accuracyConfirmed": true,
+    "nonBindingAcknowledged": true,
+    "consentWordingVersion": "v1.0-2026-07-07",
+    "sourceUrl": "http://127.0.0.1:3000/consultation",
+    "timestamp": "2026-07-07T20:10:03.258Z"
+  },
+  {
+    "leadId": "lead_1783454196926_08mebg",
+    "privacyNoticeAccepted": true,
+    "contactConsent": true,
+    "marketingConsent": false,
+    "accuracyConfirmed": true,
+    "nonBindingAcknowledged": true,
+    "consentWordingVersion": "v1.0-2026-07-07",
+    "sourceUrl": "http://127.0.0.1:3000/consultation",
+    "timestamp": "2026-07-07T19:56:36.941Z"
+  }
+]

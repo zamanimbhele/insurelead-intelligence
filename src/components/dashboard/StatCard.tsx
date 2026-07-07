@@ -6,11 +6,13 @@ export function StatCard({
   value,
   icon: Icon,
   accent,
+  testId,
 }: {
   label: string;
   value: string | number;
   icon: LucideIcon;
   accent?: "primary" | "amber" | "red" | "slate";
+  testId?: string;
 }) {
   const accentClass = {
     primary: "bg-primary-50 text-primary-600",
@@ -20,7 +22,7 @@ export function StatCard({
   }[accent ?? "primary"];
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div className="rounded-xl border border-slate-200 bg-white p-5" data-testid={testId}>
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
         <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", accentClass)}>
