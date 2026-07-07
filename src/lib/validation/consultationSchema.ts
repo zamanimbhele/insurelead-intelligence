@@ -1,0 +1,73 @@
+import { z } from "zod";
+
+export const businessDetailsSchema = z.object({
+  businessName: z.string().min(2, "Business name is required"),
+  tradingName: z.string().optional(),
+  industry: z.string().min(1, "Please select an industry"),
+  businessType: z.string().min(1, "Please select a business type"),
+  employeeBand: z.string().min(1, "Please select a company size"),
+  turnoverBand: z.string().min(1, "Please select an annual turnover range"),
+  yearsInOperation: z.string().min(1, "Please select years in operation"),
+  province: z.string().min(1, "Please select a province"),
+  city: z.string().min(1, "City or town is required"),
+  suburb: z.string().optional(),
+  postalCode: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d{4}$/.test(v), "Enter a valid 4-digit postal code"),
+  website: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/\S*)?$/i.test(v), "Enter a valid website address"),
+});
+
+export const insuranceNeedsSchema = z.object({
+  insuranceProducts: z.array(z.string()).min(1, "Select at least one insurance product"),
+  currentInsuranceStatus: z.string().min(1, "Please select your current insurance status"),
+  renewalMonth: z.string().optional(),
+  financialYearEndMonth: z.string().optional(),
+  mainConcern: z.string().max(500).optional(),
+  preferredContactTime: z.string().optional(),
+  preferredContactChannel: z.enum(["phone", "email", "whatsapp"], {
+    required_error: "Please select a preferred contact channel",
+  }),
+});
+
+export const contactPersonSchema = z.object({
+  contactFullName: z.string().min(2, "Full name is required"),
+  contactRole: z.string().min(2, "Role or job title is required"),
+  contactEmail: z.string().email("Enter a valid work email address"),
+  contactMobile: z
+    .string()
+    .min(10, "Enter a valid mobile number")
+    .regex(/^[0-9+\s()-]{10,15}$/, "Enter a valid mobile number"),
+  preferredContactMethod: z.enum(["phone", "email", "whatsapp"]),
+});
+
+export const consentSchema = z.object({
+  privacyNoticeAccepted: z.literal(true, {
+    errorMap: () => ({ message: "You must acknowledge the privacy notice" }),
+  }),
+  contactConsent: z.literal(true, {
+    errorMap: () => ({ message: "Consent to be contacted is required to submit this enquiry" }),
+  }),
+  marketingConsent: z.boolean().optional().default(false),
+  accuracyConfirmed: z.literal(true, {
+    errorMap: () => ({ message: "Please confirm the information provided is accurate" }),
+  }),
+  nonBindingAcknowledged: z.literal(true, {
+    errorMap: () => ({ message: "Please confirm you understand this is not a binding quote" }),
+  }),
+  website_url: z.string().max(0).optional(),
+});
+
+export const consultationFormSchema = businessDetailsSchema
+  .merge(insuranceNeedsSchema)
+  .merge(contactPersonSchema)
+  .merge(consentSchema);
+
+export type ConsultationFormValues = z.infer<typeof consultationFormSchema>;
+export type BusinessDetailsValues = z.infer<typeof businessDetailsSchema>;
+export type InsuranceNeedsValues = z.infer<typeof insuranceNeedsSchema>;
+export type ContactPersonValues = z.infer<typeof contactPersonSchema>;
+export type ConsentValues = z.infer<typeof consentSchema>;
