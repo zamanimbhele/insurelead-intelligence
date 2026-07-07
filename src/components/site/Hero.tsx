@@ -14,7 +14,7 @@ export function Hero() {
             Protect Your Business With Insurance That Fits Your Needs
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-slate-300">
-            Tell us about your business and the cover you're considering. A licensed broker will review your enquiry
+            Tell us about your business and the cover you&apos;re considering. A licensed broker will review your enquiry
             and get in touch to discuss your options - no obligation, no binding quote.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">

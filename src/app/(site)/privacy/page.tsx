@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <div className="prose mt-8 max-w-3xl space-y-4 text-sm text-slate-600">
         <p>Version: v1.0 - Last updated 7 July 2026 (placeholder - to be reviewed by Compliance Admin).</p>
         <p>
-          This Privacy Notice explains how InsureLead Intelligence (the "Platform") collects, uses, and protects
+          This Privacy Notice explains how InsureLead Intelligence (the &quot;Platform&quot;) collects, uses, and protects
           information you submit when requesting a business insurance consultation.
         </p>
         <h3 className="font-semibold text-slate-900">What we collect</h3>

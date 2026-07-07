@@ -19,7 +19,7 @@ export function Checklist() {
         <div>
           <SectionHeading eyebrow="Self-Assessment" title="Business Insurance Checklist" />
           <p className="mt-4 text-slate-600">
-            Answering "no" or "not sure" to any of these is a good reason to request a consultation with a licensed
+            Answering &quot;no&quot; or &quot;not sure&quot; to any of these is a good reason to request a consultation with a licensed
             broker.
           </p>
         </div>
