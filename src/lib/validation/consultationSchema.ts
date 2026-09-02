@@ -29,7 +29,7 @@ export const insuranceNeedsSchema = z.object({
   mainConcern: z.string().max(500).optional(),
   preferredContactTime: z.string().optional(),
   preferredContactChannel: z.enum(["phone", "email", "whatsapp"], {
-    required_error: "Please select a preferred contact channel",
+    error: "Please select a preferred contact channel",
   }),
 });
 
@@ -46,17 +46,17 @@ export const contactPersonSchema = z.object({
 
 export const consentSchema = z.object({
   privacyNoticeAccepted: z.literal(true, {
-    errorMap: () => ({ message: "You must acknowledge the privacy notice" }),
+    error: "You must acknowledge the privacy notice",
   }),
   contactConsent: z.literal(true, {
-    errorMap: () => ({ message: "Consent to be contacted is required to submit this enquiry" }),
+    error: "Consent to be contacted is required to submit this enquiry",
   }),
   marketingConsent: z.boolean().optional().default(false),
   accuracyConfirmed: z.literal(true, {
-    errorMap: () => ({ message: "Please confirm the information provided is accurate" }),
+    error: "Please confirm the information provided is accurate",
   }),
   nonBindingAcknowledged: z.literal(true, {
-    errorMap: () => ({ message: "Please confirm you understand this is not a binding quote" }),
+    error: "Please confirm you understand this is not a binding quote",
   }),
   website_url: z.string().max(0).optional(),
 });

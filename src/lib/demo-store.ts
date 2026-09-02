@@ -6,7 +6,7 @@
 // architecture - see README "Moving to Production".
 import fs from "fs";
 import path from "path";
-import { Lead, ConsentRecord, AuditLogEntry } from "./types";
+import type { Lead, ConsentRecord, AuditLogEntry } from "./types.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const LEADS_FILE = path.join(DATA_DIR, "leads.json");
@@ -36,6 +36,17 @@ export function getLeadById(id: string): Lead | undefined {
   return getLeads().find((l) => l.id === id);
 }
 
+export function updateLead(id: string, changes: Partial<Lead>): Lead | undefined {
+  const leads = getLeads();
+  const index = leads.findIndex((lead) => lead.id === id);
+  if (index === -1) return undefined;
+
+  const updated = { ...leads[index], ...changes, id: leads[index].id };
+  leads[index] = updated;
+  writeJson(LEADS_FILE, leads);
+  return updated;
+}
+
 export function saveLead(lead: Lead) {
   const leads = getLeads();
   leads.unshift(lead);
@@ -57,6 +68,10 @@ export function saveConsent(record: ConsentRecord) {
   const consents = readJson<ConsentRecord[]>(CONSENTS_FILE, []);
   consents.unshift(record);
   writeJson(CONSENTS_FILE, consents);
+}
+
+export function getConsentByLeadId(leadId: string): ConsentRecord | undefined {
+  return readJson<ConsentRecord[]>(CONSENTS_FILE, []).find((record) => record.leadId === leadId);
 }
 
 export function appendAuditLog(entry: Omit<AuditLogEntry, "id" | "timestamp">) {

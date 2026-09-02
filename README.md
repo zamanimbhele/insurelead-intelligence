@@ -27,6 +27,8 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   data anywhere in the repo.
 - A Playwright end-to-end test suite and a GitHub Actions CI pipeline that lints, type-checks,
   builds, and runs the suite on every push and pull request to `main`.
+- A local MCP server that exposes consent-aware lead search, prioritisation, pipeline updates,
+  summaries, and human-review follow-up drafting to compatible AI assistants.
 
 ## What is intentionally out of scope for this prototype
 
@@ -52,6 +54,30 @@ npm run dev
 
 Open http://localhost:3000 for the public site, or http://localhost:3000/dashboard for the
 internal broker dashboard.
+
+### Run the MCP server
+
+```bash
+npm run mcp
+```
+
+Example MCP client configuration (replace the path with your local clone):
+
+```json
+{
+  "mcpServers": {
+    "insurelead": {
+      "command": "npm",
+      "args": ["--prefix", "/absolute/path/to/insurelead-intelligence", "run", "mcp"]
+    }
+  }
+}
+```
+
+Use `npm run mcp:inspect` to test each tool interactively. The server does not scrape websites,
+send outreach, provide insurance advice, or make underwriting decisions. Contact details and
+follow-up drafts are available only for leads with recorded contact consent, and every draft
+requires human approval before sending.
 
 To regenerate the synthetic demo leads:
 
@@ -112,6 +138,8 @@ src/
     scoring.ts          Transparent lead scoring engine
     demo-store.ts       File-based demo data store (see note below)
     constants.ts        Reference lists (industries, provinces, products, consent version...)
+  mcp/
+    server.ts            Consent-aware MCP tools for AI assistants
 data/
   leads.json            Synthetic seeded leads (generated, not hand-written)
 scripts/
