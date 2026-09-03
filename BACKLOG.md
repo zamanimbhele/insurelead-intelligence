@@ -4,14 +4,17 @@ Scope not included in the working functional prototype, grouped by the phased bu
 Priced in the accompanying quotation.
 
 ## Foundation & Data Layer
-- Supabase (PostgreSQL) migrations for the full schema: users, user_roles, broker_profiles,
+- Production-pilot foundation completed: Supabase persistence for leads, consent, approved buyers,
+  allocations and audit logs; cookie-based dashboard authentication; RLS; and atomic consent-aware
+  capture/allocation functions.
+- Expand the Supabase schema for the full build: users, user_roles, broker_profiles,
   teams, leads, lead_contacts, lead_insurance_needs, lead_consents, lead_assignments,
   lead_activities, lead_notes, lead_tasks, lead_scores, lead_sources, campaigns,
   campaign_attribution, campaign_metrics, data_sources, data_source_approvals, market_signals,
   hotspot_snapshots, industry_snapshots, financial_year_calendars, opt_out_requests,
   data_subject_requests, audit_logs, application_settings.
-- Row Level Security policies on every sensitive table.
-- Supabase Auth with full role-based access control (Super Admin, Compliance Admin, Broker
+- Extend Row Level Security policies to every future sensitive table.
+- Expand Supabase Auth role-based access control beyond the pilot roles (Super Admin, Compliance Admin, Broker
   Manager, Broker, Marketing Analyst).
 
 ## Lead Capture Hardening
@@ -26,6 +29,11 @@ Priced in the accompanying quotation.
 - Notes, tasks, call/email/meeting logging, and follow-up reminders on the lead profile.
 - Full activity timeline and loss-reason capture.
 - Do Not Contact workflow enforcement across all outreach surfaces.
+
+## Buyer Commerce
+- Buyer self-service portal for accepting or releasing allocated leads through narrow, audited
+  database functions.
+- Contract, pricing-plan, invoice, payment, credit/refund, and lead-dispute workflows.
 
 ## Market Intelligence
 - Geographic hotspot dashboard (province → municipality → suburb) with opportunity score, growth

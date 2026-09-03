@@ -1,8 +1,28 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { getSupabasePublicConfig } from "./config";
 
-export function createSupabaseAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) return null;
-  return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+export async function createSupabaseServerClient() {
+  const config = getSupabasePublicConfig();
+  if (!config) return null;
+
+  const cookieStore = await cookies();
+
+  return createServerClient(config.url, config.anonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Server Components cannot always write cookies. Middleware refreshes
+          // sessions before protected pages are rendered.
+        }
+      },
+    },
+  });
 }

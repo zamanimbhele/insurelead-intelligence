@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { appendAuditLog, getConsentByLeadId, getLeadById } from "./demo-store.ts";
-import type { Buyer, Lead, LeadAllocation } from "./types.ts";
+import type { Buyer, ConsentRecord, Lead, LeadAllocation } from "./types.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const BUYERS_FILE = path.join(DATA_DIR, "buyers.json");
@@ -15,22 +15,41 @@ function writeJson(file: string, value: unknown) { fs.writeFileSync(file, JSON.s
 export function getBuyers(): Buyer[] { return readJson<Buyer[]>(BUYERS_FILE, []); }
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }
 
-export function getEligibleBuyers(lead: Lead): Buyer[] {
-  return getBuyers().filter((buyer) => buyer.status === "active" && buyer.minimumScore <= lead.score &&
-    buyer.provinces.includes(lead.province) && buyer.industries.includes(lead.industry));
+export function getEligibleBuyersForLead(lead: Lead, buyers: Buyer[]): Buyer[] {
+  return buyers.filter((buyer) =>
+    buyer.status === "active" &&
+    buyer.minimumScore <= lead.score &&
+    (buyer.provinces.length === 0 || buyer.provinces.includes(lead.province)) &&
+    (buyer.industries.length === 0 || buyer.industries.includes(lead.industry))
+  );
 }
 
-export function canAllocateLead(leadId: string): { allowed: boolean; reason?: string } {
-  const lead = getLeadById(leadId);
+export function getAllocationEligibility(
+  lead: Lead | undefined,
+  consent: ConsentRecord | undefined,
+  allocations: LeadAllocation[],
+): { allowed: boolean; reason?: string } {
   if (!lead) return { allowed: false, reason: "Lead not found" };
   if (lead.doNotContact) return { allowed: false, reason: "Lead is marked do not contact" };
-  const consent = getConsentByLeadId(leadId);
-  if (!consent?.contactConsent || !consent.partnerSharingConsent) return { allowed: false, reason: "Partner-sharing consent is not recorded" };
-  const active = getAllocations().filter((item) => item.leadId === leadId && item.status !== "released");
+  if (!consent?.contactConsent || !consent.partnerSharingConsent) {
+    return { allowed: false, reason: "Partner-sharing consent is not recorded" };
+  }
+
+  const active = allocations.filter((item) => item.leadId === lead.id && item.status !== "released");
   const limit = consent.maxPartnerRecipients ?? 1;
   if (active.length >= limit) return { allowed: false, reason: "Consent recipient limit reached" };
   if (active.some((item) => item.exclusive)) return { allowed: false, reason: "Lead is exclusively allocated" };
   return { allowed: true };
+}
+
+export function getEligibleBuyers(lead: Lead): Buyer[] {
+  return getEligibleBuyersForLead(lead, getBuyers());
+}
+
+export function canAllocateLead(leadId: string): { allowed: boolean; reason?: string } {
+  const lead = getLeadById(leadId);
+  const consent = getConsentByLeadId(leadId);
+  return getAllocationEligibility(lead, consent, getAllocations());
 }
 
 export function allocateLead(input: { leadId: string; buyerId: string; priceCents: number; exclusive: boolean; actor: string }): LeadAllocation {

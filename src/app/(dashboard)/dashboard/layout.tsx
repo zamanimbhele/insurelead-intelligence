@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store } from "lucide-react";
+import { redirect } from "next/navigation";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut } from "lucide-react";
+import { getDashboardIdentity } from "@/lib/auth";
+import { signOut } from "@/app/(auth)/login/actions";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -8,7 +11,11 @@ const NAV = [
   { href: "/dashboard/market-intelligence", label: "Market Intelligence", icon: BarChart3 },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const identity = await getDashboardIdentity();
+  if (!identity.authenticated) redirect("/login");
+  if (!identity.accessAllowed) redirect("/access-denied");
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       <aside className="hidden w-64 flex-shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
@@ -35,8 +42,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ArrowLeft className="h-3.5 w-3.5" /> Back to public site
           </Link>
           <p className="mt-3 text-xs text-slate-400">
-            Demo session - Broker Manager role<br />Synthetic data only
+            {identity.organisationName}<br />{identity.role.replace(/_/g, " ")}
           </p>
+          {identity.mode === "supabase" ? (
+            <form action={signOut} className="mt-3">
+              <button type="submit" className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-primary-700">
+                <LogOut className="h-3.5 w-3.5" /> Sign out
+              </button>
+            </form>
+          ) : (
+            <p className="mt-2 text-xs font-medium text-amber-600">Synthetic data only</p>
+          )}
         </div>
       </aside>
       <div className="flex-1">

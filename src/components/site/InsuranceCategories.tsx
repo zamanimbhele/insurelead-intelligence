@@ -1,8 +1,9 @@
 import { Section, SectionHeading } from "@/components/ui/Section";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
 import { Car, ShieldAlert, Building2, HardHat, Briefcase, TrendingDown, Wifi, Boxes, Users, ClipboardList } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const ICONS: Record<string, any> = {
+const ICONS: Record<string, LucideIcon> = {
   commercial_motor: Car,
   public_liability: ShieldAlert,
   property_and_contents: Building2,
