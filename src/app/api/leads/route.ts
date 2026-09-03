@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { consultationFormSchema } from "@/lib/validation/consultationSchema";
-import { saveLead, saveConsent, appendAuditLog, findPossibleDuplicate } from "@/lib/demo-store";
+import { captureRuntimeLead, hasRuntimeDuplicate } from "@/lib/runtime-data";
 import { scoreLead } from "@/lib/scoring";
 import { CONSENT_WORDING_VERSION } from "@/lib/constants";
-import { Lead } from "@/lib/types";
+import type { ConsentRecord, Lead } from "@/lib/types";
 
 // Very small in-memory rate limiter, keyed by IP, reset per server process.
 // PRODUCTION NOTE: replace with a durable rate limiter (e.g. Upstash/Redis)
@@ -55,10 +55,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, leadId: null });
     }
 
-    const duplicate = findPossibleDuplicate(data.contactEmail, data.businessName);
-    const isDuplicate = Boolean(duplicate);
-
-    const leadId = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const isDuplicate = await hasRuntimeDuplicate(data.contactEmail, data.businessName);
 
     const scoring = scoreLead({
       hasCompleteContactInfo: Boolean(data.contactEmail && data.contactMobile && data.contactFullName),
@@ -76,8 +73,7 @@ export async function POST(req: NextRequest) {
       hasInvalidContactDetails: false,
     });
 
-    const lead: Lead = {
-      id: leadId,
+    const lead: Omit<Lead, "id" | "createdAt"> = {
       businessName: data.businessName,
       tradingName: data.tradingName,
       industry: data.industry,
@@ -110,13 +106,9 @@ export async function POST(req: NextRequest) {
       referrer: body?.referrer,
       doNotContact: false,
       assignedBroker: undefined,
-      createdAt: new Date().toISOString(),
     };
 
-    saveLead(lead);
-
-    saveConsent({
-      leadId,
+    const consent: Omit<ConsentRecord, "leadId" | "timestamp"> = {
       privacyNoticeAccepted: data.privacyNoticeAccepted,
       contactConsent: data.contactConsent,
       marketingConsent: Boolean(data.marketingConsent),
@@ -126,16 +118,9 @@ export async function POST(req: NextRequest) {
       nonBindingAcknowledged: data.nonBindingAcknowledged,
       consentWordingVersion: CONSENT_WORDING_VERSION,
       sourceUrl: body?.sourceUrl ?? "",
-      timestamp: new Date().toISOString(),
-    });
+    };
 
-    appendAuditLog({
-      entity: "lead",
-      entityId: leadId,
-      action: "lead_created",
-      actor: "public_form",
-      details: `New lead captured via consultation form (${data.insuranceProducts.length} product(s) selected).`,
-    });
+    const leadId = await captureRuntimeLead(lead, consent);
 
     // PRODUCTION NOTE: trigger a secure internal notification (email/queue)
     // to the assigned broker or lead queue here.
@@ -143,6 +128,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, leadId });
   } catch (err) {
     // Sanitised error - never leak stack traces or PII to the client.
+    if (err instanceof Error && err.message.includes("Supabase mode requires")) {
+      return NextResponse.json({ error: "Lead capture is temporarily unavailable." }, { status: 503 });
+    }
     return NextResponse.json({ error: "Something went wrong submitting your enquiry." }, { status: 500 });
   }
 }

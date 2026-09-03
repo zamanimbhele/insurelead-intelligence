@@ -1,4 +1,4 @@
-import { getLeads } from "@/lib/demo-store";
+import { getDashboardLeads } from "@/lib/dashboard-data";
 import { BarChartCard } from "@/components/dashboard/BarChartCard";
 import { MapPin, TrendingUp, Info } from "lucide-react";
 
@@ -20,8 +20,8 @@ function countBy<T>(items: T[], key: keyof T) {
     .sort((a, b) => b.count - a.count);
 }
 
-export default function MarketIntelligencePage() {
-  const leads = getLeads();
+export default async function MarketIntelligencePage() {
+  const leads = await getDashboardLeads();
 
   const byIndustry = countBy(leads, "industry").filter((d) => d.count >= MIN_AGGREGATION_THRESHOLD).slice(0, 8);
   const byProvince = countBy(leads, "province").filter((d) => d.count >= MIN_AGGREGATION_THRESHOLD).slice(0, 8);

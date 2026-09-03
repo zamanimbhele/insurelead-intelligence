@@ -1,4 +1,4 @@
-import { getLeadById } from "@/lib/demo-store";
+import { getDashboardLead } from "@/lib/dashboard-data";
 import { LEAD_STATUS_LABELS, INSURANCE_PRODUCTS } from "@/lib/constants";
 import { ScoreBadge, StatusBadge } from "@/components/dashboard/ScoreBadge";
 import { notFound } from "next/navigation";
@@ -6,8 +6,9 @@ import Link from "next/link";
 import { ArrowLeft, Mail, Phone, MapPin, Building2, ShieldOff } from "lucide-react";
 import { format } from "date-fns";
 
-export default function LeadDetailPage({ params }: { params: { id: string } }) {
-  const lead = getLeadById(params.id);
+export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const lead = await getDashboardLead(id);
   if (!lead) return notFound();
 
   const productLabels = lead.insuranceProducts.map(

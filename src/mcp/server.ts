@@ -3,14 +3,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
 
 import {
-  appendAuditLog,
-  getConsentByLeadId,
-  getLeadById,
-  getLeads,
-  updateLead,
-} from "../lib/demo-store.ts";
+  appendRuntimeAuditLog,
+  getRuntimeConsent,
+  getRuntimeLead,
+  listRuntimeAllocations,
+  listRuntimeBuyers,
+  listRuntimeLeads,
+  reserveRuntimeLead,
+  updateRuntimeLead,
+} from "../lib/runtime-data.ts";
 import type { Lead, LeadStatus } from "../lib/types.ts";
-import { allocateLead, canAllocateLead, getEligibleBuyers } from "../lib/marketplace-store.ts";
+import { getAllocationEligibility, getEligibleBuyersForLead } from "../lib/marketplace-store.ts";
+import { getDataMode } from "../lib/supabase/config.ts";
 
 const server = new McpServer({ name: "insurelead-intelligence", version: "0.1.0" });
 
@@ -51,6 +55,10 @@ function safeLead(lead: Lead) {
   };
 }
 
+function productionWritesEnabled() {
+  return getDataMode() === "demo" || process.env.INSURELEAD_MCP_ALLOW_WRITES === "true";
+}
+
 server.registerTool(
   "list_leads",
   {
@@ -66,7 +74,7 @@ server.registerTool(
     annotations: { readOnlyHint: true },
   },
   async ({ status, scoreBand, province, industry, limit }) => {
-    const leads = getLeads()
+    const leads = (await listRuntimeLeads())
       .filter((lead) => !status || lead.status === status)
       .filter((lead) => !scoreBand || lead.scoreBand === scoreBand)
       .filter((lead) => !province || lead.province.toLowerCase() === province.toLowerCase())
@@ -87,9 +95,9 @@ server.registerTool(
     annotations: { readOnlyHint: true },
   },
   async ({ leadId }) => {
-    const lead = getLeadById(leadId);
+    const lead = await getRuntimeLead(leadId);
     if (!lead) return result({ found: false, leadId });
-    const consent = getConsentByLeadId(leadId);
+    const consent = await getRuntimeConsent(leadId);
     const mayContact = Boolean(consent?.contactConsent) && !lead.doNotContact;
     return result({
       found: true,
@@ -117,12 +125,16 @@ server.registerTool(
   },
   async ({ limit }) => {
     const excluded: LeadStatus[] = ["won", "lost", "do_not_contact", "archived"];
-    const leads = getLeads()
+    const candidates = (await listRuntimeLeads())
       .filter((lead) => !lead.doNotContact && !excluded.includes(lead.status))
-      .filter((lead) => Boolean(getConsentByLeadId(lead.id)?.contactConsent))
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score);
+    const consented = await Promise.all(
+      candidates.map(async (lead) => ({ lead, consent: await getRuntimeConsent(lead.id) })),
+    );
+    const leads = consented
+      .filter(({ consent }) => Boolean(consent?.contactConsent))
       .slice(0, limit)
-      .map((lead) => ({ ...safeLead(lead), reason: lead.scoreExplanation }));
+      .map(({ lead }) => ({ ...safeLead(lead), reason: lead.scoreExplanation }));
     return result({ count: leads.length, requiresHumanDecision: true, leads });
   },
 );
@@ -141,12 +153,15 @@ server.registerTool(
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
   async ({ leadId, status, reason, actor }) => {
-    const lead = updateLead(
+    if (!productionWritesEnabled()) {
+      return result({ updated: false, error: "Production MCP writes are disabled", leadId });
+    }
+    const lead = await updateRuntimeLead(
       leadId,
       status === "do_not_contact" ? { status, doNotContact: true } : { status },
     );
     if (!lead) return result({ updated: false, error: "Lead not found", leadId });
-    appendAuditLog({ entity: "status", entityId: leadId, action: `status_changed_to_${status}`,
+    await appendRuntimeAuditLog({ entity: "status", entityId: leadId, action: `status_changed_to_${status}`,
       actor, details: reason });
     return result({ updated: true, lead: safeLead(lead) });
   },
@@ -164,9 +179,9 @@ server.registerTool(
     annotations: { readOnlyHint: true },
   },
   async ({ leadId, channel }) => {
-    const lead = getLeadById(leadId);
+    const lead = await getRuntimeLead(leadId);
     if (!lead) return result({ drafted: false, error: "Lead not found", leadId });
-    const consent = getConsentByLeadId(leadId);
+    const consent = await getRuntimeConsent(leadId);
     if (lead.doNotContact || !consent?.contactConsent) {
       return result({ drafted: false, error: "Contact is not permitted for this lead", leadId });
     }
@@ -189,11 +204,24 @@ server.registerTool(
     annotations: { readOnlyHint: true },
   },
   async ({ leadId }) => {
-    const lead = getLeadById(leadId);
+    const lead = await getRuntimeLead(leadId);
     if (!lead) return result({ matched: false, error: "Lead not found", leadId });
-    const check = canAllocateLead(leadId);
+    const [consent, allocations, allBuyers] = await Promise.all([
+      getRuntimeConsent(leadId),
+      listRuntimeAllocations(),
+      listRuntimeBuyers(),
+    ]);
+    const check = getAllocationEligibility(lead, consent, allocations);
     if (!check.allowed) return result({ matched: false, error: check.reason, leadId });
-    const buyers = getEligibleBuyers(lead).map(({ contactEmail: _contactEmail, ...buyer }) => buyer);
+    const buyers = getEligibleBuyersForLead(lead, allBuyers).map((buyer) => ({
+      id: buyer.id,
+      organisationName: buyer.organisationName,
+      buyerType: buyer.buyerType,
+      status: buyer.status,
+      provinces: buyer.provinces,
+      industries: buyer.industries,
+      minimumScore: buyer.minimumScore,
+    }));
     return result({ matched: buyers.length > 0, lead: safeLead(lead), buyers });
   },
 );
@@ -207,7 +235,10 @@ server.registerTool(
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
   },
   async ({ leadId, buyerId, priceCents, exclusive, actor }) => {
-    try { return result({ reserved: true, allocation: allocateLead({ leadId, buyerId, priceCents, exclusive, actor }) }); }
+    if (!productionWritesEnabled()) {
+      return result({ reserved: false, error: "Production MCP writes are disabled" });
+    }
+    try { return result({ reserved: true, allocation: await reserveRuntimeLead({ leadId, buyerId, priceCents, exclusive, actor }) }); }
     catch (error) { return result({ reserved: false, error: error instanceof Error ? error.message : "Reservation failed" }); }
   },
 );
@@ -221,7 +252,7 @@ server.registerTool(
     annotations: { readOnlyHint: true },
   },
   async () => {
-    const leads = getLeads();
+    const leads = await listRuntimeLeads();
     const countBy = (key: "status" | "scoreBand" | "industry" | "province") =>
       leads.reduce<Record<string, number>>((acc, lead) => {
         const value = lead[key];

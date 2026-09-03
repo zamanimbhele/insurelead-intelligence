@@ -1,4 +1,5 @@
-import { getLeads } from "@/lib/demo-store";
+import { getDashboardLeads } from "@/lib/dashboard-data";
+import { getDataMode } from "@/lib/supabase/config";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { LeadsTable } from "@/components/dashboard/LeadsTable";
 import { LEAD_STATUS_LABELS } from "@/lib/constants";
@@ -7,8 +8,8 @@ import { isToday, isThisWeek } from "date-fns";
 
 export const metadata = { title: "Dashboard | InsureLead Intelligence" };
 
-export default function DashboardPage() {
-  const leads = getLeads();
+export default async function DashboardPage() {
+  const leads = await getDashboardLeads();
 
   const newToday = leads.filter((l) => isToday(new Date(l.createdAt))).length;
   const newThisWeek = leads.filter((l) => isThisWeek(new Date(l.createdAt), { weekStartsOn: 1 })).length;
@@ -28,7 +29,9 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Lead Management Overview</h1>
-        <p className="mt-1 text-sm text-slate-500">Synthetic demo data - Broker Manager view</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {getDataMode() === "demo" ? "Synthetic demo data" : "Live, access-controlled lead data"}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
