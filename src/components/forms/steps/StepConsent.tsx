@@ -1,8 +1,7 @@
-import { UseFormReturn } from "react-hook-form";
-import { ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import Link from "next/link";
 
-export function StepConsent({ form }: { form: UseFormReturn<ConsultationFormValues> }) {
+export function StepConsent({ form }: { form: ConsultationFormHandle }) {
   const { register, formState: { errors } } = form;
   return (
     <div className="flex flex-col gap-5">

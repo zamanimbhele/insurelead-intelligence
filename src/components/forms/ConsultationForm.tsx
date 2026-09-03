@@ -4,7 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { consultationFormSchema, ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import {
+  consultationFormSchema,
+  ConsultationFormInput,
+  ConsultationFormValues,
+} from "@/lib/validation/consultationSchema";
 import { StepBusinessDetails } from "./steps/StepBusinessDetails";
 import { StepInsuranceNeeds } from "./steps/StepInsuranceNeeds";
 import { StepContactPerson } from "./steps/StepContactPerson";
@@ -38,7 +42,7 @@ export function ConsultationForm() {
     [searchParams]
   );
 
-  const form = useForm<ConsultationFormValues>({
+  const form = useForm<ConsultationFormInput, unknown, ConsultationFormValues>({
     resolver: zodResolver(consultationFormSchema),
     mode: "onBlur",
     defaultValues: {
@@ -49,7 +53,7 @@ export function ConsultationForm() {
   });
 
   async function goNext() {
-    const fields = STEPS[step].fields as unknown as (keyof ConsultationFormValues)[];
+    const fields = STEPS[step].fields as unknown as (keyof ConsultationFormInput)[];
     const valid = await form.trigger(fields);
     if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }

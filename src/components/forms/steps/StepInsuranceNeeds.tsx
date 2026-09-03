@@ -1,9 +1,8 @@
-import { UseFormReturn } from "react-hook-form";
-import { ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import { Field, inputClass } from "../FormField";
 import { INSURANCE_PRODUCTS, CURRENT_INSURANCE_STATUS, MONTHS } from "@/lib/constants";
 
-export function StepInsuranceNeeds({ form }: { form: UseFormReturn<ConsultationFormValues> }) {
+export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
   const { register, watch, setValue, formState: { errors } } = form;
   const selected = watch("insuranceProducts") ?? [];
 

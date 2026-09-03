@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { UseFormReturn } from "react-hook-form";
 
 export const businessDetailsSchema = z.object({
   businessName: z.string().min(2, "Business name is required"),
@@ -70,7 +71,13 @@ export const consultationFormSchema = businessDetailsSchema
   .merge(contactPersonSchema)
   .merge(consentSchema);
 
-export type ConsultationFormValues = z.infer<typeof consultationFormSchema>;
+export type ConsultationFormInput = z.input<typeof consultationFormSchema>;
+export type ConsultationFormValues = z.output<typeof consultationFormSchema>;
+export type ConsultationFormHandle = UseFormReturn<
+  ConsultationFormInput,
+  unknown,
+  ConsultationFormValues
+>;
 export type BusinessDetailsValues = z.infer<typeof businessDetailsSchema>;
 export type InsuranceNeedsValues = z.infer<typeof insuranceNeedsSchema>;
 export type ContactPersonValues = z.infer<typeof contactPersonSchema>;

@@ -1,8 +1,7 @@
-import { UseFormReturn } from "react-hook-form";
-import { ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import { Field, inputClass } from "../FormField";
 
-export function StepContactPerson({ form }: { form: UseFormReturn<ConsultationFormValues> }) {
+export function StepContactPerson({ form }: { form: ConsultationFormHandle }) {
   const { register, formState: { errors } } = form;
   return (
     <div className="grid gap-5 sm:grid-cols-2">

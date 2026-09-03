@@ -1,9 +1,8 @@
-import { UseFormReturn } from "react-hook-form";
-import { ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import { Field, inputClass } from "../FormField";
 import { INDUSTRIES, BUSINESS_TYPES, EMPLOYEE_BANDS, TURNOVER_BANDS, YEARS_IN_OPERATION, PROVINCES } from "@/lib/constants";
 
-export function StepBusinessDetails({ form }: { form: UseFormReturn<ConsultationFormValues> }) {
+export function StepBusinessDetails({ form }: { form: ConsultationFormHandle }) {
   const { register, formState: { errors } } = form;
   return (
     <div className="grid gap-5 sm:grid-cols-2">
