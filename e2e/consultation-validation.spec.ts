@@ -46,5 +46,6 @@ test.describe("Consultation request - validation and consent gating", () => {
     await expect(page).not.toHaveURL(/thank-you/);
     await expect(page.getByText("You must acknowledge the privacy notice")).toBeVisible();
     await expect(page.getByText("Consent to be contacted is required to submit this enquiry")).toBeVisible();
+    await expect(page.getByText("Consent to share this enquiry with an approved insurance partner is required")).toBeVisible();
   });
 });

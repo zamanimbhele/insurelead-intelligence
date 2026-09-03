@@ -93,11 +93,38 @@ export interface ConsentRecord {
   privacyNoticeAccepted: boolean;
   contactConsent: boolean;
   marketingConsent: boolean;
+  partnerSharingConsent?: boolean;
+  maxPartnerRecipients?: 1 | 3;
   accuracyConfirmed: boolean;
   nonBindingAcknowledged: boolean;
   consentWordingVersion: string;
   sourceUrl: string;
   timestamp: string;
+}
+
+export type BuyerStatus = "pending" | "active" | "suspended";
+export type LeadAllocationStatus = "reserved" | "accepted" | "disputed" | "released";
+
+export interface Buyer {
+  id: string;
+  organisationName: string;
+  buyerType: "broker" | "insurer";
+  status: BuyerStatus;
+  provinces: string[];
+  industries: string[];
+  minimumScore: number;
+  contactEmail: string;
+}
+
+export interface LeadAllocation {
+  id: string;
+  leadId: string;
+  buyerId: string;
+  status: LeadAllocationStatus;
+  priceCents: number;
+  exclusive: boolean;
+  allocatedAt: string;
+  acceptedAt?: string;
 }
 
 export interface AuditLogEntry {

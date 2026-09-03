@@ -4,7 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { consultationFormSchema, ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import {
+  consultationFormSchema,
+  ConsultationFormInput,
+  ConsultationFormValues,
+} from "@/lib/validation/consultationSchema";
 import { StepBusinessDetails } from "./steps/StepBusinessDetails";
 import { StepInsuranceNeeds } from "./steps/StepInsuranceNeeds";
 import { StepContactPerson } from "./steps/StepContactPerson";
@@ -17,7 +21,7 @@ const STEPS = [
   { key: "business", label: "Business Details", fields: ["businessName", "industry", "businessType", "employeeBand", "turnoverBand", "yearsInOperation", "province", "city", "postalCode", "website"] },
   { key: "needs", label: "Insurance Needs", fields: ["insuranceProducts", "currentInsuranceStatus", "preferredContactChannel"] },
   { key: "contact", label: "Contact Person", fields: ["contactFullName", "contactRole", "contactEmail", "contactMobile", "preferredContactMethod"] },
-  { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "accuracyConfirmed", "nonBindingAcknowledged"] },
+  { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "partnerSharingConsent", "maxPartnerRecipients", "accuracyConfirmed", "nonBindingAcknowledged"] },
 ] as const;
 
 export function ConsultationForm() {
@@ -38,17 +42,18 @@ export function ConsultationForm() {
     [searchParams]
   );
 
-  const form = useForm<ConsultationFormValues>({
+  const form = useForm<ConsultationFormInput, unknown, ConsultationFormValues>({
     resolver: zodResolver(consultationFormSchema),
     mode: "onBlur",
     defaultValues: {
       insuranceProducts: [],
       marketingConsent: false,
+      maxPartnerRecipients: "1",
     },
   });
 
   async function goNext() {
-    const fields = STEPS[step].fields as unknown as (keyof ConsultationFormValues)[];
+    const fields = STEPS[step].fields as unknown as (keyof ConsultationFormInput)[];
     const valid = await form.trigger(fields);
     if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }

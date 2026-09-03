@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { UseFormReturn } from "react-hook-form";
 
 export const businessDetailsSchema = z.object({
   businessName: z.string().min(2, "Business name is required"),
@@ -52,6 +53,10 @@ export const consentSchema = z.object({
     error: "Consent to be contacted is required to submit this enquiry",
   }),
   marketingConsent: z.boolean().optional().default(false),
+  partnerSharingConsent: z.literal(true, {
+    error: "Consent to share this enquiry with an approved insurance partner is required",
+  }),
+  maxPartnerRecipients: z.enum(["1", "3"]).default("1"),
   accuracyConfirmed: z.literal(true, {
     error: "Please confirm the information provided is accurate",
   }),
@@ -66,7 +71,13 @@ export const consultationFormSchema = businessDetailsSchema
   .merge(contactPersonSchema)
   .merge(consentSchema);
 
-export type ConsultationFormValues = z.infer<typeof consultationFormSchema>;
+export type ConsultationFormInput = z.input<typeof consultationFormSchema>;
+export type ConsultationFormValues = z.output<typeof consultationFormSchema>;
+export type ConsultationFormHandle = UseFormReturn<
+  ConsultationFormInput,
+  unknown,
+  ConsultationFormValues
+>;
 export type BusinessDetailsValues = z.infer<typeof businessDetailsSchema>;
 export type InsuranceNeedsValues = z.infer<typeof insuranceNeedsSchema>;
 export type ContactPersonValues = z.infer<typeof contactPersonSchema>;

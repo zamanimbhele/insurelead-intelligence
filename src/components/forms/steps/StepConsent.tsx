@@ -1,8 +1,7 @@
-import { UseFormReturn } from "react-hook-form";
-import { ConsultationFormValues } from "@/lib/validation/consultationSchema";
+import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import Link from "next/link";
 
-export function StepConsent({ form }: { form: UseFormReturn<ConsultationFormValues> }) {
+export function StepConsent({ form }: { form: ConsultationFormHandle }) {
   const { register, formState: { errors } } = form;
   return (
     <div className="flex flex-col gap-5">
@@ -30,6 +29,23 @@ export function StepConsent({ form }: { form: UseFormReturn<ConsultationFormValu
         </span>
       </label>
       {errors.contactConsent && <p className="text-xs text-red-600">{errors.contactConsent.message}</p>}
+
+      <label className="flex items-start gap-3 rounded-md border border-primary-200 bg-primary-50 p-4 text-sm">
+        <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("partnerSharingConsent")} />
+        <span>
+          I consent to InsureLead sharing this enquiry and my contact details with the approved insurance
+          partner limit I select below, so they may contact me about this business-insurance request.
+        </span>
+      </label>
+      {errors.partnerSharingConsent && <p className="text-xs text-red-600">{errors.partnerSharingConsent.message}</p>}
+
+      <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+        Maximum approved partners
+        <select className="rounded-md border border-slate-300 bg-white px-3 py-2 font-normal" {...register("maxPartnerRecipients")}>
+          <option value="1">One partner — exclusive enquiry</option>
+          <option value="3">Up to three partners — compare options</option>
+        </select>
+      </label>
 
       <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("marketingConsent")} />

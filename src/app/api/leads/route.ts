@@ -120,6 +120,8 @@ export async function POST(req: NextRequest) {
       privacyNoticeAccepted: data.privacyNoticeAccepted,
       contactConsent: data.contactConsent,
       marketingConsent: Boolean(data.marketingConsent),
+      partnerSharingConsent: data.partnerSharingConsent,
+      maxPartnerRecipients: Number(data.maxPartnerRecipients) as 1 | 3,
       accuracyConfirmed: data.accuracyConfirmed,
       nonBindingAcknowledged: data.nonBindingAcknowledged,
       consentWordingVersion: CONSENT_WORDING_VERSION,

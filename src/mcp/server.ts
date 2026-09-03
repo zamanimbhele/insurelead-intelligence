@@ -10,6 +10,7 @@ import {
   updateLead,
 } from "../lib/demo-store.ts";
 import type { Lead, LeadStatus } from "../lib/types.ts";
+import { allocateLead, canAllocateLead, getEligibleBuyers } from "../lib/marketplace-store.ts";
 
 const server = new McpServer({ name: "insurelead-intelligence", version: "0.1.0" });
 
@@ -176,6 +177,38 @@ server.registerTool(
       `${lead.insuranceProducts.length} area(s) of cover. Would you like to arrange a short discussion?`;
     return result({ drafted: true, leadId, channel: selectedChannel, message,
       requiresHumanApproval: true, sent: false });
+  },
+);
+
+server.registerTool(
+  "match_lead_to_buyers",
+  {
+    title: "Match lead to approved buyers",
+    description: "Find active buyers whose approved appetite matches a consented lead.",
+    inputSchema: { leadId: z.string().min(1) },
+    annotations: { readOnlyHint: true },
+  },
+  async ({ leadId }) => {
+    const lead = getLeadById(leadId);
+    if (!lead) return result({ matched: false, error: "Lead not found", leadId });
+    const check = canAllocateLead(leadId);
+    if (!check.allowed) return result({ matched: false, error: check.reason, leadId });
+    const buyers = getEligibleBuyers(lead).map(({ contactEmail: _contactEmail, ...buyer }) => buyer);
+    return result({ matched: buyers.length > 0, lead: safeLead(lead), buyers });
+  },
+);
+
+server.registerTool(
+  "reserve_lead",
+  {
+    title: "Reserve a lead for a buyer",
+    description: "Reserve an eligible consented lead for an approved buyer and create an audit record.",
+    inputSchema: { leadId: z.string().min(1), buyerId: z.string().min(1), priceCents: z.number().int().min(0), exclusive: z.boolean().default(true), actor: z.string().min(2).default("mcp_platform_admin") },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  },
+  async ({ leadId, buyerId, priceCents, exclusive, actor }) => {
+    try { return result({ reserved: true, allocation: allocateLead({ leadId, buyerId, priceCents, exclusive, actor }) }); }
+    catch (error) { return result({ reserved: false, error: error instanceof Error ? error.message : "Reservation failed" }); }
   },
 );
 

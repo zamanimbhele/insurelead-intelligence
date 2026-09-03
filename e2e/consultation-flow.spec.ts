@@ -51,6 +51,8 @@ test.describe("Consultation request - happy path", () => {
     await expect(page.getByRole("heading", { name: "Consent" })).toBeVisible();
     await page.getByLabel(/I have read and acknowledge the/i).check();
     await page.getByLabel(/I am requesting contact regarding/i).check();
+    await page.getByLabel(/I consent to InsureLead sharing this enquiry/i).check();
+    await page.getByLabel("Maximum approved partners").selectOption("1");
     await page.getByLabel(/I confirm that the information I have submitted is accurate/i).check();
     await page.getByLabel(/I understand that submitting this enquiry does not create insurance cover/i).check();
     // Marketing consent is intentionally left unchecked - it must never be

@@ -1,0 +1,4 @@
+[
+  {"id":"buyer_gauteng_commercial","organisationName":"Gauteng Commercial Broker Pilot","buyerType":"broker","status":"active","provinces":["Gauteng"],"industries":["Construction and Contracting","Transport and Logistics","Manufacturing"],"minimumScore":35,"contactEmail":"pilot-broker@example-synthetic.co.za"},
+  {"id":"buyer_sme_national","organisationName":"National SME Insurance Pilot","buyerType":"insurer","status":"active","provinces":["Gauteng","Western Cape","KwaZulu-Natal"],"industries":["Retail and E-commerce","Professional Services","Technology and IT Services"],"minimumScore":30,"contactEmail":"pilot-insurer@example-synthetic.co.za"}
+]
