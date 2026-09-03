@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/leads", label: "Leads", icon: Users },
+  { href: "/dashboard/marketplace", label: "Lead Marketplace", icon: Store },
   { href: "/dashboard/market-intelligence", label: "Market Intelligence", icon: BarChart3 },
 ];
 

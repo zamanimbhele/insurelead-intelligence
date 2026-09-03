@@ -75,7 +75,7 @@ export const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export const CONSENT_WORDING_VERSION = "v1.0-2026-07-07";
+export const CONSENT_WORDING_VERSION = "v2.0-2026-09-03";
 
 export const LEAD_STATUS_LABELS: Record<string, string> = {
   new: "New",

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <Section>
       <SectionHeading eyebrow="Legal" title="Privacy Notice" />
       <div className="prose mt-8 max-w-3xl space-y-4 text-sm text-slate-600">
-        <p>Version: v1.0 - Last updated 7 July 2026 (placeholder - to be reviewed by Compliance Admin).</p>
+        <p>Version: v2.0 - Last updated 3 September 2026 (placeholder - to be reviewed by Compliance Admin).</p>
         <p>
           This Privacy Notice explains how InsureLead Intelligence (the &quot;Platform&quot;) collects, uses, and protects
           information you submit when requesting a business insurance consultation.
@@ -24,9 +24,9 @@ export default function PrivacyPage() {
         </p>
         <h3 className="font-semibold text-slate-900">How we use your information</h3>
         <p>
-          Your information is used to respond to your enquiry, assign it to a licensed broker, and, only where you
-          give optional marketing consent, to share relevant business insurance information in future. We record
-          your campaign source and consent choices alongside your enquiry.
+          Your information is used to respond to your enquiry and, when you give partner-sharing consent, match it
+          to no more than the number of approved insurance partners you selected. Optional marketing consent is
+          separate and is not required. We record your campaign source, recipient limit and consent wording.
         </p>
         <h3 className="font-semibold text-slate-900">Your rights</h3>
         <p>

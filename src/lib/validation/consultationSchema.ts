@@ -52,6 +52,10 @@ export const consentSchema = z.object({
     error: "Consent to be contacted is required to submit this enquiry",
   }),
   marketingConsent: z.boolean().optional().default(false),
+  partnerSharingConsent: z.literal(true, {
+    error: "Consent to share this enquiry with an approved insurance partner is required",
+  }),
+  maxPartnerRecipients: z.enum(["1", "3"]).default("1"),
   accuracyConfirmed: z.literal(true, {
     error: "Please confirm the information provided is accurate",
   }),

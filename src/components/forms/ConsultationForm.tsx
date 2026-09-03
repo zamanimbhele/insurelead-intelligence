@@ -17,7 +17,7 @@ const STEPS = [
   { key: "business", label: "Business Details", fields: ["businessName", "industry", "businessType", "employeeBand", "turnoverBand", "yearsInOperation", "province", "city", "postalCode", "website"] },
   { key: "needs", label: "Insurance Needs", fields: ["insuranceProducts", "currentInsuranceStatus", "preferredContactChannel"] },
   { key: "contact", label: "Contact Person", fields: ["contactFullName", "contactRole", "contactEmail", "contactMobile", "preferredContactMethod"] },
-  { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "accuracyConfirmed", "nonBindingAcknowledged"] },
+  { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "partnerSharingConsent", "maxPartnerRecipients", "accuracyConfirmed", "nonBindingAcknowledged"] },
 ] as const;
 
 export function ConsultationForm() {
@@ -44,6 +44,7 @@ export function ConsultationForm() {
     defaultValues: {
       insuranceProducts: [],
       marketingConsent: false,
+      maxPartnerRecipients: "1",
     },
   });
 
