@@ -18,9 +18,10 @@ Priced in the accompanying quotation.
   Manager, Broker, Marketing Analyst).
 
 ## Lead Capture Hardening
-- Production CAPTCHA integration and durable rate limiting (Upstash/Redis) in front of the
-  public form.
-- Secure internal broker/lead-queue notifications (email or queue-based).
+- Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable
+  Supabase rate limiter using HMAC-keyed counters, PII-minimised lead-queue webhooks, notification
+  audit events, and `/api/health` readiness reporting. Deployment configuration and monitoring
+  remain operational tasks.
 - Configurable legal-text fields editable by Compliance Admin (privacy notice, consent wording,
   marketing wording, FSP disclosures, terms, retention policy) with version history.
 

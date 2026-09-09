@@ -8,7 +8,7 @@ import { ScoreBadge, StatusBadge } from "./ScoreBadge";
 import { Search } from "lucide-react";
 import { format } from "date-fns";
 
-export function LeadsTable({ leads }: { leads: Lead[] }) {
+export function LeadsTable({ leads, demoMode = false }: { leads: Lead[]; demoMode?: boolean }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -87,7 +87,7 @@ export function LeadsTable({ leads }: { leads: Lead[] }) {
         </table>
       </div>
       <div className="border-t border-slate-200 px-4 py-3 text-xs text-slate-400">
-        Showing {Math.min(filtered.length, 25)} of {filtered.length} matching leads ({leads.length} total demo leads).
+        Showing {Math.min(filtered.length, 25)} of {filtered.length} matching leads ({leads.length} total {demoMode ? "demo " : ""}leads).
       </div>
     </div>
   );

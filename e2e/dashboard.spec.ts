@@ -16,6 +16,7 @@ test.describe("Internal broker dashboard (synthetic demo data)", () => {
     await expect(page.getByTestId("stat-do-not-contact")).toBeVisible();
 
     await expect(page.getByText("Recent Leads")).toBeVisible();
+    await expect(page.getByText(/total demo leads/)).toBeVisible();
   });
 
   test("leads list is searchable and links through to a lead detail page", async ({ page }) => {

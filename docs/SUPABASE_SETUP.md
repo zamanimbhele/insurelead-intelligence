@@ -14,7 +14,7 @@ npx supabase migration list
 npx supabase db push
 ```
 
-Only one person should push migrations to a shared project at a time. The two migrations in
+Only one person should push migrations to a shared project at a time. The three migrations in
 `supabase/migrations` are applied in timestamp order.
 
 ## 2. Configure server secrets
@@ -27,6 +27,9 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 SUPABASE_SECRET_KEY=YOUR_SERVER_ONLY_SECRET_KEY
 INSURELEAD_MCP_ALLOW_WRITES=false
+RATE_LIMIT_HASH_SECRET=YOUR_RANDOM_32_PLUS_CHARACTER_SECRET
+LEAD_RATE_LIMIT_MAX=5
+LEAD_RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
 Legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` values are also supported.
@@ -35,6 +38,9 @@ Never paste it into browser code, a URL, logs, Git, chat, email, or screenshots.
 
 For Vercel, add the same variables under Project Settings → Environment Variables. Use separate
 Supabase projects or branches for preview/testing and production.
+
+After the core connection works, follow [`PILOT_HARDENING.md`](PILOT_HARDENING.md) to configure
+Turnstile, lead-queue notifications, and the readiness endpoint.
 
 ## 3. Bootstrap the first administrator
 
@@ -79,6 +85,7 @@ Then validate in a non-production environment:
 - `/dashboard/marketplace` shows only consented, allocatable leads.
 - Reserving a lead creates one allocation and prevents a second exclusive reservation.
 - A buyer account sees only records permitted by RLS.
+- `/api/health` reports the Supabase data store and durable rate limiter as configured.
 
 ## 6. MCP production mode
 
@@ -88,7 +95,8 @@ blocked unless `INSURELEAD_MCP_ALLOW_WRITES=true` is deliberately set after acce
 
 ## Remaining go-live gates
 
-Supabase and authentication do not complete the production hardening. Before public marketing,
-add durable rate limiting, CAPTCHA/bot protection, internal lead notifications, retention and
-deletion workflows, monitoring, backups, secret rotation, and a legal/compliance review of the
-privacy notice and partner-sharing wording.
+The repository now includes durable rate limiting, configurable CAPTCHA, internal webhook
+notifications, and a readiness endpoint. They still need to be configured and tested in every
+deployed environment using `PILOT_HARDENING.md`. Before broader public marketing, also complete
+retention and deletion workflows, external monitoring, backups, secret rotation, and a
+legal/compliance review of the privacy notice and partner-sharing wording.

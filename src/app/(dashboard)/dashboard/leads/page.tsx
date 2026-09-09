@@ -16,7 +16,7 @@ export default async function LeadsPage() {
           {!demoMode && " Row Level Security limits this list to records available to your organisation and role."}
         </p>
       </div>
-      <LeadsTable leads={leads} />
+      <LeadsTable leads={leads} demoMode={demoMode} />
     </div>
   );
 }

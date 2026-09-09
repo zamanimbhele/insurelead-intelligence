@@ -12,3 +12,6 @@ out
 /playwright-report/
 /playwright/.cache/
 /blob-report/
+
+# Supabase CLI local project state
+/supabase/.temp/

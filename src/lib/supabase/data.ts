@@ -166,6 +166,16 @@ export async function fetchSupabaseLead(client: SupabaseClient, id: string): Pro
   return data ? mapLead(data as LeadRow) : undefined;
 }
 
+export async function checkSupabaseHealth(client: SupabaseClient) {
+  const { error } = await client.from("leads").select("id").limit(1);
+  fail("Unable to reach the lead data store", error);
+}
+
+export async function checkSupabaseRateLimitHealth(client: SupabaseClient) {
+  const { error } = await client.from("lead_submission_windows").select("key_hash").limit(1);
+  fail("Unable to reach the durable rate-limit store", error);
+}
+
 export async function fetchSupabaseConsent(client: SupabaseClient, leadId: string): Promise<ConsentRecord | undefined> {
   const { data, error } = await client
     .from("lead_consents")
@@ -252,6 +262,22 @@ export async function hasRecentSupabaseDuplicate(
   return (data ?? []).some((row) =>
     String(row.business_name).toLowerCase() === businessName.toLowerCase()
   );
+}
+
+export async function checkSupabaseSubmissionRateLimit(
+  client: SupabaseClient,
+  input: { keyHash: string; maximumRequests: number; windowSeconds: number },
+) {
+  const { data, error } = await client.rpc("check_lead_submission_rate_limit", {
+    p_key_hash: input.keyHash,
+    p_limit: input.maximumRequests,
+    p_window_seconds: input.windowSeconds,
+  });
+  fail("Unable to enforce lead submission rate limit", error);
+  if (typeof data !== "boolean") {
+    throw new Error("Unable to enforce lead submission rate limit: database did not return a decision");
+  }
+  return data;
 }
 
 export async function captureSupabaseLead(
