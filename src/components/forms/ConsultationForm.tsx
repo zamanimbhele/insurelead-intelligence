@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   consultationFormSchema,
   ConsultationFormInput,
@@ -16,6 +16,7 @@ import { StepConsent } from "./steps/StepConsent";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { CheckCircle2 } from "lucide-react";
+import { TurnstileWidget } from "./TurnstileWidget";
 
 const STEPS = [
   { key: "business", label: "Business Details", fields: ["businessName", "industry", "businessType", "employeeBand", "turnoverBand", "yearsInOperation", "province", "city", "postalCode", "website"] },
@@ -24,12 +25,18 @@ const STEPS = [
   { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "partnerSharingConsent", "maxPartnerRecipients", "accuracyConfirmed", "nonBindingAcknowledged"] },
 ] as const;
 
-export function ConsultationForm() {
+export function ConsultationForm({ turnstileSiteKey }: { turnstileSiteKey?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0);
+
+  const handleCaptchaToken = useCallback((token: string | null) => {
+    setCaptchaToken(token);
+  }, []);
 
   const utm = useMemo(
     () => ({
@@ -59,6 +66,10 @@ export function ConsultationForm() {
   }
 
   function goBack() {
+    if (step === STEPS.length - 1 && turnstileSiteKey) {
+      setCaptchaToken(null);
+      setCaptchaResetSignal((value) => value + 1);
+    }
     setStep((s) => Math.max(s - 1, 0));
   }
 
@@ -74,6 +85,7 @@ export function ConsultationForm() {
           utm,
           referrer: typeof document !== "undefined" ? document.referrer : undefined,
           sourceUrl: typeof window !== "undefined" ? window.location.href.split("?")[0] : undefined,
+          captchaToken: captchaToken ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -84,6 +96,7 @@ export function ConsultationForm() {
       router.push("/consultation/thank-you");
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      if (turnstileSiteKey) setCaptchaResetSignal((value) => value + 1);
     } finally {
       setSubmitting(false);
     }
@@ -133,6 +146,18 @@ export function ConsultationForm() {
           {step === 1 && <StepInsuranceNeeds form={form} />}
           {step === 2 && <StepContactPerson form={form} />}
           {step === 3 && <StepConsent form={form} />}
+          {step === 3 && turnstileSiteKey && (
+            <div className="mt-6">
+              <TurnstileWidget
+                siteKey={turnstileSiteKey}
+                onToken={handleCaptchaToken}
+                resetSignal={captchaResetSignal}
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Complete the security check before submitting your enquiry.
+              </p>
+            </div>
+          )}
         </div>
 
         {submitError && <p className="mt-4 text-sm text-red-600">{submitError}</p>}
@@ -141,7 +166,7 @@ export function ConsultationForm() {
           <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0}>
             Back
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting || Boolean(turnstileSiteKey && !captchaToken)}>
             {isLastStep ? (submitting ? "Submitting..." : "Submit Enquiry") : "Continue"}
           </Button>
         </div>

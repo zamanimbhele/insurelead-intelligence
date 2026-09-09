@@ -19,7 +19,7 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   UTM capture, and a generic thank-you page that never exposes submitted data in the URL.
 - A working `POST /api/leads` endpoint: validates input server-side, runs the transparent lead
   scoring model, detects likely duplicates, writes a consent record and an audit log entry, and
-  applies a basic in-memory rate limit.
+  applies a durable HMAC-keyed Supabase rate limit in production-pilot mode.
 - Internal dashboard (`/dashboard`): overview widgets, a searchable/filterable leads table, a lead
   detail page (score explanation, business/contact detail, source attribution, Do Not Contact
   flag), and a Market Intelligence view with aggregated, threshold-gated charts.
@@ -31,12 +31,14 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   summaries, and human-review follow-up drafting to compatible AI assistants.
 - Optional Supabase persistence for lead capture, consent, buyers, allocations, and audit logs.
 - Password authentication for the internal dashboard, with profile and organisation checks.
+- Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
+  and a deployment-readiness endpoint at `/api/health`.
 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): the Kanban pipeline, notes/tasks/call logging, CAPTCHA and durable rate
-limiting, the Data Source Registry, hotspot/industry opportunity dashboards, the financial
+build (see `BACKLOG.md`): the Kanban pipeline, notes/tasks/call logging, the Data Source Registry,
+hotspot/industry opportunity dashboards, the financial
 year-end campaign planner, the compliance dashboard, CSV export controls, buyer self-service,
 contracting, and invoicing/payment collection. The full scope is documented in the project's
 build specification and priced in the accompanying quotation.
@@ -87,14 +89,15 @@ To regenerate the synthetic demo leads:
 node scripts/generate-seed.mjs
 ```
 
-Copy `.env.example` to `.env.local` before running in an environment that needs the optional
-variables (notifications, CAPTCHA, etc.) — the prototype runs without any of them populated.
+Copy `.env.example` to `.env.local` before running in an environment that needs Supabase or the
+optional integrations. Demo mode runs without populated secrets.
 
 ### Enable Supabase mode
 
 Follow [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md) to apply the migrations, configure
 server-only secrets, bootstrap the first administrator, and add approved pilot buyers. Demo mode
 remains the default so CI and local product demonstrations never require production credentials.
+Then follow [`docs/PILOT_HARDENING.md`](docs/PILOT_HARDENING.md) before accepting public traffic.
 
 ## Testing
 
@@ -135,6 +138,7 @@ src/
     (site)/          Public marketing pages + consultation form + thank-you page
     (dashboard)/      Internal broker dashboard (overview, leads, lead detail, market intelligence)
     api/leads/        POST endpoint: validation, scoring, consent + audit logging
+    api/health/       Data-store and public-traffic readiness check
   components/
     site/             Public site sections (Hero, categories, FAQ, compliance reassurance...)
     forms/             Multi-step consultation form and its per-step field groups
@@ -165,20 +169,21 @@ e2e/
 
 Set `INSURELEAD_DATA_MODE=supabase` to use the Supabase repositories. In this mode public lead
 capture is written atomically to PostgreSQL, dashboard reads use the signed-in user session and
-RLS, and marketplace reservations re-check consent and allocation limits inside the database.
+RLS, marketplace reservations re-check consent and allocation limits inside the database, and
+public form rate-limit decisions persist across application instances. Configure the included
+Turnstile and notification integrations using `docs/PILOT_HARDENING.md`.
 The remaining production work includes:
 
 1. Expand role-based access control beyond the production-pilot roles and add an administration UI.
 2. Expand the database schema (`lead_assignments`,
    `campaigns`, `data_sources`, `audit_logs`, etc.) with Row Level Security on every sensitive
    table.
-3. A real CAPTCHA provider and a durable rate limiter (e.g. Upstash) in front of `/api/leads` —
-   the route is already structured to slot these in.
-4. Secure internal notifications (email/queue) to the assigned broker on new lead creation.
-5. A buyer portal for accepting/releasing allocated leads, plus contract, billing, dispute, and
+3. Production monitoring, retention/deletion workflows, backup recovery tests, secret rotation,
+   and a legal/compliance review before broader marketing.
+4. A buyer portal for accepting/releasing allocated leads, plus contract, billing, dispute, and
    refund workflows. The pilot deliberately keeps allocation under platform-admin control.
-6. The remaining Phase 2–5 modules listed in `BACKLOG.md`.
-7. Once on Supabase, revisit `playwright.config.ts` — parallel workers become safe again, and CI
+5. The remaining Phase 2–5 modules listed in `BACKLOG.md`.
+6. Once on Supabase, revisit `playwright.config.ts` — parallel workers become safe again, and CI
    can seed/reset a dedicated test database per run instead of writing to `data/leads.json`.
 
 ## Compliance notes

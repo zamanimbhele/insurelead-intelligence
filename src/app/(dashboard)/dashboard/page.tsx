@@ -10,6 +10,7 @@ export const metadata = { title: "Dashboard | InsureLead Intelligence" };
 
 export default async function DashboardPage() {
   const leads = await getDashboardLeads();
+  const demoMode = getDataMode() === "demo";
 
   const newToday = leads.filter((l) => isToday(new Date(l.createdAt))).length;
   const newThisWeek = leads.filter((l) => isThisWeek(new Date(l.createdAt), { weekStartsOn: 1 })).length;
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Lead Management Overview</h1>
         <p className="mt-1 text-sm text-slate-500">
-          {getDataMode() === "demo" ? "Synthetic demo data" : "Live, access-controlled lead data"}
+          {demoMode ? "Synthetic demo data" : "Live, access-controlled lead data"}
         </p>
       </div>
 
@@ -57,7 +58,7 @@ export default async function DashboardPage() {
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Recent Leads</h2>
-        <LeadsTable leads={leads} />
+        <LeadsTable leads={leads} demoMode={demoMode} />
       </div>
     </div>
   );

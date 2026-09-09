@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { consultationFormSchema } from "@/lib/validation/consultationSchema";
-import { captureRuntimeLead, hasRuntimeDuplicate } from "@/lib/runtime-data";
+import { appendRuntimeAuditLog, captureRuntimeLead, hasRuntimeDuplicate } from "@/lib/runtime-data";
 import { scoreLead } from "@/lib/scoring";
 import { CONSENT_WORDING_VERSION } from "@/lib/constants";
 import type { ConsentRecord, Lead } from "@/lib/types";
-
-// Very small in-memory rate limiter, keyed by IP, reset per server process.
-// PRODUCTION NOTE: replace with a durable rate limiter (e.g. Upstash/Redis)
-// in front of this route, plus CAPTCHA verification, before going live.
-const submissionLog = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 5;
-
-function isRateLimited(ip: string) {
-  const now = Date.now();
-  const timestamps = (submissionLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  timestamps.push(now);
-  submissionLog.set(ip, timestamps);
-  return timestamps.length > RATE_LIMIT_MAX;
-}
+import { verifyLeadCaptcha } from "@/lib/security/captcha";
+import { PublicSubmissionUnavailableError } from "@/lib/security/errors";
+import { checkLeadSubmissionRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { notifyLeadCreated } from "@/lib/notifications";
 
 const HIGH_PRIORITY_INDUSTRIES = new Set([
   "Construction and Contracting",
@@ -31,9 +20,12 @@ const HIGH_INTENT_CAMPAIGNS = new Set(["google-ads-fye-review", "webinar-cyber-r
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-    if (isRateLimited(ip)) {
-      return NextResponse.json({ error: "Too many submissions. Please try again shortly." }, { status: 429 });
+    const rateLimit = await checkLeadSubmissionRateLimit(req.headers);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many submissions. Please try again shortly." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      );
     }
 
     const body = await req.json();
@@ -53,6 +45,14 @@ export async function POST(req: NextRequest) {
     // Honeypot check - if the hidden field was filled, silently reject like a success.
     if (data.website_url && data.website_url.length > 0) {
       return NextResponse.json({ ok: true, leadId: null });
+    }
+
+    const captchaPassed = await verifyLeadCaptcha(data.captchaToken, getClientIp(req.headers));
+    if (!captchaPassed) {
+      return NextResponse.json(
+        { error: "Security verification failed. Please try again." },
+        { status: 400 },
+      );
     }
 
     const isDuplicate = await hasRuntimeDuplicate(data.contactEmail, data.businessName);
@@ -121,14 +121,29 @@ export async function POST(req: NextRequest) {
     };
 
     const leadId = await captureRuntimeLead(lead, consent);
-
-    // PRODUCTION NOTE: trigger a secure internal notification (email/queue)
-    // to the assigned broker or lead queue here.
+    const notification = await notifyLeadCreated(leadId, lead);
+    if (notification !== "disabled") {
+      try {
+        await appendRuntimeAuditLog({
+          entity: "lead",
+          entityId: leadId,
+          action: notification === "sent" ? "lead_notification_sent" : "lead_notification_failed",
+          actor: "system",
+          details: notification === "sent"
+            ? "The configured lead-queue webhook accepted the notification."
+            : "The configured lead-queue webhook did not accept the notification.",
+        });
+      } catch {
+        // The lead is already safely captured. Notification audit failure must
+        // not make the public form report a false submission failure.
+      }
+    }
 
     return NextResponse.json({ ok: true, leadId });
   } catch (err) {
     // Sanitised error - never leak stack traces or PII to the client.
-    if (err instanceof Error && err.message.includes("Supabase mode requires")) {
+    if (err instanceof PublicSubmissionUnavailableError
+      || (err instanceof Error && err.message.includes("Supabase mode requires"))) {
       return NextResponse.json({ error: "Lead capture is temporarily unavailable." }, { status: 503 });
     }
     return NextResponse.json({ error: "Something went wrong submitting your enquiry." }, { status: 500 });

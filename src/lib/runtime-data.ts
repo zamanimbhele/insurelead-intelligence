@@ -15,6 +15,8 @@ import { getDataMode } from "./supabase/config.ts";
 import {
   appendSupabaseAuditLog,
   captureSupabaseLead,
+  checkSupabaseHealth,
+  checkSupabaseRateLimitHealth,
   fetchSupabaseAllocations,
   fetchSupabaseBuyers,
   fetchSupabaseConsent,
@@ -38,6 +40,26 @@ function requireAdminClient() {
 
 export async function listRuntimeLeads() {
   return getDataMode() === "demo" ? getLeads() : fetchSupabaseLeads(requireAdminClient());
+}
+
+export async function checkRuntimeDataHealth() {
+  if (getDataMode() === "demo") return true;
+  try {
+    await checkSupabaseHealth(requireAdminClient());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function checkRuntimeRateLimitHealth() {
+  if (getDataMode() === "demo") return false;
+  try {
+    await checkSupabaseRateLimitHealth(requireAdminClient());
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function getRuntimeLead(id: string) {

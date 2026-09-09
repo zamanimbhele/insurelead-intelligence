@@ -63,6 +63,7 @@ export const consentSchema = z.object({
   nonBindingAcknowledged: z.literal(true, {
     error: "Please confirm you understand this is not a binding quote",
   }),
+  captchaToken: z.string().max(2048).optional(),
   website_url: z.string().max(0).optional(),
 });
 
