@@ -4,9 +4,9 @@ test.describe("Public site - home page", () => {
   test("renders hero, primary CTA, and cover categories", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: /Protect Your Business With Insurance/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Request a Consultation" }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Business Insurance Solutions" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Insurance Options for Every Stage/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Find Insurance Options" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cover for Individuals and Businesses" })).toBeVisible();
   });
 
   test("footer exposes privacy notice, terms, and disclaimer", async ({ page }) => {
@@ -19,10 +19,10 @@ test.describe("Public site - home page", () => {
 
   test("primary navigation reaches the consultation form", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Request a Consultation" }).first().click();
+    await page.getByRole("link", { name: "Find Insurance Options" }).first().click();
 
     await expect(page).toHaveURL(/\/consultation$/);
-    await expect(page.getByRole("heading", { name: "Request a Business Insurance Consultation" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Find Insurance Options" })).toBeVisible();
   });
 
   test("legal pages render configurable placeholder text", async ({ page }) => {

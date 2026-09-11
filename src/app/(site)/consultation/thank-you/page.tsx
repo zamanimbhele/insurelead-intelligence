@@ -13,8 +13,8 @@ export default function ThankYouPage() {
         </span>
         <h1 className="mt-6 text-2xl font-bold text-slate-900">Thank you for your enquiry</h1>
         <p className="mt-3 text-slate-600">
-          We&apos;ve received your business insurance consultation request. A licensed broker will review the details and
-          contact you using your preferred channel, typically within 1 business day.
+          We&apos;ve received your insurance enquiry. A participating broker offering the selected product will review
+          the details and contact you using your preferred channel, typically within 1 business day.
         </p>
         <p className="mt-3 text-sm text-slate-500">
           This confirmation does not create insurance cover, a binding quote, or advice. No details from your

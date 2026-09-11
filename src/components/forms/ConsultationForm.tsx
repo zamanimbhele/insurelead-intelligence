@@ -9,7 +9,7 @@ import {
   ConsultationFormInput,
   ConsultationFormValues,
 } from "@/lib/validation/consultationSchema";
-import { StepBusinessDetails } from "./steps/StepBusinessDetails";
+import { StepApplicantDetails } from "./steps/StepApplicantDetails";
 import { StepInsuranceNeeds } from "./steps/StepInsuranceNeeds";
 import { StepContactPerson } from "./steps/StepContactPerson";
 import { StepConsent } from "./steps/StepConsent";
@@ -17,11 +17,12 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { CheckCircle2 } from "lucide-react";
 import { TurnstileWidget } from "./TurnstileWidget";
+import { INSURANCE_PRODUCTS } from "@/lib/constants";
 
 const STEPS = [
-  { key: "business", label: "Business Details", fields: ["businessName", "industry", "businessType", "employeeBand", "turnoverBand", "yearsInOperation", "province", "city", "postalCode", "website"] },
-  { key: "needs", label: "Insurance Needs", fields: ["insuranceProducts", "currentInsuranceStatus", "preferredContactChannel"] },
-  { key: "contact", label: "Contact Person", fields: ["contactFullName", "contactRole", "contactEmail", "contactMobile", "preferredContactMethod"] },
+  { key: "applicant", label: "About You", fields: ["applicantType", "businessName", "industry", "businessType", "employeeBand", "turnoverBand", "yearsInOperation", "province", "city", "postalCode", "website"] },
+  { key: "needs", label: "Insurance Needs", fields: ["insuranceProducts", "businessCoverInterests", "currentInsuranceStatus", "preferredContactChannel"] },
+  { key: "contact", label: "Contact Details", fields: ["contactFullName", "contactRole", "contactEmail", "contactMobile", "preferredContactMethod"] },
   { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "partnerSharingConsent", "maxPartnerRecipients", "accuracyConfirmed", "nonBindingAcknowledged"] },
 ] as const;
 
@@ -49,11 +50,20 @@ export function ConsultationForm({ turnstileSiteKey }: { turnstileSiteKey?: stri
     [searchParams]
   );
 
+  const requestedProduct = useMemo(
+    () => INSURANCE_PRODUCTS.find((product) => product.value === searchParams.get("product")),
+    [searchParams],
+  );
+
   const form = useForm<ConsultationFormInput, unknown, ConsultationFormValues>({
     resolver: zodResolver(consultationFormSchema),
     mode: "onBlur",
     defaultValues: {
-      insuranceProducts: [],
+      applicantType: requestedProduct?.applicantTypes.length === 1
+        ? requestedProduct.applicantTypes[0]
+        : undefined,
+      insuranceProducts: requestedProduct ? [requestedProduct.value] : [],
+      businessCoverInterests: [],
       marketingConsent: false,
       maxPartnerRecipients: "1",
     },
@@ -142,7 +152,7 @@ export function ConsultationForm({ turnstileSiteKey }: { turnstileSiteKey?: stri
       >
         <h2 className="text-lg font-semibold text-slate-900">{STEPS[step].label}</h2>
         <div className="mt-6">
-          {step === 0 && <StepBusinessDetails form={form} />}
+          {step === 0 && <StepApplicantDetails form={form} />}
           {step === 1 && <StepInsuranceNeeds form={form} />}
           {step === 2 && <StepContactPerson form={form} />}
           {step === 3 && <StepConsent form={form} />}
@@ -166,7 +176,10 @@ export function ConsultationForm({ turnstileSiteKey }: { turnstileSiteKey?: stri
           <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0}>
             Back
           </Button>
-          <Button type="submit" disabled={submitting || Boolean(turnstileSiteKey && !captchaToken)}>
+          <Button
+            type="submit"
+            disabled={submitting || Boolean(isLastStep && turnstileSiteKey && !captchaToken)}
+          >
             {isLastStep ? (submitting ? "Submitting..." : "Submit Enquiry") : "Continue"}
           </Button>
         </div>

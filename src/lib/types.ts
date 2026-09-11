@@ -1,7 +1,19 @@
 // Core domain types for the InsureLead Intelligence prototype.
 // In production these mirror the Supabase-generated database types.
 
+export type ApplicantType = "individual" | "business";
+
 export type InsuranceProduct =
+  | "motor_insurance"
+  | "home_contents_insurance"
+  | "life_insurance"
+  | "funeral_cover"
+  | "travel_insurance"
+  | "personal_accident"
+  | "business_insurance"
+  | "general_insurance_review";
+
+export type BusinessCoverInterest =
   | "commercial_motor"
   | "public_liability"
   | "property_and_contents"
@@ -41,13 +53,14 @@ export type LeadScoreBand = "hot" | "warm" | "nurture" | "low_priority";
 
 export interface Lead {
   id: string;
-  businessName: string;
+  applicantType: ApplicantType;
+  businessName?: string;
   tradingName?: string;
-  industry: string;
-  businessType: string;
-  employeeBand: string;
-  turnoverBand: string;
-  yearsInOperation: string;
+  industry?: string;
+  businessType?: string;
+  employeeBand?: string;
+  turnoverBand?: string;
+  yearsInOperation?: string;
   province: string;
   city: string;
   suburb?: string;
@@ -55,6 +68,7 @@ export interface Lead {
   website?: string;
 
   insuranceProducts: InsuranceProduct[];
+  businessCoverInterests?: BusinessCoverInterest[];
   currentInsuranceStatus: CurrentInsuranceStatus;
   renewalMonth?: string;
   financialYearEndMonth?: string;
@@ -63,7 +77,7 @@ export interface Lead {
   preferredContactChannel: ContactChannel;
 
   contactFullName: string;
-  contactRole: string;
+  contactRole?: string;
   contactEmail: string;
   contactMobile: string;
 
@@ -112,6 +126,7 @@ export interface Buyer {
   status: BuyerStatus;
   provinces: string[];
   industries: string[];
+  insuranceProducts: InsuranceProduct[];
   minimumScore: number;
   contactEmail: string;
 }

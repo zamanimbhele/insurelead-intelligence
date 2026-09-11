@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       insuranceProductCount: data.insuranceProducts.length,
       renewalWithinDays: null,
       financialYearEndWithinDays: null,
-      highPriorityIndustry: HIGH_PRIORITY_INDUSTRIES.has(data.industry),
+      highPriorityIndustry: HIGH_PRIORITY_INDUSTRIES.has(data.industry ?? ""),
       employeeBand: data.employeeBand,
       turnoverBand: data.turnoverBand,
       highIntentCampaignSource: HIGH_INTENT_CAMPAIGNS.has(body?.utm?.campaign ?? ""),
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
     });
 
     const lead: Omit<Lead, "id" | "createdAt"> = {
+      applicantType: data.applicantType,
       businessName: data.businessName,
       tradingName: data.tradingName,
       industry: data.industry,
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
       postalCode: data.postalCode,
       website: data.website,
       insuranceProducts: data.insuranceProducts as Lead["insuranceProducts"],
+      businessCoverInterests: data.businessCoverInterests as Lead["businessCoverInterests"],
       currentInsuranceStatus: data.currentInsuranceStatus as Lead["currentInsuranceStatus"],
       renewalMonth: data.renewalMonth,
       financialYearEndMonth: data.financialYearEndMonth,

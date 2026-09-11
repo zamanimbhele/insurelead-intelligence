@@ -14,7 +14,7 @@ export function ComplianceReassurance() {
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-2xl font-bold text-white sm:text-3xl">Privacy and Compliance, By Design</h2>
         <p className="mt-3 text-slate-300">
-          Built to handle business insurance enquiries responsibly, from first contact through to conversion.
+          Built to handle personal and business insurance enquiries responsibly, from first contact through to broker allocation.
         </p>
       </div>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

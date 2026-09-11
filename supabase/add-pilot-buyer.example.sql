@@ -17,11 +17,12 @@ begin
   ) returning id into buyer_id;
 
   insert into public.buyer_preferences (
-    organisation_id, provinces, industries, minimum_score, accepts_shared_leads
+    organisation_id, provinces, industries, insurance_products, minimum_score, accepts_shared_leads
   ) values (
     buyer_id,
     array['Gauteng'],
     array['Construction and Contracting', 'Transport and Logistics'],
+    array['business_insurance'],
     35,
     false
   );

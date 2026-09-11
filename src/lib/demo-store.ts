@@ -7,6 +7,7 @@
 import fs from "fs";
 import path from "path";
 import type { Lead, ConsentRecord, AuditLogEntry } from "./types.ts";
+import { INSURANCE_PRODUCTS } from "./constants.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const LEADS_FILE = path.join(DATA_DIR, "leads.json");
@@ -29,7 +30,22 @@ function writeJson(file: string, data: unknown) {
 }
 
 export function getLeads(): Lead[] {
-  return readJson<Lead[]>(LEADS_FILE, []);
+  return readJson<Lead[]>(LEADS_FILE, []).map(normaliseLead);
+}
+
+const PRODUCT_IDS = new Set(INSURANCE_PRODUCTS.map((product) => product.value));
+
+function normaliseLead(lead: Lead): Lead {
+  if (lead.applicantType) return lead;
+  const storedProducts = lead.insuranceProducts as string[];
+  const alreadyUsesCatalogue = storedProducts.some((product) => PRODUCT_IDS.has(product as Lead["insuranceProducts"][number]));
+  return {
+    ...lead,
+    applicantType: "business",
+    insuranceProducts: alreadyUsesCatalogue ? lead.insuranceProducts : ["business_insurance"],
+    businessCoverInterests: lead.businessCoverInterests
+      ?? (alreadyUsesCatalogue ? [] : storedProducts as Lead["businessCoverInterests"]),
+  };
 }
 
 export function getLeadById(id: string): Lead | undefined {
@@ -53,13 +69,13 @@ export function saveLead(lead: Lead) {
   writeJson(LEADS_FILE, leads);
 }
 
-export function findPossibleDuplicate(email: string, businessName: string): Lead | undefined {
+export function findPossibleDuplicate(email: string, businessName?: string): Lead | undefined {
   const windowMs = 1000 * 60 * 60 * 24; // 24 hours
   const now = Date.now();
   return getLeads().find(
     (l) =>
       l.contactEmail.toLowerCase() === email.toLowerCase() &&
-      l.businessName.toLowerCase() === businessName.toLowerCase() &&
+      (!businessName || l.businessName?.toLowerCase() === businessName.toLowerCase()) &&
       now - new Date(l.createdAt).getTime() < windowMs
   );
 }

@@ -16,10 +16,14 @@ const industries = [
   "Manufacturing", "Hospitality and Tourism", "Transport and Logistics",
   "Healthcare and Wellness", "Agriculture", "Technology and IT Services", "Wholesale and Distribution",
 ];
-const products = [
+const businessCovers = [
   "commercial_motor", "public_liability", "property_and_contents", "contractors_all_risk",
   "professional_indemnity", "business_interruption", "cyber_insurance",
   "stock_equipment_machinery", "employee_related_cover", "general_review_or_comparison",
+];
+const personalProducts = [
+  "motor_insurance", "home_contents_insurance", "life_insurance", "funeral_cover",
+  "travel_insurance", "personal_accident", "general_insurance_review",
 ];
 const statuses = [
   "new", "contact_attempted", "contacted", "qualified", "consultation_booked",
@@ -45,29 +49,37 @@ const total = 64;
 for (let i = 0; i < total; i++) {
   const province = rand(provinces);
   const city = rand(cities[province]);
+  const applicantType = Math.random() < 0.7 ? "business" : "individual";
   const industry = rand(industries);
   const status = rand(statuses);
   const numProducts = randInt(1, 3);
-  const chosenProducts = Array.from(new Set(Array.from({ length: numProducts }, () => rand(products))));
+  const chosenBusinessCovers = Array.from(new Set(Array.from({ length: numProducts }, () => rand(businessCovers))));
+  const chosenProducts = applicantType === "business"
+    ? ["business_insurance"]
+    : Array.from(new Set(Array.from({ length: Math.min(numProducts, 2) }, () => rand(personalProducts))));
   const daysAgo = randInt(0, 120);
   const score = randInt(10, 96);
   const band = score >= 70 ? "hot" : score >= 45 ? "warm" : score >= 20 ? "nurture" : "low_priority";
 
   leads.push({
     id: `lead_${String(i + 1).padStart(4, "0")}`,
-    businessName: `${rand(businessNamePrefixes)} ${rand(businessNameSuffixes)}`,
-    industry,
-    businessType: "Private Company (Pty Ltd)",
-    employeeBand: rand(employeeBands),
-    turnoverBand: rand(turnoverBands),
-    yearsInOperation: rand(["1-3 years", "4-10 years", "11-20 years", "20+ years"]),
+    applicantType,
+    ...(applicantType === "business" ? {
+      businessName: `${rand(businessNamePrefixes)} ${rand(businessNameSuffixes)}`,
+      industry,
+      businessType: "Private Company (Pty Ltd)",
+      employeeBand: rand(employeeBands),
+      turnoverBand: rand(turnoverBands),
+      yearsInOperation: rand(["1-3 years", "4-10 years", "11-20 years", "20+ years"]),
+      businessCoverInterests: chosenBusinessCovers,
+    } : {}),
     province,
     city,
     insuranceProducts: chosenProducts,
     currentInsuranceStatus: rand(["currently_insured", "not_currently_insured", "reviewing_existing_cover", "starting_new_business", "unsure"]),
     preferredContactChannel: rand(["phone", "email", "whatsapp"]),
     contactFullName: "Demo Contact",
-    contactRole: rand(["Owner", "Financial Manager", "Operations Manager", "Director"]),
+    ...(applicantType === "business" ? { contactRole: rand(["Owner", "Financial Manager", "Operations Manager", "Director"]) } : {}),
     contactEmail: `demo.contact+${i + 1}@example-synthetic.co.za`,
     contactMobile: `08${randInt(1, 9)}${randInt(1000000, 9999999)}`,
     status,

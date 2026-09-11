@@ -1,14 +1,41 @@
 import { z } from "zod";
 import type { UseFormReturn } from "react-hook-form";
 
-export const businessDetailsSchema = z.object({
-  businessName: z.string().min(2, "Business name is required"),
+const insuranceProductSchema = z.enum([
+  "motor_insurance",
+  "home_contents_insurance",
+  "life_insurance",
+  "funeral_cover",
+  "travel_insurance",
+  "personal_accident",
+  "business_insurance",
+  "general_insurance_review",
+]);
+
+const businessCoverSchema = z.enum([
+  "commercial_motor",
+  "public_liability",
+  "property_and_contents",
+  "contractors_all_risk",
+  "professional_indemnity",
+  "business_interruption",
+  "cyber_insurance",
+  "stock_equipment_machinery",
+  "employee_related_cover",
+  "general_review_or_comparison",
+]);
+
+export const applicantDetailsSchema = z.object({
+  applicantType: z.enum(["individual", "business"], {
+    error: "Please choose whether this enquiry is for you or a business",
+  }),
+  businessName: z.string().optional(),
   tradingName: z.string().optional(),
-  industry: z.string().min(1, "Please select an industry"),
-  businessType: z.string().min(1, "Please select a business type"),
-  employeeBand: z.string().min(1, "Please select a company size"),
-  turnoverBand: z.string().min(1, "Please select an annual turnover range"),
-  yearsInOperation: z.string().min(1, "Please select years in operation"),
+  industry: z.string().optional(),
+  businessType: z.string().optional(),
+  employeeBand: z.string().optional(),
+  turnoverBand: z.string().optional(),
+  yearsInOperation: z.string().optional(),
   province: z.string().min(1, "Please select a province"),
   city: z.string().min(1, "City or town is required"),
   suburb: z.string().optional(),
@@ -23,7 +50,8 @@ export const businessDetailsSchema = z.object({
 });
 
 export const insuranceNeedsSchema = z.object({
-  insuranceProducts: z.array(z.string()).min(1, "Select at least one insurance product"),
+  insuranceProducts: z.array(insuranceProductSchema).min(1, "Select at least one insurance product"),
+  businessCoverInterests: z.array(businessCoverSchema).optional().default([]),
   currentInsuranceStatus: z.string().min(1, "Please select your current insurance status"),
   renewalMonth: z.string().optional(),
   financialYearEndMonth: z.string().optional(),
@@ -36,8 +64,8 @@ export const insuranceNeedsSchema = z.object({
 
 export const contactPersonSchema = z.object({
   contactFullName: z.string().min(2, "Full name is required"),
-  contactRole: z.string().min(2, "Role or job title is required"),
-  contactEmail: z.string().email("Enter a valid work email address"),
+  contactRole: z.string().optional(),
+  contactEmail: z.string().email("Enter a valid email address"),
   contactMobile: z
     .string()
     .min(10, "Enter a valid mobile number")
@@ -67,10 +95,47 @@ export const consentSchema = z.object({
   website_url: z.string().max(0).optional(),
 });
 
-export const consultationFormSchema = businessDetailsSchema
+export const consultationFormSchema = applicantDetailsSchema
   .merge(insuranceNeedsSchema)
   .merge(contactPersonSchema)
-  .merge(consentSchema);
+  .merge(consentSchema)
+  .superRefine((data, ctx) => {
+    const incompatibleProduct = data.insuranceProducts.find((product) => {
+      if (product === "general_insurance_review") return false;
+      return data.applicantType === "business"
+        ? product !== "business_insurance"
+        : product === "business_insurance";
+    });
+    if (incompatibleProduct) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["insuranceProducts"],
+        message: "One or more selected products do not match the applicant type",
+      });
+    }
+    if (data.applicantType === "individual" && data.businessCoverInterests.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["businessCoverInterests"],
+        message: "Business cover areas can only be selected for a business enquiry",
+      });
+    }
+    if (data.applicantType !== "business") return;
+    const requiredBusinessFields: [keyof typeof data, string][] = [
+      ["businessName", "Business name is required"],
+      ["industry", "Please select an industry"],
+      ["businessType", "Please select a business type"],
+      ["employeeBand", "Please select a company size"],
+      ["turnoverBand", "Please select an annual turnover range"],
+      ["yearsInOperation", "Please select years in operation"],
+      ["contactRole", "Role or job title is required for a business enquiry"],
+    ];
+    for (const [field, message] of requiredBusinessFields) {
+      if (!String(data[field] ?? "").trim()) {
+        ctx.addIssue({ code: "custom", path: [field], message });
+      }
+    }
+  });
 
 export type ConsultationFormInput = z.input<typeof consultationFormSchema>;
 export type ConsultationFormValues = z.output<typeof consultationFormSchema>;
@@ -79,7 +144,7 @@ export type ConsultationFormHandle = UseFormReturn<
   unknown,
   ConsultationFormValues
 >;
-export type BusinessDetailsValues = z.infer<typeof businessDetailsSchema>;
+export type ApplicantDetailsValues = z.infer<typeof applicantDetailsSchema>;
 export type InsuranceNeedsValues = z.infer<typeof insuranceNeedsSchema>;
 export type ContactPersonValues = z.infer<typeof contactPersonSchema>;
 export type ConsentValues = z.infer<typeof consentSchema>;

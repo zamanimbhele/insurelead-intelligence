@@ -52,11 +52,13 @@ export async function notifyLeadCreated(leadId: string, lead: Omit<Lead, "id" | 
       body: JSON.stringify({
         event: "lead.created",
         leadId,
+        applicantType: lead.applicantType,
         businessName: lead.businessName,
         industry: lead.industry,
         province: lead.province,
         city: lead.city,
         insuranceProducts: lead.insuranceProducts,
+        businessCoverInterests: lead.businessCoverInterests,
         preferredContactChannel: lead.preferredContactChannel,
         score: lead.score,
         scoreBand: lead.scoreBand,

@@ -1,6 +1,7 @@
 import { getDashboardLeads } from "@/lib/dashboard-data";
 import { BarChartCard } from "@/components/dashboard/BarChartCard";
 import { MapPin, TrendingUp, Info } from "lucide-react";
+import { INSURANCE_PRODUCTS } from "@/lib/constants";
 
 export const metadata = { title: "Market Intelligence | InsureLead Intelligence" };
 
@@ -27,6 +28,11 @@ export default async function MarketIntelligencePage() {
   const byProvince = countBy(leads, "province").filter((d) => d.count >= MIN_AGGREGATION_THRESHOLD).slice(0, 8);
   const byCampaign = countBy(leads, "campaignSource").slice(0, 6);
 
+  const byProduct = INSURANCE_PRODUCTS.map((product) => ({
+    name: product.label,
+    count: leads.filter((lead) => lead.insuranceProducts.includes(product.value)).length,
+  })).filter((item) => item.count > 0).sort((a, b) => b.count - a.count);
+
   const fyeMonths = countBy(leads, "financialYearEndMonth").sort((a, b) => b.count - a.count).slice(0, 4);
 
   return (
@@ -34,7 +40,7 @@ export default async function MarketIntelligencePage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Market Intelligence</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-500">
-          Aggregated demand trends from internally captured leads only. No individual business is identifiable in
+          Aggregated demand trends from internally captured leads only. No individual applicant or business is identifiable in
           this view, and any breakdown below the minimum data threshold ({MIN_AGGREGATION_THRESHOLD} leads) is
           suppressed.
         </p>
@@ -51,6 +57,7 @@ export default async function MarketIntelligencePage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <BarChartCard title="Lead Volume by Industry" data={byIndustry} />
         <BarChartCard title="Lead Volume by Province" data={byProvince} />
+        <BarChartCard title="Lead Volume by Insurance Product" data={byProduct} />
         <BarChartCard title="Lead Volume by Campaign Source" data={byCampaign} />
         <BarChartCard title="Financial Year-End Distribution" data={fyeMonths} />
       </div>

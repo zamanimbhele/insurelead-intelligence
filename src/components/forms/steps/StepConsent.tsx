@@ -24,8 +24,8 @@ export function StepConsent({ form }: { form: ConsultationFormHandle }) {
       <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("contactConsent")} />
         <span>
-          I am requesting contact regarding <strong>business insurance</strong> and consent to be contacted about
-          this enquiry via my selected contact channel (phone, email, or WhatsApp).
+          I am requesting contact about the insurance products selected and consent to be contacted about this
+          enquiry via my selected contact channel (phone, email, or WhatsApp).
         </span>
       </label>
       {errors.contactConsent && <p className="text-xs text-red-600">{errors.contactConsent.message}</p>}
@@ -34,7 +34,7 @@ export function StepConsent({ form }: { form: ConsultationFormHandle }) {
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("partnerSharingConsent")} />
         <span>
           I consent to InsureLead sharing this enquiry and my contact details with the approved insurance
-          partner limit I select below, so they may contact me about this business-insurance request.
+          partner limit I select below, so they may contact me about the selected insurance products.
         </span>
       </label>
       {errors.partnerSharingConsent && <p className="text-xs text-red-600">{errors.partnerSharingConsent.message}</p>}
@@ -50,7 +50,8 @@ export function StepConsent({ form }: { form: ConsultationFormHandle }) {
       <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("marketingConsent")} />
         <span>
-          <strong>Optional:</strong> I would also like to receive future business insurance marketing communications.
+          <strong>Optional:</strong> I would also like to receive future insurance marketing communications relevant
+          to the interests I selected.
           I understand I can unsubscribe at any time.
         </span>
       </label>

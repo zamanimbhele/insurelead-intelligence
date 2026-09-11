@@ -1,28 +1,66 @@
 import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import { Field, inputClass } from "../FormField";
-import { INSURANCE_PRODUCTS, CURRENT_INSURANCE_STATUS, MONTHS } from "@/lib/constants";
+import { BUSINESS_COVER_OPTIONS, INSURANCE_PRODUCTS, CURRENT_INSURANCE_STATUS, MONTHS } from "@/lib/constants";
+import type { BusinessCoverInterest, InsuranceProduct } from "@/lib/types";
 
 export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
   const { register, watch, setValue, formState: { errors } } = form;
   const selected = watch("insuranceProducts") ?? [];
+  const selectedBusinessCovers = watch("businessCoverInterests") ?? [];
+  const applicantType = watch("applicantType");
+  const availableProducts = INSURANCE_PRODUCTS.filter(
+    (product) => !applicantType || product.applicantTypes.includes(applicantType),
+  );
 
-  function toggleProduct(value: string) {
+  function toggleProduct(value: InsuranceProduct) {
     const next = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
     setValue("insuranceProducts", next, { shouldValidate: true });
+    if (value === "business_insurance" && !next.includes(value)) {
+      setValue("businessCoverInterests", []);
+    }
+  }
+
+  function toggleBusinessCover(value: BusinessCoverInterest) {
+    const next = selectedBusinessCovers.includes(value)
+      ? selectedBusinessCovers.filter((item) => item !== value)
+      : [...selectedBusinessCovers, value];
+    setValue("businessCoverInterests", next);
   }
 
   return (
     <div className="flex flex-col gap-6">
       <Field label="Insurance products of interest" htmlFor="insuranceProducts" error={errors.insuranceProducts?.message as string}>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {INSURANCE_PRODUCTS.map((p) => (
+          {availableProducts.map((p) => (
             <label key={p.value} className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50">
               <input type="checkbox" checked={selected.includes(p.value)} onChange={() => toggleProduct(p.value)} className="h-4 w-4 rounded border-slate-300 text-primary-600" />
-              {p.label}
+              <span>
+                <span className="block font-medium text-slate-800">{p.label}</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{p.description}</span>
+              </span>
             </label>
           ))}
         </div>
       </Field>
+
+      {selected.includes("business_insurance") && (
+        <Field label="Business cover areas" htmlFor="businessCoverInterests" optional>
+          <p className="mb-3 text-xs text-slate-500">Select any known requirements, or leave this blank for a general review.</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {BUSINESS_COVER_OPTIONS.map((cover) => (
+              <label key={cover.value} className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={selectedBusinessCovers.includes(cover.value)}
+                  onChange={() => toggleBusinessCover(cover.value)}
+                  className="h-4 w-4 rounded border-slate-300 text-primary-600"
+                />
+                {cover.label}
+              </label>
+            ))}
+          </div>
+        </Field>
+      )}
 
       <Field label="Current insurance status" htmlFor="currentInsuranceStatus" error={errors.currentInsuranceStatus?.message}>
         <select id="currentInsuranceStatus" className={inputClass} {...register("currentInsuranceStatus")} defaultValue="">
@@ -38,12 +76,14 @@ export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
             {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </Field>
-        <Field label="Business financial year-end month" htmlFor="financialYearEndMonth" optional>
-          <select id="financialYearEndMonth" className={inputClass} {...register("financialYearEndMonth")} defaultValue="">
-            <option value="">Not sure / not applicable</option>
-            {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </Field>
+        {applicantType === "business" && (
+          <Field label="Business financial year-end month" htmlFor="financialYearEndMonth" optional>
+            <select id="financialYearEndMonth" className={inputClass} {...register("financialYearEndMonth")} defaultValue="">
+              <option value="">Not sure / not applicable</option>
+              {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </Field>
+        )}
       </div>
 
       <Field label="Main insurance concern" htmlFor="mainConcern" optional error={errors.mainConcern?.message}>

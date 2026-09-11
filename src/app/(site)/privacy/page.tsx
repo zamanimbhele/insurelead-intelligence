@@ -11,16 +11,16 @@ export default function PrivacyPage() {
     <Section>
       <SectionHeading eyebrow="Legal" title="Privacy Notice" />
       <div className="prose mt-8 max-w-3xl space-y-4 text-sm text-slate-600">
-        <p>Version: v2.0 - Last updated 3 September 2026 (placeholder - to be reviewed by Compliance Admin).</p>
+        <p>Version: v3.0 - Last updated 9 September 2026 (placeholder - to be reviewed by Compliance Admin).</p>
         <p>
           This Privacy Notice explains how InsureLead Intelligence (the &quot;Platform&quot;) collects, uses, and protects
-          information you submit when requesting a business insurance consultation.
+          information you submit when making a personal or business insurance enquiry.
         </p>
         <h3 className="font-semibold text-slate-900">What we collect</h3>
         <p>
-          We collect business details (such as business name, industry, and location), your insurance needs, and
-          contact person details (name, role, email, mobile number) that you provide in the consultation form. We do
-          not collect ID numbers, banking details, payment card details, or medical information through this form.
+          We collect applicant type, location, selected insurance products, contact details, and, for business
+          enquiries, relevant business details. We do not collect ID numbers, banking details, payment card details,
+          or medical information through this form.
         </p>
         <h3 className="font-semibold text-slate-900">How we use your information</h3>
         <p>

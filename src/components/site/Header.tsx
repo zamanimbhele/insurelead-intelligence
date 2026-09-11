@@ -6,8 +6,9 @@ import { Menu, X, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/solutions", label: "Business Insurance Solutions" },
-  { href: "/industries", label: "Industry Solutions" },
+  { href: "/solutions", label: "Insurance Products" },
+  { href: "/industries", label: "For Businesses" },
+  { href: "/about#brokers", label: "For Brokers" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQs" },
   { href: "/contact", label: "Contact" },
@@ -44,7 +45,7 @@ export function Header() {
             href="/consultation"
             className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
           >
-            Request a Consultation
+            Find Insurance Options
           </Link>
         </div>
 
@@ -64,7 +65,7 @@ export function Header() {
             Broker Login
           </Link>
           <Link href="/consultation" className="mt-2 rounded-md bg-primary-600 px-4 py-2 text-center text-sm font-semibold text-white">
-            Request a Consultation
+            Find Insurance Options
           </Link>
         </nav>
       </div>

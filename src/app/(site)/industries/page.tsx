@@ -16,7 +16,7 @@ export default function IndustriesPage() {
       </Section>
       <IndustryCategories />
       <Section className="text-center">
-        <LinkButton href="/consultation">Request a Business Insurance Consultation</LinkButton>
+        <LinkButton href="/consultation?product=business_insurance">Explore Business Insurance Options</LinkButton>
       </Section>
     </>
   );

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InsureLead Intelligence | Business Insurance Consultations",
+  title: "InsureLead Intelligence | Insurance Lead & Broker Platform",
   description:
-    "Request a business insurance consultation. Configurable, compliant lead intelligence platform for South African business insurance brokers.",
+    "Explore personal and business insurance products through a consent-aware, multi-broker lead intelligence platform.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

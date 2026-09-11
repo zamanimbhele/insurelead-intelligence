@@ -1,9 +1,10 @@
 import { getDashboardLead } from "@/lib/dashboard-data";
-import { LEAD_STATUS_LABELS, INSURANCE_PRODUCTS } from "@/lib/constants";
+import { LEAD_STATUS_LABELS } from "@/lib/constants";
+import { getBusinessCoverLabels, getInsuranceProductLabels, getLeadDisplayName } from "@/lib/lead-utils";
 import { ScoreBadge, StatusBadge } from "@/components/dashboard/ScoreBadge";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, MapPin, Building2, ShieldOff } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, ShieldOff, User } from "lucide-react";
 import { format } from "date-fns";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -11,9 +12,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const lead = await getDashboardLead(id);
   if (!lead) return notFound();
 
-  const productLabels = lead.insuranceProducts.map(
-    (p) => INSURANCE_PRODUCTS.find((ip) => ip.value === p)?.label ?? p
-  );
+  const productLabels = getInsuranceProductLabels(lead);
+  const businessCoverLabels = getBusinessCoverLabels(lead);
+  const ApplicantIcon = lead.applicantType === "business" ? Building2 : User;
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,9 +24,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
       <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-6 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{lead.businessName}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{getLeadDisplayName(lead)}</h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
-            <Building2 className="h-4 w-4" /> {lead.industry} · {lead.businessType}
+            <ApplicantIcon className="h-4 w-4" /> {lead.applicantType === "business"
+              ? `${lead.industry ?? "Industry not provided"} · ${lead.businessType ?? "Business type not provided"}`
+              : "Individual enquiry"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -59,21 +62,31 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 <span key={p} className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">{p}</span>
               ))}
             </div>
+            {businessCoverLabels.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Business cover areas</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {businessCoverLabels.map((cover) => (
+                    <span key={cover} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{cover}</span>
+                  ))}
+                </div>
+              </div>
+            )}
             <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
               <div><dt className="text-slate-400">Current status</dt><dd className="text-slate-700">{lead.currentInsuranceStatus.replace(/_/g, " ")}</dd></div>
-              <div><dt className="text-slate-400">Financial year-end</dt><dd className="text-slate-700">{lead.financialYearEndMonth ?? "Not provided"}</dd></div>
+              {lead.applicantType === "business" && <div><dt className="text-slate-400">Financial year-end</dt><dd className="text-slate-700">{lead.financialYearEndMonth ?? "Not provided"}</dd></div>}
             </dl>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
+          {lead.applicantType === "business" && <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-sm font-semibold text-slate-900">Business Details</h2>
             <dl className="mt-3 grid grid-cols-2 gap-4 text-sm">
-              <div><dt className="text-slate-400">Employees</dt><dd className="text-slate-700">{lead.employeeBand}</dd></div>
-              <div><dt className="text-slate-400">Annual turnover</dt><dd className="text-slate-700">{lead.turnoverBand}</dd></div>
-              <div><dt className="text-slate-400">Years in operation</dt><dd className="text-slate-700">{lead.yearsInOperation}</dd></div>
+              <div><dt className="text-slate-400">Employees</dt><dd className="text-slate-700">{lead.employeeBand ?? "Not provided"}</dd></div>
+              <div><dt className="text-slate-400">Annual turnover</dt><dd className="text-slate-700">{lead.turnoverBand ?? "Not provided"}</dd></div>
+              <div><dt className="text-slate-400">Years in operation</dt><dd className="text-slate-700">{lead.yearsInOperation ?? "Not provided"}</dd></div>
               <div><dt className="text-slate-400">Location</dt><dd className="flex items-center gap-1 text-slate-700"><MapPin className="h-3.5 w-3.5" />{lead.city}, {lead.province}</dd></div>
             </dl>
-          </section>
+          </section>}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-sm font-semibold text-slate-900">Activity Timeline</h2>
@@ -97,7 +110,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-sm font-semibold text-slate-900">Contact Person</h2>
             <p className="mt-2 text-sm font-medium text-slate-800">{lead.contactFullName}</p>
-            <p className="text-xs text-slate-500">{lead.contactRole}</p>
+            {lead.contactRole && <p className="text-xs text-slate-500">{lead.contactRole}</p>}
             <div className="mt-4 flex flex-col gap-2 text-sm">
               <span className="flex items-center gap-2 text-slate-600"><Mail className="h-4 w-4" /> {lead.contactEmail}</span>
               <span className="flex items-center gap-2 text-slate-600"><Phone className="h-4 w-4" /> {lead.contactMobile}</span>
