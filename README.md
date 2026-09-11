@@ -32,14 +32,16 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   prioritisation, pipeline updates, summaries, and human-review follow-up drafting.
 - Optional Supabase persistence for product catalogue, lead capture, consent, product-aware buyer
   matching, allocations, and audit logs.
-- Password authentication for the internal dashboard, with profile and organisation checks.
+- Multi-broker tenancy with organisation-scoped broker users, role-aware navigation, capacity and
+  SLA-aware matching, broker-specific sending identities, and audited allocation responses.
+- Password authentication for the internal dashboard, with profile, membership, and organisation checks.
 - Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
   and a deployment-readiness endpoint at `/api/health`.
 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): the Kanban pipeline, notes/tasks/call logging, the Data Source Registry,
+build (see `BACKLOG.md`): the Kanban pipeline, notes/tasks/call logging, broker invitation UI, the Data Source Registry,
 hotspot/industry opportunity dashboards, the financial
 year-end campaign planner, the compliance dashboard, CSV export controls, buyer self-service,
 contracting, and invoicing/payment collection. The full scope is documented in the project's
@@ -176,14 +178,14 @@ public form rate-limit decisions persist across application instances. Configure
 Turnstile and notification integrations using `docs/PILOT_HARDENING.md`.
 The remaining production work includes:
 
-1. Expand role-based access control beyond the production-pilot roles and add an administration UI.
+1. Add administration workflows for broker invitations, role changes, appetite approval, and sending-domain verification.
 2. Expand the database schema (`lead_assignments`,
    `campaigns`, `data_sources`, `audit_logs`, etc.) with Row Level Security on every sensitive
    table.
 3. Production monitoring, retention/deletion workflows, backup recovery tests, secret rotation,
    and a legal/compliance review before broader marketing.
-4. A buyer portal for accepting/releasing allocated leads, plus contract, billing, dispute, and
-   refund workflows. The pilot deliberately keeps allocation under platform-admin control.
+4. Contract, billing, dispute, refund, and full buyer self-service workflows. Broker operators can
+   accept or release reservations, while allocation creation remains under platform-admin control.
 5. The remaining Phase 2–5 modules listed in `BACKLOG.md`.
 6. Once on Supabase, revisit `playwright.config.ts` — parallel workers become safe again, and CI
    can seed/reset a dedicated test database per run instead of writing to `data/leads.json`.

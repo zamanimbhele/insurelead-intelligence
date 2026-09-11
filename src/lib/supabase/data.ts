@@ -1,5 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Buyer, ConsentRecord, Lead, LeadAllocation } from "../types.ts";
+import type {
+  BrokerMember,
+  BrokerSendingIdentity,
+  Buyer,
+  BuyerMatchDecision,
+  ConsentRecord,
+  Lead,
+  LeadAllocation,
+} from "../types.ts";
 import { INSURANCE_PRODUCTS } from "../constants.ts";
 
 type LeadRow = {
@@ -58,17 +66,26 @@ type ConsentRow = {
 type OrganisationRow = {
   id: string;
   name: string;
+  slug: string;
   organisation_type: "broker" | "insurer";
   status: Buyer["status"];
+  onboarding_status: Buyer["onboardingStatus"];
+  fsp_number: string | null;
+  website_url: string | null;
+  support_phone: string | null;
   contact_email: string;
 };
 
 type PreferenceRow = {
   organisation_id: string;
   provinces: string[];
+  cities: string[];
   industries: string[];
   insurance_products: string[];
   minimum_score: number;
+  daily_lead_capacity: number;
+  contact_sla_hours: number;
+  accepts_shared_leads: boolean;
 };
 
 type AllocationRow = {
@@ -80,6 +97,30 @@ type AllocationRow = {
   exclusive: boolean;
   allocated_at: string;
   accepted_at: string | null;
+  responded_at: string | null;
+};
+
+type BrokerMemberRow = {
+  id: string;
+  organisation_id: string;
+  display_name: string | null;
+  job_title: string | null;
+  role: BrokerMember["role"];
+  member_status: BrokerMember["status"];
+  created_at: string;
+};
+
+type SendingIdentityRow = {
+  id: string;
+  organisation_id: string;
+  domain: string;
+  from_name: string;
+  from_email: string;
+  reply_to_email: string | null;
+  provider: "resend";
+  status: BrokerSendingIdentity["status"];
+  is_default: boolean;
+  created_at: string;
 };
 
 function fail(operation: string, error: { message: string } | null) {
@@ -162,6 +203,34 @@ function mapAllocation(row: AllocationRow): LeadAllocation {
     exclusive: row.exclusive,
     allocatedAt: row.allocated_at,
     acceptedAt: optional(row.accepted_at),
+    respondedAt: optional(row.responded_at),
+  };
+}
+
+function mapBrokerMember(row: BrokerMemberRow): BrokerMember {
+  return {
+    id: row.id,
+    organisationId: row.organisation_id,
+    displayName: optional(row.display_name),
+    jobTitle: optional(row.job_title),
+    role: row.role,
+    status: row.member_status,
+    createdAt: row.created_at,
+  };
+}
+
+function mapSendingIdentity(row: SendingIdentityRow): BrokerSendingIdentity {
+  return {
+    id: row.id,
+    organisationId: row.organisation_id,
+    domain: row.domain,
+    fromName: row.from_name,
+    fromEmail: row.from_email,
+    replyToEmail: optional(row.reply_to_email),
+    provider: row.provider,
+    status: row.status,
+    isDefault: row.is_default,
+    createdAt: row.created_at,
   };
 }
 
@@ -222,9 +291,11 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
   const [organisationResult, preferenceResult] = await Promise.all([
     client
       .from("organisations")
-      .select("id, name, organisation_type, status, contact_email")
+      .select("id, name, slug, organisation_type, status, onboarding_status, fsp_number, website_url, support_phone, contact_email")
       .in("organisation_type", ["broker", "insurer"]),
-    client.from("buyer_preferences").select("organisation_id, provinces, industries, insurance_products, minimum_score"),
+    client.from("buyer_preferences").select(
+      "organisation_id, provinces, cities, industries, insurance_products, minimum_score, daily_lead_capacity, contact_sla_hours, accepts_shared_leads",
+    ),
   ]);
   fail("Unable to load buyer organisations", organisationResult.error);
   fail("Unable to load buyer preferences", preferenceResult.error);
@@ -238,12 +309,21 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
     return {
       id: organisation.id,
       organisationName: organisation.name,
+      slug: organisation.slug,
       buyerType: organisation.organisation_type,
       status: organisation.status,
+      onboardingStatus: organisation.onboarding_status,
+      fspNumber: optional(organisation.fsp_number),
+      websiteUrl: optional(organisation.website_url),
+      supportPhone: optional(organisation.support_phone),
       provinces: preference?.provinces ?? [],
+      cities: preference?.cities ?? [],
       industries: preference?.industries ?? [],
       insuranceProducts: (preference?.insurance_products ?? []) as Buyer["insuranceProducts"],
       minimumScore: preference?.minimum_score ?? 0,
+      dailyLeadCapacity: preference?.daily_lead_capacity ?? 25,
+      contactSlaHours: preference?.contact_sla_hours ?? 24,
+      acceptsSharedLeads: preference?.accepts_shared_leads ?? false,
       contactEmail: organisation.contact_email,
     };
   });
@@ -256,6 +336,72 @@ export async function fetchSupabaseAllocations(client: SupabaseClient): Promise<
     .order("allocated_at", { ascending: false });
   fail("Unable to load allocations", error);
   return ((data ?? []) as AllocationRow[]).map(mapAllocation);
+}
+
+export async function fetchSupabaseBrokerMembers(
+  client: SupabaseClient,
+  organisationId: string,
+): Promise<BrokerMember[]> {
+  const { data, error } = await client
+    .from("profiles")
+    .select("id, organisation_id, display_name, job_title, role, member_status, created_at")
+    .eq("organisation_id", organisationId)
+    .order("created_at", { ascending: true });
+  fail("Unable to load broker members", error);
+  return ((data ?? []) as BrokerMemberRow[]).map(mapBrokerMember);
+}
+
+export async function fetchSupabaseSendingIdentities(
+  client: SupabaseClient,
+  organisationId?: string,
+): Promise<BrokerSendingIdentity[]> {
+  let query = client
+    .from("broker_sending_identities")
+    .select("id, organisation_id, domain, from_name, from_email, reply_to_email, provider, status, is_default, created_at")
+    .order("created_at", { ascending: true });
+  if (organisationId) query = query.eq("organisation_id", organisationId);
+  const { data, error } = await query;
+  fail("Unable to load broker sending identities", error);
+  return ((data ?? []) as SendingIdentityRow[]).map(mapSendingIdentity);
+}
+
+export async function evaluateSupabaseLeadBuyerMatch(
+  client: SupabaseClient,
+  input: { leadId: string; buyerId: string; source: string },
+): Promise<BuyerMatchDecision> {
+  const { data, error } = await client.rpc("evaluate_lead_buyer_match", {
+    p_lead_id: input.leadId,
+    p_buyer_id: input.buyerId,
+    p_source: input.source,
+  });
+  fail("Unable to evaluate buyer match", error);
+  const decision = data as {
+    leadId?: string;
+    buyerId?: string;
+    matched?: boolean;
+    reasons?: string[];
+  } | null;
+  if (!decision || typeof decision.matched !== "boolean") {
+    throw new Error("Unable to evaluate buyer match: database did not return a decision");
+  }
+  return {
+    leadId: decision.leadId ?? input.leadId,
+    buyerId: decision.buyerId ?? input.buyerId,
+    matched: decision.matched,
+    reasons: decision.reasons ?? [],
+  };
+}
+
+export async function respondToSupabaseAllocation(
+  client: SupabaseClient,
+  input: { allocationId: string; decision: "accepted" | "released" },
+) {
+  const { data, error } = await client.rpc("respond_to_lead_allocation", {
+    p_allocation_id: input.allocationId,
+    p_decision: input.decision,
+  });
+  fail("Unable to respond to allocation", error);
+  return data as { allocationId: string; leadId: string; status: "accepted" | "released" };
 }
 
 export async function hasRecentSupabaseDuplicate(

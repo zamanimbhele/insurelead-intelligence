@@ -1,0 +1,26 @@
+[
+  {
+    "id": "identity_gauteng_commercial",
+    "organisationId": "buyer_gauteng_commercial",
+    "domain": "broker-one.example-synthetic.co.za",
+    "fromName": "Gauteng Commercial Broker Pilot",
+    "fromEmail": "insurance@broker-one.example-synthetic.co.za",
+    "replyToEmail": "pilot-broker@example-synthetic.co.za",
+    "provider": "resend",
+    "status": "pending",
+    "isDefault": true,
+    "createdAt": "2026-09-11T08:00:00.000Z"
+  },
+  {
+    "id": "identity_personal_lines",
+    "organisationId": "buyer_personal_lines",
+    "domain": "personal-lines.example-synthetic.co.za",
+    "fromName": "Personal Lines Broker Pilot",
+    "fromEmail": "insurance@personal-lines.example-synthetic.co.za",
+    "replyToEmail": "personal-lines@example-synthetic.co.za",
+    "provider": "resend",
+    "status": "verified",
+    "isDefault": true,
+    "createdAt": "2026-09-11T08:00:00.000Z"
+  }
+]

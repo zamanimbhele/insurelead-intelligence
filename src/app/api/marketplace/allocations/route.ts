@@ -4,7 +4,7 @@ import { allocateLead } from "@/lib/marketplace-store";
 import { getDashboardIdentity, isPlatformAdmin } from "@/lib/auth";
 import { getDataMode } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { reserveSupabaseLead } from "@/lib/supabase/data";
+import { evaluateSupabaseLeadBuyerMatch, reserveSupabaseLead } from "@/lib/supabase/data";
 
 const schema = z.object({ leadId: z.string().min(1), buyerId: z.string().min(1), priceCents: z.number().int().min(0), exclusive: z.boolean().default(true) });
 
@@ -17,6 +17,7 @@ const safeAllocationErrors = [
   "Buyer does not accept shared leads",
   "Consent recipient limit reached",
   "Lead already has an incompatible active allocation",
+  "Buyer daily lead capacity has been reached",
 ];
 
 function allocationErrorMessage(error: unknown) {
@@ -38,6 +39,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     if (!supabase) return NextResponse.json({ error: "Marketplace is not configured" }, { status: 503 });
+    const decision = await evaluateSupabaseLeadBuyerMatch(supabase, {
+      leadId: parsed.data.leadId,
+      buyerId: parsed.data.buyerId,
+      source: "dashboard_reservation",
+    });
+    if (!decision.matched) {
+      return NextResponse.json(
+        { error: decision.reasons[0] ?? "Lead does not match the buyer appetite", decision },
+        { status: 409 },
+      );
+    }
     const allocation = await reserveSupabaseLead(supabase, parsed.data);
     return NextResponse.json({ ok: true, allocation }, { status: 201 });
   }

@@ -10,6 +10,9 @@ Priced in the accompanying quotation.
 - Multi-product foundation completed: product catalogue, individual/business intake, preservation
   of existing commercial cover selections, product-aware buyer appetite, product filtering, and
   read-only MCP product discovery.
+- Multi-broker tenancy completed: organisation-scoped broker roles, allocated-lead RLS, broker
+  profile/directory views, territory and capacity controls, sending identities, auditable matching,
+  and controlled allocation acceptance/release.
 - Expand the Supabase schema for the full build: users, user_roles, broker_profiles,
   teams, leads, lead_contacts, lead_insurance_needs, lead_consents, lead_assignments,
   lead_activities, lead_notes, lead_tasks, lead_scores, lead_sources, campaigns,
@@ -17,8 +20,8 @@ Priced in the accompanying quotation.
   hotspot_snapshots, industry_snapshots, financial_year_calendars, opt_out_requests,
   data_subject_requests, audit_logs, application_settings.
 - Extend Row Level Security policies to every future sensitive table.
-- Expand Supabase Auth role-based access control beyond the pilot roles (Super Admin, Compliance Admin, Broker
-  Manager, Broker, Marketing Analyst).
+- Add a platform administration UI for invitations, role changes, organisation approval, and
+  sending-domain verification; the database roles and tenant policies are already in place.
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable
@@ -29,16 +32,16 @@ Priced in the accompanying quotation.
   marketing wording, FSP disclosures, terms, retention policy) with version history.
 
 ## Broker Workflow
-- Add broker-owned campaigns, product permissions, capacity limits, sending identities, and strict
-  organisation isolation for campaign and lead data.
+- Add broker-owned campaigns on top of the completed product permissions, capacity limits, sending
+  identities, and strict organisation isolation for allocated lead data.
 - Kanban pipeline across all 13 lead statuses, with drag-and-drop reassignment.
 - Notes, tasks, call/email/meeting logging, and follow-up reminders on the lead profile.
 - Full activity timeline and loss-reason capture.
 - Do Not Contact workflow enforcement across all outreach surfaces.
 
 ## Buyer Commerce
-- Buyer self-service portal for accepting or releasing allocated leads through narrow, audited
-  database functions.
+- Extend the initial audited acceptance/release workspace with reassignment, dispute evidence, and
+  broker-manager administration.
 - Contract, pricing-plan, invoice, payment, credit/refund, and lead-dispute workflows.
 
 ## Market Intelligence

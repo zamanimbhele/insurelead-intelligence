@@ -14,7 +14,7 @@ npx supabase migration list
 npx supabase db push
 ```
 
-Only one person should push migrations to a shared project at a time. The three migrations in
+Only one person should push migrations to a shared project at a time. Migrations in
 `supabase/migrations` are applied in timestamp order.
 
 ## 2. Configure server secrets
@@ -57,7 +57,7 @@ access; this prevents newly created accounts from becoming administrators automa
 For every contracted broker or insurer:
 
 1. Copy `supabase/add-pilot-buyer.example.sql`.
-2. Replace the organisation name and contact email.
+2. Replace the organisation name, URL-safe slug, contact email, FSP number, and sending identity placeholders.
 3. Set `buyer_kind` to `broker` or `insurer`.
 4. Confirm provinces, industries, minimum score, shared-lead preference, FSP details, pricing,
    and the signed data-processing/lead-supply agreement before activation.
@@ -65,7 +65,8 @@ For every contracted broker or insurer:
 
 The marketplace matches only active buyers whose stored appetite matches the lead. The database
 reservation function locks the lead, verifies current consent, enforces recipient/exclusivity
-limits, and records an audit entry atomically.
+and daily-capacity limits, and records an audit entry atomically. Follow
+[`BROKER_TENANCY_SETUP.md`](BROKER_TENANCY_SETUP.md) to attach broker users and validate tenant isolation.
 
 ## 5. Validate before accepting real leads
 
@@ -83,6 +84,8 @@ Then validate in a non-production environment:
 - `/login` rejects an unprofiled user and accepts the platform administrator.
 - `/dashboard` is inaccessible after signing out.
 - `/dashboard/marketplace` shows only consented, allocatable leads.
+- `/dashboard/brokers` shows every tenant only to platform oversight roles.
+- `/dashboard/allocations` lets a broker operator accept or release only its organisation's reservations.
 - Reserving a lead creates one allocation and prevents a second exclusive reservation.
 - A buyer account sees only records permitted by RLS.
 - `/api/health` reports the Supabase data store and durable rate limiter as configured.

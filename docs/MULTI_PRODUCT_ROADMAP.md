@@ -20,11 +20,14 @@ insurance advice, quotes, premiums, or underwriting decisions.
 
 ## Increment 2 — multi-broker tenancy
 
-- Broker profile, approved products, geographic coverage, capacity, contact SLA, and sending
-  identity configuration.
-- Broker-admin, campaign-manager, broker-agent, compliance-auditor, and platform-admin roles.
-- Row Level Security ensuring broker users only access their organisation's campaigns and leads.
-- Product-aware allocation with an auditable reason for every match or rejection.
+- Broker profile, approved products, geographic coverage, daily capacity, contact SLA, and sending
+  identity configuration are implemented in `202609110001_multi_broker_tenancy.sql`.
+- Broker-admin, campaign-manager, broker-agent, compliance-auditor, and platform-admin roles are enforced.
+- Row Level Security ensures broker users only access their organisation's active allocations and leads.
+- Product-aware, territory-aware, and capacity-aware evaluations record a reason for every explicit match or rejection.
+- Broker operators can accept or release their own organisation's reserved leads through an audited RPC.
+
+Operational setup is documented in [`BROKER_TENANCY_SETUP.md`](BROKER_TENANCY_SETUP.md).
 
 ## Increment 3 — campaign-generation MCP
 

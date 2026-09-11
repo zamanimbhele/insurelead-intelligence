@@ -240,15 +240,18 @@ server.registerTool(
     ]);
     const check = getAllocationEligibility(lead, consent, allocations);
     if (!check.allowed) return result({ matched: false, error: check.reason, leadId });
-    const buyers = getEligibleBuyersForLead(lead, allBuyers).map((buyer) => ({
+    const buyers = getEligibleBuyersForLead(lead, allBuyers, allocations).map((buyer) => ({
       id: buyer.id,
       organisationName: buyer.organisationName,
       buyerType: buyer.buyerType,
       status: buyer.status,
       provinces: buyer.provinces,
+      cities: buyer.cities,
       industries: buyer.industries,
       minimumScore: buyer.minimumScore,
       insuranceProducts: buyer.insuranceProducts,
+      dailyLeadCapacity: buyer.dailyLeadCapacity,
+      contactSlaHours: buyer.contactSlaHours,
     }));
     return result({ matched: buyers.length > 0, lead: safeLead(lead), buyers });
   },
