@@ -1,20 +1,29 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut } from "lucide-react";
-import { getDashboardIdentity } from "@/lib/auth";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings } from "lucide-react";
+import { getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
-
-const NAV = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/leads", label: "Leads", icon: Users },
-  { href: "/dashboard/marketplace", label: "Lead Marketplace", icon: Store },
-  { href: "/dashboard/market-intelligence", label: "Market Intelligence", icon: BarChart3 },
-];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const identity = await getDashboardIdentity();
   if (!identity.authenticated) redirect("/login");
   if (!identity.accessAllowed) redirect("/access-denied");
+
+  const nav = [
+    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { href: "/dashboard/leads", label: "Leads", icon: Users },
+    ...(isPlatformAdmin(identity)
+      ? [{ href: "/dashboard/marketplace", label: "Lead Marketplace", icon: Store }]
+      : []),
+    ...(isPlatformAdmin(identity) || isComplianceAuditor(identity)
+      ? [{ href: "/dashboard/brokers", label: "Broker Directory", icon: Building2 }]
+      : []),
+    { href: "/dashboard/allocations", label: "Allocations", icon: ClipboardList },
+    ...(isBrokerUser(identity)
+      ? [{ href: "/dashboard/broker-profile", label: "Broker Profile", icon: Settings }]
+      : []),
+    { href: "/dashboard/market-intelligence", label: "Market Intelligence", icon: BarChart3 },
+  ];
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -26,7 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <span className="text-sm font-semibold text-slate-900">InsureLead Intelligence</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -42,6 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <ArrowLeft className="h-3.5 w-3.5" /> Back to public site
           </Link>
           <p className="mt-3 text-xs text-slate-400">
+            {identity.displayName && <>{identity.displayName}<br /></>}
             {identity.organisationName}<br />{identity.role.replace(/_/g, " ")}
           </p>
           {identity.mode === "supabase" ? (

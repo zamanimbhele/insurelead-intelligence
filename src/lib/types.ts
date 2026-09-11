@@ -117,17 +117,30 @@ export interface ConsentRecord {
 }
 
 export type BuyerStatus = "pending" | "active" | "suspended";
+export type BrokerOnboardingStatus = "pending" | "in_review" | "approved" | "rejected";
 export type LeadAllocationStatus = "reserved" | "accepted" | "disputed" | "released";
+export type BrokerMemberStatus = "invited" | "active" | "suspended";
+export type BrokerRole = "broker_admin" | "campaign_manager" | "broker_agent";
+export type SendingIdentityStatus = "pending" | "verified" | "disabled";
 
 export interface Buyer {
   id: string;
   organisationName: string;
+  slug?: string;
   buyerType: "broker" | "insurer";
   status: BuyerStatus;
+  onboardingStatus: BrokerOnboardingStatus;
+  fspNumber?: string;
+  websiteUrl?: string;
+  supportPhone?: string;
   provinces: string[];
+  cities: string[];
   industries: string[];
   insuranceProducts: InsuranceProduct[];
   minimumScore: number;
+  dailyLeadCapacity: number;
+  contactSlaHours: number;
+  acceptsSharedLeads: boolean;
   contactEmail: string;
 }
 
@@ -140,6 +153,37 @@ export interface LeadAllocation {
   exclusive: boolean;
   allocatedAt: string;
   acceptedAt?: string;
+  respondedAt?: string;
+}
+
+export interface BrokerMember {
+  id: string;
+  organisationId: string;
+  displayName?: string;
+  jobTitle?: string;
+  role: BrokerRole | "platform_admin" | "compliance_admin" | "compliance_auditor";
+  status: BrokerMemberStatus;
+  createdAt: string;
+}
+
+export interface BrokerSendingIdentity {
+  id: string;
+  organisationId: string;
+  domain: string;
+  fromName: string;
+  fromEmail: string;
+  replyToEmail?: string;
+  provider: "resend";
+  status: SendingIdentityStatus;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface BuyerMatchDecision {
+  buyerId: string;
+  leadId: string;
+  matched: boolean;
+  reasons: string[];
 }
 
 export interface AuditLogEntry {

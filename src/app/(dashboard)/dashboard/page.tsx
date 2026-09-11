@@ -5,11 +5,12 @@ import { LeadsTable } from "@/components/dashboard/LeadsTable";
 import { INSURANCE_PRODUCTS, LEAD_STATUS_LABELS } from "@/lib/constants";
 import { Users, Clock, AlertTriangle, TrendingUp, ShieldOff } from "lucide-react";
 import { isToday, isThisWeek } from "date-fns";
+import { getDashboardIdentity, isBrokerUser } from "@/lib/auth";
 
 export const metadata = { title: "Dashboard | InsureLead Intelligence" };
 
 export default async function DashboardPage() {
-  const leads = await getDashboardLeads();
+  const [leads, identity] = await Promise.all([getDashboardLeads(), getDashboardIdentity()]);
   const demoMode = getDataMode() === "demo";
 
   const newToday = leads.filter((l) => isToday(new Date(l.createdAt))).length;
@@ -36,7 +37,11 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Lead Management Overview</h1>
         <p className="mt-1 text-sm text-slate-500">
-          {demoMode ? "Synthetic demo data" : "Live, access-controlled lead data"}
+          {demoMode
+            ? "Synthetic demo data"
+            : isBrokerUser(identity)
+              ? `${identity.organisationName} · allocated leads only`
+              : "Live, access-controlled lead data across approved tenants"}
         </p>
       </div>
 

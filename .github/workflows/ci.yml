@@ -32,6 +32,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Verify broker tenancy matching
+        run: npm run test:tenancy
+
       - name: Build production bundle
         run: npm run build
 

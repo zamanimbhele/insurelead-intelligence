@@ -24,7 +24,7 @@ export default async function MarketplacePage() {
     .filter((lead) => getAllocationEligibility(lead, consents.get(lead.id), allocations).allowed)
     .map((lead) => ({
       lead,
-      buyers: getEligibleBuyersForLead(lead, buyers),
+      buyers: getEligibleBuyersForLead(lead, buyers, allocations),
       consent: consents.get(lead.id),
     }));
 
@@ -76,6 +76,9 @@ export default async function MarketplacePage() {
             <div key={buyer.id} className="rounded-lg border border-slate-200 p-4">
               <p className="font-medium text-slate-800">{buyer.organisationName}</p>
               <p className="mt-2 text-sm text-slate-500">{buyer.buyerType} · Minimum score {buyer.minimumScore}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {buyer.dailyLeadCapacity} leads/day · {buyer.contactSlaHours}h contact SLA
+              </p>
               <p className="mt-1 text-xs text-slate-400">
                 {buyer.insuranceProducts.length ? buyer.insuranceProducts.join(", ").replaceAll("_", " ") : "All configured products"}
               </p>

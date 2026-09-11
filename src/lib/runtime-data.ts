@@ -17,6 +17,7 @@ import {
   captureSupabaseLead,
   checkSupabaseHealth,
   checkSupabaseRateLimitHealth,
+  evaluateSupabaseLeadBuyerMatch,
   fetchSupabaseAllocations,
   fetchSupabaseBuyers,
   fetchSupabaseConsent,
@@ -132,7 +133,13 @@ export async function reserveRuntimeLead(input: {
   exclusive: boolean;
   actor: string;
 }) {
-  return getDataMode() === "demo"
-    ? allocateLead(input)
-    : reserveSupabaseLead(requireAdminClient(), input);
+  if (getDataMode() === "demo") return allocateLead(input);
+  const client = requireAdminClient();
+  const decision = await evaluateSupabaseLeadBuyerMatch(client, {
+    leadId: input.leadId,
+    buyerId: input.buyerId,
+    source: "mcp_reservation",
+  });
+  if (!decision.matched) throw new Error(decision.reasons[0] ?? "Lead does not match the buyer appetite");
+  return reserveSupabaseLead(client, input);
 }
