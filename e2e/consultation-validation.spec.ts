@@ -6,15 +6,15 @@ test.describe("Consultation request - validation and consent gating", () => {
 
     await page.getByRole("button", { name: "Continue" }).click();
 
-    // Still on step 1 - the heading has not advanced to "Insurance Needs".
-    await expect(page.getByRole("heading", { name: "Business Details" })).toBeVisible();
-    await expect(page.getByText("Business name is required")).toBeVisible();
-    await expect(page.getByText("Please select an industry")).toBeVisible();
+    // Still on step 1 - applicant type and location are required.
+    await expect(page.getByRole("heading", { name: "About You" })).toBeVisible();
+    await expect(page.getByText("Please choose whether this enquiry is for you or a business")).toBeVisible();
   });
 
   test("cannot submit without required consent, even with everything else valid", async ({ page }) => {
     await page.goto("/consultation");
 
+    await page.getByLabel("My business").check();
     await page.getByLabel("Business name").fill("Consent Gate Test Co");
     await page.getByLabel("Industry").selectOption({ label: "Professional Services" });
     await page.getByLabel("Business type").selectOption({ label: "Private Company (Pty Ltd)" });
@@ -25,6 +25,7 @@ test.describe("Consultation request - validation and consent gating", () => {
     await page.getByLabel("City or town").fill("Cape Town");
     await page.getByRole("button", { name: "Continue" }).click();
 
+    await page.getByLabel("Business Insurance").check();
     await page.getByLabel("Business Interruption Cover").check();
     await page.getByLabel("Current insurance status").selectOption({ label: "Unsure" });
     await page.getByLabel("Preferred contact channel").selectOption({ label: "Phone" });
@@ -32,7 +33,7 @@ test.describe("Consultation request - validation and consent gating", () => {
 
     await page.getByLabel("Full name").fill("Consent Gate Contact");
     await page.getByLabel("Role or job title").fill("Owner");
-    await page.getByLabel("Work email address").fill("consent-gate@example-synthetic.co.za");
+    await page.getByLabel("Email address").fill("consent-gate@example-synthetic.co.za");
     await page.getByLabel("Mobile number").fill("0731234567");
     await page.getByLabel("Preferred contact method").selectOption({ label: "Phone" });
     await page.getByRole("button", { name: "Continue" }).click();

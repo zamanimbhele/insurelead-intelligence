@@ -26,7 +26,7 @@ export default function ContactPage() {
         </div>
       </div>
       <p className="mt-10 max-w-2xl text-sm text-slate-500">
-        To request a business insurance consultation, please use the{" "}
+        To submit a personal or business insurance enquiry, please use the{" "}
         <LinkButton href="/consultation" variant="ghost" className="px-0 underline">
           consultation form
         </LinkButton>{" "}

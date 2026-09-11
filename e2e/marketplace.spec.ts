@@ -9,4 +9,5 @@ test("lead marketplace shows approved pilot buyers", async ({ page }) => {
 
   await expect(pilotBuyers.getByText("Gauteng Commercial Broker Pilot", { exact: true })).toBeVisible();
   await expect(pilotBuyers.getByText("National SME Insurance Pilot", { exact: true })).toBeVisible();
+  await expect(pilotBuyers.getByText("Personal Lines Broker Pilot", { exact: true })).toBeVisible();
 });

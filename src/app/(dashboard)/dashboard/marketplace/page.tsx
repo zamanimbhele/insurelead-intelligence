@@ -2,6 +2,7 @@ import { AllocateLeadButton } from "@/components/dashboard/AllocateLeadButton";
 import { getDashboardIdentity, isPlatformAdmin } from "@/lib/auth";
 import { getDashboardMarketplaceData } from "@/lib/dashboard-data";
 import { getAllocationEligibility, getEligibleBuyersForLead } from "@/lib/marketplace-store";
+import { getInsuranceProductLabels, getLeadDisplayName } from "@/lib/lead-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +57,8 @@ export default async function MarketplacePage() {
             {inventory.map(({ lead, buyers: matches, consent }) => (
               <article key={lead.id} className="grid gap-4 px-6 py-5 lg:grid-cols-[1.4fr_1fr_auto] lg:items-center">
                 <div>
-                  <p className="font-semibold text-slate-900">{lead.businessName}</p>
-                  <p className="text-sm text-slate-500">{lead.industry} · {lead.city}, {lead.province}</p>
+                  <p className="font-semibold text-slate-900">{getLeadDisplayName(lead)}</p>
+                  <p className="text-sm text-slate-500">{getInsuranceProductLabels(lead).join(", ")} · {lead.city}, {lead.province}</p>
                   <p className="mt-1 text-xs text-slate-400">Score {lead.score}/100 · Recipient limit {consent?.maxPartnerRecipients ?? 1}</p>
                 </div>
                 <p className="text-sm text-slate-700">{matches[0]?.organisationName ?? "No matching buyer appetite"}</p>
@@ -75,6 +76,9 @@ export default async function MarketplacePage() {
             <div key={buyer.id} className="rounded-lg border border-slate-200 p-4">
               <p className="font-medium text-slate-800">{buyer.organisationName}</p>
               <p className="mt-2 text-sm text-slate-500">{buyer.buyerType} · Minimum score {buyer.minimumScore}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {buyer.insuranceProducts.length ? buyer.insuranceProducts.join(", ").replaceAll("_", " ") : "All configured products"}
+              </p>
             </div>
           ))}
         </div>

@@ -1,6 +1,6 @@
 # InsureLead Intelligence — MVP Prototype
 
-Business Insurance Lead Intelligence Platform for a South African business insurance broker.
+Multi-product insurance lead intelligence and broker-allocation platform for South Africa.
 This repository supports two explicit operating modes: a local **synthetic demo** backed by JSON
 files, and a **Supabase production-pilot mode** with PostgreSQL persistence, cookie-based
 authentication, Row Level Security, and audited lead allocation.
@@ -12,24 +12,26 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 
 ## What's included in this prototype
 
-- Public marketing site: Home, Business Insurance Solutions, Industry Solutions, About, FAQs,
+- Public marketing site: Home, Insurance Products, Business Industries, About, FAQs,
   Privacy Notice, Terms of Use, Contact Us.
-- Four-step **Request a Business Insurance Consultation** form (Business Details → Insurance
-  Needs → Contact Person → Consent), built with React Hook Form + Zod, including a honeypot field,
+- Four-step **Find Insurance Options** form (About You → Insurance Needs → Contact Details →
+  Consent), supporting individual and business enquiries. It is built with React Hook Form + Zod
+  and includes a honeypot field,
   UTM capture, and a generic thank-you page that never exposes submitted data in the URL.
 - A working `POST /api/leads` endpoint: validates input server-side, runs the transparent lead
   scoring model, detects likely duplicates, writes a consent record and an audit log entry, and
   applies a durable HMAC-keyed Supabase rate limit in production-pilot mode.
-- Internal dashboard (`/dashboard`): overview widgets, a searchable/filterable leads table, a lead
-  detail page (score explanation, business/contact detail, source attribution, Do Not Contact
+- Internal dashboard (`/dashboard`): overview widgets, a searchable leads table with product and
+  status filters, a lead detail page (score explanation, applicant/contact detail, source attribution, Do Not Contact
   flag), and a Market Intelligence view with aggregated, threshold-gated charts.
 - 64 synthetic demo leads seeded via `scripts/generate-seed.mjs` — no real business or personal
   data anywhere in the repo.
 - A Playwright end-to-end test suite and a GitHub Actions CI pipeline that lints, type-checks,
   builds, and runs the suite on every push and pull request to `main`.
-- A local MCP server that exposes consent-aware lead search, prioritisation, pipeline updates,
-  summaries, and human-review follow-up drafting to compatible AI assistants.
-- Optional Supabase persistence for lead capture, consent, buyers, allocations, and audit logs.
+- A local MCP server that exposes the product catalogue plus consent-aware lead search,
+  prioritisation, pipeline updates, summaries, and human-review follow-up drafting.
+- Optional Supabase persistence for product catalogue, lead capture, consent, product-aware buyer
+  matching, allocations, and audit logs.
 - Password authentication for the internal dashboard, with profile and organisation checks.
 - Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
   and a deployment-readiness endpoint at `/api/health`.
@@ -79,7 +81,7 @@ Example MCP client configuration (replace the path with your local clone):
 ```
 
 Use `npm run mcp:inspect` to test each tool interactively. The server does not scrape websites,
-send outreach, provide insurance advice, or make underwriting decisions. Contact details and
+send campaigns or outreach, provide insurance advice, or make underwriting decisions. Contact details and
 follow-up drafts are available only for leads with recorded contact consent, and every draft
 requires human approval before sending.
 
@@ -118,7 +120,7 @@ Tests run serially against a single worker on purpose: `src/lib/demo-store.ts` i
 file on disk, not a real database, so parallel workers writing at the same time could race. This
 reverts to normal parallel execution once the app moves to Supabase.
 
-Running `npm run test:e2e` locally will add a couple of clearly-labelled synthetic leads (for
+Running `npm run test:e2e` locally will add clearly-labelled synthetic leads (for
 example `E2E Test Business <timestamp>`) into your local `data/leads.json` — harmless, but you can
 regenerate clean seed data afterwards with `node scripts/generate-seed.mjs` if it bothers you.
 
@@ -185,6 +187,9 @@ The remaining production work includes:
 5. The remaining Phase 2–5 modules listed in `BACKLOG.md`.
 6. Once on Supabase, revisit `playwright.config.ts` — parallel workers become safe again, and CI
    can seed/reset a dedicated test database per run instead of writing to `data/leads.json`.
+
+See [`docs/MULTI_PRODUCT_ROADMAP.md`](docs/MULTI_PRODUCT_ROADMAP.md) for the boundary between this
+foundation, broker tenancy, and the approval-gated campaign-generation MCP.
 
 ## Compliance notes
 

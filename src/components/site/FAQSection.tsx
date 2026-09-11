@@ -7,15 +7,15 @@ import { cn } from "@/lib/utils";
 export const FAQ_ITEMS = [
   {
     q: "Does submitting this form create an insurance policy or a binding quote?",
-    a: "No. Submitting an enquiry only registers your interest in a business insurance consultation. No cover, quote, or policy is created until a licensed broker has engaged with you directly and you have agreed to proceed.",
+    a: "No. Submitting an enquiry only registers your interest in the products selected. No cover, quote, or policy is created until a participating broker has engaged with you directly and you have agreed to proceed.",
   },
   {
     q: "Who will contact me after I submit my details?",
-    a: "A broker from the relevant team will reach out using your preferred contact channel and time, based on the consent you provide in the form.",
+    a: "One or more participating brokers whose approved product appetite matches your enquiry may contact you, up to the partner limit you select.",
   },
   {
     q: "How is my information used?",
-    a: "Your information is used only to respond to your enquiry and, where you've given optional marketing consent, to share relevant business insurance information. See our Privacy Notice for full details.",
+    a: "Your information is used to respond to your enquiry and, where you give separate optional marketing consent, to share relevant insurance information. See our Privacy Notice for full details.",
   },
   {
     q: "Can I ask you to stop contacting me?",

@@ -1,39 +1,39 @@
 import { Section, SectionHeading } from "@/components/ui/Section";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
-import { Car, ShieldAlert, Building2, HardHat, Briefcase, TrendingDown, Wifi, Boxes, Users, ClipboardList } from "lucide-react";
+import { Car, ShieldAlert, Briefcase, Plane, HeartPulse, House, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 
 const ICONS: Record<string, LucideIcon> = {
-  commercial_motor: Car,
-  public_liability: ShieldAlert,
-  property_and_contents: Building2,
-  contractors_all_risk: HardHat,
-  professional_indemnity: Briefcase,
-  business_interruption: TrendingDown,
-  cyber_insurance: Wifi,
-  stock_equipment_machinery: Boxes,
-  employee_related_cover: Users,
-  general_review_or_comparison: ClipboardList,
+  motor_insurance: Car,
+  home_contents_insurance: House,
+  life_insurance: HeartPulse,
+  funeral_cover: ShieldAlert,
+  travel_insurance: Plane,
+  personal_accident: HeartPulse,
+  business_insurance: Briefcase,
+  general_insurance_review: ClipboardList,
 };
 
 export function InsuranceCategories() {
   return (
     <Section>
       <SectionHeading
-        eyebrow="Cover Categories"
-        title="Business Insurance Solutions"
-        description="Tell us which categories are relevant to your business - you can select more than one."
+        eyebrow="Insurance Products"
+        title="Cover for Individuals and Businesses"
+        description="Choose the products you want to explore. Your enquiry will only be shared within the partner limit you approve."
       />
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {INSURANCE_PRODUCTS.map((p) => {
           const Icon = ICONS[p.value] ?? ShieldAlert;
           return (
-            <div key={p.value} className="rounded-xl border border-slate-200 p-5 transition-shadow hover:shadow-md">
+            <Link key={p.value} href={`/consultation?product=${p.value}`} className="rounded-xl border border-slate-200 p-5 transition-shadow hover:shadow-md">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
                 <Icon className="h-5 w-5" />
               </span>
               <h3 className="mt-4 text-sm font-semibold text-slate-900">{p.label}</h3>
-            </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{p.description}</p>
+            </Link>
           );
         })}
       </div>

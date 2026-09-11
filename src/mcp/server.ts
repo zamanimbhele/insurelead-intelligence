@@ -15,6 +15,8 @@ import {
 import type { Lead, LeadStatus } from "../lib/types.ts";
 import { getAllocationEligibility, getEligibleBuyersForLead } from "../lib/marketplace-store.ts";
 import { getDataMode } from "../lib/supabase/config.ts";
+import { INSURANCE_PRODUCTS } from "../lib/constants.ts";
+import { getInsuranceProductLabels } from "../lib/lead-utils.ts";
 
 const server = new McpServer({ name: "insurelead-intelligence", version: "0.1.0" });
 
@@ -34,12 +36,14 @@ function result<T>(value: T) {
 function safeLead(lead: Lead) {
   return {
     id: lead.id,
+    applicantType: lead.applicantType,
     businessName: lead.businessName,
     industry: lead.industry,
     city: lead.city,
     province: lead.province,
     website: lead.website,
     insuranceProducts: lead.insuranceProducts,
+    businessCoverInterests: lead.businessCoverInterests,
     currentInsuranceStatus: lead.currentInsuranceStatus,
     renewalMonth: lead.renewalMonth,
     financialYearEndMonth: lead.financialYearEndMonth,
@@ -60,25 +64,45 @@ function productionWritesEnabled() {
 }
 
 server.registerTool(
+  "list_insurance_products",
+  {
+    title: "List insurance products",
+    description: "List the active product catalogue used for lead intake and broker matching.",
+    inputSchema: {
+      applicantType: z.enum(["individual", "business"]).optional(),
+    },
+    annotations: { readOnlyHint: true },
+  },
+  async ({ applicantType }) => {
+    const products = INSURANCE_PRODUCTS.filter(
+      (product) => !applicantType || product.applicantTypes.includes(applicantType),
+    );
+    return result({ count: products.length, products });
+  },
+);
+
+server.registerTool(
   "list_leads",
   {
     title: "List InsureLead leads",
-    description: "Search the business-insurance lead pipeline without exposing contact PII.",
+    description: "Search the multi-product insurance lead pipeline without exposing contact PII.",
     inputSchema: {
       status: leadStatusSchema.optional(),
       scoreBand: z.enum(["hot", "warm", "nurture", "low_priority"]).optional(),
       province: z.string().optional(),
       industry: z.string().optional(),
+      insuranceProduct: z.string().optional(),
       limit: z.number().int().min(1).max(100).default(25),
     },
     annotations: { readOnlyHint: true },
   },
-  async ({ status, scoreBand, province, industry, limit }) => {
+  async ({ status, scoreBand, province, industry, insuranceProduct, limit }) => {
     const leads = (await listRuntimeLeads())
       .filter((lead) => !status || lead.status === status)
       .filter((lead) => !scoreBand || lead.scoreBand === scoreBand)
       .filter((lead) => !province || lead.province.toLowerCase() === province.toLowerCase())
-      .filter((lead) => !industry || lead.industry.toLowerCase().includes(industry.toLowerCase()))
+      .filter((lead) => !industry || (lead.industry ?? "").toLowerCase().includes(industry.toLowerCase()))
+      .filter((lead) => !insuranceProduct || lead.insuranceProducts.includes(insuranceProduct as Lead["insuranceProducts"][number]))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(safeLead);
@@ -186,10 +210,13 @@ server.registerTool(
       return result({ drafted: false, error: "Contact is not permitted for this lead", leadId });
     }
     const selectedChannel = channel ?? lead.preferredContactChannel;
+    const subject = lead.applicantType === "business" && lead.businessName
+      ? `${lead.businessName}'s enquiry`
+      : "your enquiry";
+    const products = getInsuranceProductLabels(lead).join(", ");
     const message =
-      `Hi ${lead.contactFullName}, I’m following up on ${lead.businessName}’s request for a ` +
-      `business-insurance consultation. Based on the information submitted, we can review ` +
-      `${lead.insuranceProducts.length} area(s) of cover. Would you like to arrange a short discussion?`;
+      `Hi ${lead.contactFullName}, I’m following up on ${subject} about ${products}. ` +
+      "Would you like to arrange a short discussion with a participating broker?";
     return result({ drafted: true, leadId, channel: selectedChannel, message,
       requiresHumanApproval: true, sent: false });
   },
@@ -221,6 +248,7 @@ server.registerTool(
       provinces: buyer.provinces,
       industries: buyer.industries,
       minimumScore: buyer.minimumScore,
+      insuranceProducts: buyer.insuranceProducts,
     }));
     return result({ matched: buyers.length > 0, lead: safeLead(lead), buyers });
   },
@@ -255,13 +283,17 @@ server.registerTool(
     const leads = await listRuntimeLeads();
     const countBy = (key: "status" | "scoreBand" | "industry" | "province") =>
       leads.reduce<Record<string, number>>((acc, lead) => {
-        const value = lead[key];
+        const value = lead[key] ?? "Not provided";
         acc[value] = (acc[value] ?? 0) + 1;
         return acc;
       }, {});
+    const byProduct = leads.reduce<Record<string, number>>((acc, lead) => {
+      for (const product of lead.insuranceProducts) acc[product] = (acc[product] ?? 0) + 1;
+      return acc;
+    }, {});
     return result({ total: leads.length, byStatus: countBy("status"),
       byScoreBand: countBy("scoreBand"), byIndustry: countBy("industry"),
-      byProvince: countBy("province") });
+      byProvince: countBy("province"), byProduct });
   },
 );
 

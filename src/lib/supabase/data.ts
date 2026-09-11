@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Buyer, ConsentRecord, Lead, LeadAllocation } from "../types.ts";
+import { INSURANCE_PRODUCTS } from "../constants.ts";
 
 type LeadRow = {
   id: string;
-  business_name: string;
+  applicant_type?: "individual" | "business";
+  business_name: string | null;
   trading_name: string | null;
-  industry: string;
+  industry: string | null;
   business_type: string | null;
   employee_band: string | null;
   turnover_band: string | null;
@@ -16,6 +18,7 @@ type LeadRow = {
   postal_code: string | null;
   website: string | null;
   insurance_products: string[];
+  business_cover_interests?: string[] | null;
   current_insurance_status: string | null;
   renewal_month: string | null;
   financial_year_end_month: string | null;
@@ -64,6 +67,7 @@ type PreferenceRow = {
   organisation_id: string;
   provinces: string[];
   industries: string[];
+  insurance_products: string[];
   minimum_score: number;
 };
 
@@ -87,21 +91,28 @@ function optional(value: string | null | undefined) {
 }
 
 export function mapLead(row: LeadRow): Lead {
+  const productIds = new Set(INSURANCE_PRODUCTS.map((product) => product.value));
+  const usesProductCatalogue = row.insurance_products.some((product) => productIds.has(product as Lead["insuranceProducts"][number]));
   return {
     id: row.id,
-    businessName: row.business_name,
+    applicantType: row.applicant_type ?? "business",
+    businessName: optional(row.business_name),
     tradingName: optional(row.trading_name),
-    industry: row.industry,
-    businessType: row.business_type ?? "Not provided",
-    employeeBand: row.employee_band ?? "Not provided",
-    turnoverBand: row.turnover_band ?? "Not provided",
-    yearsInOperation: row.years_in_operation ?? "Not provided",
+    industry: optional(row.industry),
+    businessType: optional(row.business_type),
+    employeeBand: optional(row.employee_band),
+    turnoverBand: optional(row.turnover_band),
+    yearsInOperation: optional(row.years_in_operation),
     province: row.province,
     city: row.city,
     suburb: optional(row.suburb),
     postalCode: optional(row.postal_code),
     website: optional(row.website),
-    insuranceProducts: row.insurance_products as Lead["insuranceProducts"],
+    insuranceProducts: usesProductCatalogue
+      ? row.insurance_products as Lead["insuranceProducts"]
+      : ["business_insurance"],
+    businessCoverInterests: row.business_cover_interests as Lead["businessCoverInterests"]
+      ?? (usesProductCatalogue ? [] : row.insurance_products as Lead["businessCoverInterests"]),
     currentInsuranceStatus: (row.current_insurance_status ?? "unsure") as Lead["currentInsuranceStatus"],
     renewalMonth: optional(row.renewal_month),
     financialYearEndMonth: optional(row.financial_year_end_month),
@@ -109,7 +120,7 @@ export function mapLead(row: LeadRow): Lead {
     preferredContactTime: optional(row.preferred_contact_time),
     preferredContactChannel: (row.preferred_contact_channel ?? "email") as Lead["preferredContactChannel"],
     contactFullName: row.contact_full_name,
-    contactRole: row.contact_role ?? "Not provided",
+    contactRole: optional(row.contact_role),
     contactEmail: row.contact_email,
     contactMobile: row.contact_mobile,
     status: row.status as Lead["status"],
@@ -213,7 +224,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       .from("organisations")
       .select("id, name, organisation_type, status, contact_email")
       .in("organisation_type", ["broker", "insurer"]),
-    client.from("buyer_preferences").select("organisation_id, provinces, industries, minimum_score"),
+    client.from("buyer_preferences").select("organisation_id, provinces, industries, insurance_products, minimum_score"),
   ]);
   fail("Unable to load buyer organisations", organisationResult.error);
   fail("Unable to load buyer preferences", preferenceResult.error);
@@ -231,6 +242,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       status: organisation.status,
       provinces: preference?.provinces ?? [],
       industries: preference?.industries ?? [],
+      insuranceProducts: (preference?.insurance_products ?? []) as Buyer["insuranceProducts"],
       minimumScore: preference?.minimum_score ?? 0,
       contactEmail: organisation.contact_email,
     };
@@ -249,7 +261,7 @@ export async function fetchSupabaseAllocations(client: SupabaseClient): Promise<
 export async function hasRecentSupabaseDuplicate(
   client: SupabaseClient,
   email: string,
-  businessName: string,
+  businessName?: string,
 ) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await client
@@ -259,8 +271,9 @@ export async function hasRecentSupabaseDuplicate(
     .gte("created_at", since)
     .limit(20);
   fail("Unable to check duplicate lead", error);
+  if (!businessName) return (data ?? []).length > 0;
   return (data ?? []).some((row) =>
-    String(row.business_name).toLowerCase() === businessName.toLowerCase()
+    String(row.business_name ?? "").toLowerCase() === businessName.toLowerCase()
   );
 }
 

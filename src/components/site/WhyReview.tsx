@@ -4,25 +4,25 @@ import { CalendarClock, TrendingUp, ShieldQuestion } from "lucide-react";
 const REASONS = [
   {
     icon: CalendarClock,
-    title: "Your business has changed",
-    description: "Headcount, turnover, equipment, premises, or contracts have changed since your cover was last reviewed.",
+    title: "Your circumstances have changed",
+    description: "A move, new vehicle, growing family, new assets, or changes in your business can affect the cover you need.",
   },
   {
     icon: TrendingUp,
-    title: "Your risk exposure has grown",
-    description: "New clients, new locations, or new digital systems can introduce risks your existing cover may not address.",
+    title: "Your risks have changed",
+    description: "New responsibilities, locations, equipment, travel, or digital activity can create different insurance needs.",
   },
   {
     icon: ShieldQuestion,
     title: "You're not sure what you're covered for",
-    description: "Many businesses are unclear on the difference between public liability, business interruption, and other cover types.",
+    description: "A participating broker can explain relevant options without InsureLead making an automated recommendation.",
   },
 ];
 
 export function WhyReview() {
   return (
     <Section>
-      <SectionHeading eyebrow="Insurance Reviews" title="Why Review Your Business Insurance?" />
+      <SectionHeading eyebrow="Insurance Reviews" title="Why Review Your Insurance Needs?" />
       <div className="mt-10 grid gap-8 sm:grid-cols-3">
         {REASONS.map((r) => (
           <div key={r.title}>

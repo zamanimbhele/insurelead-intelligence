@@ -2,14 +2,10 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { CheckCircle2 } from "lucide-react";
 
 const CHECKLIST_ITEMS = [
-  "Do you know your total insured value for property, stock, and equipment?",
-  "Have you reviewed your public liability limits in the last 12 months?",
-  "Are all business vehicles correctly covered for commercial use?",
-  "Would your business survive an interruption of 1-3 months?",
-  "Do you handle client data that could be exposed in a cyber incident?",
-  "Are contractors or sub-contractors covered while working on client sites?",
-  "Is your cover aligned to your business's financial year-end?",
-  "Have your employee numbers changed since your policy was last reviewed?",
+  "Choose whether the enquiry is for you, your household, or your business.",
+  "Select one or more insurance products you want to explore.",
+  "Tell us your preferred contact channel and the best time to reach you.",
+  "Choose whether one partner or up to three approved partners may receive the enquiry.",
 ];
 
 export function Checklist() {
@@ -17,10 +13,10 @@ export function Checklist() {
     <Section className="bg-slate-50">
       <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
         <div>
-          <SectionHeading eyebrow="Self-Assessment" title="Business Insurance Checklist" />
+          <SectionHeading eyebrow="How It Works" title="One Enquiry, Relevant Broker Options" />
           <p className="mt-4 text-slate-600">
-            Answering &quot;no&quot; or &quot;not sure&quot; to any of these is a good reason to request a consultation with a licensed
-            broker.
+            InsureLead captures your product interest and consent, then helps route the enquiry to brokers whose
+            approved product appetite matches what you selected.
           </p>
         </div>
         <ul className="space-y-3">

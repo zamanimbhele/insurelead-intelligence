@@ -3,7 +3,7 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { ConsultationForm } from "@/components/forms/ConsultationForm";
 import { getCaptchaMode } from "@/lib/security/captcha";
 
-export const metadata = { title: "Request a Business Insurance Consultation | InsureLead Intelligence" };
+export const metadata = { title: "Find Insurance Options | InsureLead Intelligence" };
 export const dynamic = "force-dynamic";
 
 export default function ConsultationPage() {
@@ -14,9 +14,9 @@ export default function ConsultationPage() {
   return (
     <Section>
       <SectionHeading
-        eyebrow="Consultation Request"
-        title="Request a Business Insurance Consultation"
-        description="Four short steps. A licensed broker will review your enquiry and get in touch - this is not a binding quote."
+        eyebrow="Insurance Enquiry"
+        title="Find Insurance Options"
+        description="Four short steps. Select your product interests and sharing preference so a relevant participating broker can follow up. This is not a binding quote."
         center
       />
       <div className="mt-12">

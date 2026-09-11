@@ -17,8 +17,8 @@ export interface ScoringInput {
   renewalWithinDays?: number | null;
   financialYearEndWithinDays?: number | null;
   highPriorityIndustry: boolean;
-  employeeBand: string;
-  turnoverBand: string;
+  employeeBand?: string;
+  turnoverBand?: string;
   highIntentCampaignSource: boolean;
   isDirectReferral: boolean;
   isDuplicate: boolean;
@@ -42,11 +42,11 @@ export function scoreLead(input: ScoringInput): ScoringResult {
   }
   if (input.hasWebsite) {
     score += 5;
-    reasons.push("provided a business website");
+    reasons.push("provided an organisation website");
   }
   if (input.insuranceProductCount >= 2) {
     score += 15;
-    reasons.push("selected multiple cover requirements");
+    reasons.push("selected multiple insurance products");
   } else if (input.insuranceProductCount === 1) {
     score += 8;
     reasons.push("selected a specific insurance need");
@@ -63,13 +63,13 @@ export function scoreLead(input: ScoringInput): ScoringResult {
     score += 8;
     reasons.push("operates in a high-priority industry");
   }
-  if (["51-200", "200+"].includes(input.employeeBand)) {
+  if (["51-200", "200+"].includes(input.employeeBand ?? "")) {
     score += 8;
     reasons.push("has a larger employee headcount");
-  } else if (["21-50"].includes(input.employeeBand)) {
+  } else if (["21-50"].includes(input.employeeBand ?? "")) {
     score += 4;
   }
-  if (["R20 million - R50 million", "R50 million+"].includes(input.turnoverBand)) {
+  if (["R20 million - R50 million", "R50 million+"].includes(input.turnoverBand ?? "")) {
     score += 8;
     reasons.push("falls in a higher annual turnover band");
   }
@@ -102,7 +102,7 @@ export function scoreLead(input: ScoringInput): ScoringResult {
   else band = "low_priority";
 
   const explanation = reasons.length
-    ? `Lead scored ${score}/100 because the business ${reasons.join(", ")}.`
+    ? `Lead scored ${score}/100 because the applicant ${reasons.join(", ")}.`
     : `Lead scored ${score}/100 based on limited information available at submission.`;
 
   return { score, band, explanation };

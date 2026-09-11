@@ -2,7 +2,7 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { InsuranceCategories } from "@/components/site/InsuranceCategories";
 import { LinkButton } from "@/components/ui/Button";
 
-export const metadata = { title: "Business Insurance Solutions | InsureLead Intelligence" };
+export const metadata = { title: "Insurance Products | InsureLead Intelligence" };
 
 export default function SolutionsPage() {
   return (
@@ -10,13 +10,13 @@ export default function SolutionsPage() {
       <Section className="pb-0">
         <SectionHeading
           eyebrow="Solutions"
-          title="Business Insurance Solutions"
-          description="From commercial motor to cyber cover, tell us what you need and a licensed broker will follow up with relevant options - no automated pricing or advice."
+          title="Insurance Products"
+          description="Explore personal and business product categories, then submit one consent-aware enquiry for a relevant participating broker to review."
         />
       </Section>
       <InsuranceCategories />
       <Section className="bg-slate-50 text-center">
-        <LinkButton href="/consultation">Request a Business Insurance Consultation</LinkButton>
+        <LinkButton href="/consultation">Find Insurance Options</LinkButton>
       </Section>
     </>
   );

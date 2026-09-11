@@ -1,4 +1,22 @@
-export const INSURANCE_PRODUCTS: { value: string; label: string }[] = [
+import type { ApplicantType, BusinessCoverInterest, InsuranceProduct } from "./types";
+
+export const INSURANCE_PRODUCTS: {
+  value: InsuranceProduct;
+  label: string;
+  description: string;
+  applicantTypes: ApplicantType[];
+}[] = [
+  { value: "motor_insurance", label: "Motor Insurance", description: "Cover options for personal vehicles.", applicantTypes: ["individual"] },
+  { value: "home_contents_insurance", label: "Home & Contents", description: "Protection for a home and its contents.", applicantTypes: ["individual"] },
+  { value: "life_insurance", label: "Life Insurance", description: "Financial protection for the people who depend on you.", applicantTypes: ["individual"] },
+  { value: "funeral_cover", label: "Funeral Cover", description: "Cover intended to help with funeral expenses.", applicantTypes: ["individual"] },
+  { value: "travel_insurance", label: "Travel Insurance", description: "Cover options for domestic and international travel.", applicantTypes: ["individual"] },
+  { value: "personal_accident", label: "Personal Accident", description: "Cover options following specified accidental injury events.", applicantTypes: ["individual"] },
+  { value: "business_insurance", label: "Business Insurance", description: "Commercial cover options shaped around business risks.", applicantTypes: ["business"] },
+  { value: "general_insurance_review", label: "Insurance Review", description: "A general review when you are unsure which product fits.", applicantTypes: ["individual", "business"] },
+];
+
+export const BUSINESS_COVER_OPTIONS: { value: BusinessCoverInterest; label: string }[] = [
   { value: "commercial_motor", label: "Commercial Motor Insurance" },
   { value: "public_liability", label: "Public Liability Insurance" },
   { value: "property_and_contents", label: "Property and Contents Insurance" },
@@ -66,7 +84,7 @@ export const CURRENT_INSURANCE_STATUS = [
   { value: "currently_insured", label: "Currently insured" },
   { value: "not_currently_insured", label: "Not currently insured" },
   { value: "reviewing_existing_cover", label: "Reviewing existing cover" },
-  { value: "starting_new_business", label: "Starting a new business" },
+  { value: "starting_new_business", label: "Starting something new" },
   { value: "unsure", label: "Unsure" },
 ];
 
@@ -75,7 +93,7 @@ export const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export const CONSENT_WORDING_VERSION = "v2.0-2026-09-03";
+export const CONSENT_WORDING_VERSION = "v3.0-2026-09-09-multi-product";
 
 export const LEAD_STATUS_LABELS: Record<string, string> = {
   new: "New",

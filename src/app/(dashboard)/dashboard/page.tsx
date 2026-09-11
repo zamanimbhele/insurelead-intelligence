@@ -2,7 +2,7 @@ import { getDashboardLeads } from "@/lib/dashboard-data";
 import { getDataMode } from "@/lib/supabase/config";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { LeadsTable } from "@/components/dashboard/LeadsTable";
-import { LEAD_STATUS_LABELS } from "@/lib/constants";
+import { INSURANCE_PRODUCTS, LEAD_STATUS_LABELS } from "@/lib/constants";
 import { Users, Clock, AlertTriangle, TrendingUp, ShieldOff } from "lucide-react";
 import { isToday, isThisWeek } from "date-fns";
 
@@ -25,6 +25,11 @@ export default async function DashboardPage() {
     label,
     count: leads.filter((l) => l.status === status).length,
   })).filter((s) => s.count > 0);
+
+  const byProduct = INSURANCE_PRODUCTS.map((product) => ({
+    ...product,
+    count: leads.filter((lead) => lead.insuranceProducts.includes(product.value)).length,
+  })).filter((product) => product.count > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,6 +56,18 @@ export default async function DashboardPage() {
             <div key={s.status} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
               <span className="font-semibold text-slate-900">{s.count}</span>
               <span className="text-slate-500">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-slate-900">Leads by Product</h2>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {byProduct.map((product) => (
+            <div key={product.value} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+              <span className="font-semibold text-slate-900">{product.count}</span>
+              <span className="text-slate-500">{product.label}</span>
             </div>
           ))}
         </div>

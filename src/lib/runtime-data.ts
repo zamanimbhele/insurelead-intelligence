@@ -89,7 +89,7 @@ export async function appendRuntimeAuditLog(entry: {
   await appendSupabaseAuditLog(requireAdminClient(), entry);
 }
 
-export async function hasRuntimeDuplicate(email: string, businessName: string) {
+export async function hasRuntimeDuplicate(email: string, businessName?: string) {
   return getDataMode() === "demo"
     ? Boolean(findPossibleDuplicate(email, businessName))
     : hasRecentSupabaseDuplicate(requireAdminClient(), email, businessName);
@@ -109,7 +109,7 @@ export async function captureRuntimeLead(lead: Omit<Lead, "id" | "createdAt">, c
       entityId: id,
       action: "lead_created",
       actor: "public_form",
-      details: `New lead captured via consultation form (${lead.insuranceProducts.length} product(s) selected).`,
+      details: `New ${lead.applicantType} lead captured via consultation form (${lead.insuranceProducts.length} product(s) selected).`,
     });
     return id;
   }

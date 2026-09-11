@@ -8,9 +8,14 @@ export default function AboutPage() {
       <SectionHeading eyebrow="About" title="About InsureLead Intelligence" />
       <div className="prose mt-8 max-w-3xl text-slate-600">
         <p>
-          InsureLead Intelligence is a configurable, white-label business insurance lead intelligence platform. It
-          helps a business insurance broker attract, capture, qualify, and convert business insurance enquiries
-          responsibly, while giving management team visibility into demand trends across industries and regions.
+          InsureLead Intelligence is a configurable, multi-product insurance lead intelligence platform. It helps
+          participating brokers attract, capture, qualify, and convert consented enquiries while giving platform
+          teams visibility into demand by product, campaign, region, and customer type.
+        </p>
+        <p id="brokers" className="mt-4 scroll-mt-28">
+          Approved brokers participate as separate organisations, with product appetite, geographic coverage, lead
+          capacity, and access controls configured for each organisation. Broker-specific campaign management is
+          introduced in the next platform increment.
         </p>
         <p className="mt-4">
           This instance uses placeholder branding and synthetic demonstration data. Legal entity details, financial
@@ -19,7 +24,7 @@ export default function AboutPage() {
         </p>
         <p className="mt-4">
           The platform does not provide automated insurance advice, premiums, or underwriting decisions. Every
-          enquiry is reviewed and actioned by a licensed human broker.
+          enquiry is reviewed and actioned by an appropriately authorised human broker.
         </p>
       </div>
     </Section>

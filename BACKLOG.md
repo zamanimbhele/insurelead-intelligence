@@ -7,6 +7,9 @@ Priced in the accompanying quotation.
 - Production-pilot foundation completed: Supabase persistence for leads, consent, approved buyers,
   allocations and audit logs; cookie-based dashboard authentication; RLS; and atomic consent-aware
   capture/allocation functions.
+- Multi-product foundation completed: product catalogue, individual/business intake, preservation
+  of existing commercial cover selections, product-aware buyer appetite, product filtering, and
+  read-only MCP product discovery.
 - Expand the Supabase schema for the full build: users, user_roles, broker_profiles,
   teams, leads, lead_contacts, lead_insurance_needs, lead_consents, lead_assignments,
   lead_activities, lead_notes, lead_tasks, lead_scores, lead_sources, campaigns,
@@ -26,6 +29,8 @@ Priced in the accompanying quotation.
   marketing wording, FSP disclosures, terms, retention policy) with version history.
 
 ## Broker Workflow
+- Add broker-owned campaigns, product permissions, capacity limits, sending identities, and strict
+  organisation isolation for campaign and lead data.
 - Kanban pipeline across all 13 lead statuses, with drag-and-drop reassignment.
 - Notes, tasks, call/email/meeting logging, and follow-up reminders on the lead profile.
 - Full activity timeline and loss-reason capture.
@@ -60,3 +65,13 @@ Priced in the accompanying quotation.
 - Full reporting suite: leads by source/broker/industry/location/campaign/category/score,
   funnel conversion rates, response time, lead ageing, lost-lead reasons, FYE campaign
   performance, hotspot conversion performance.
+
+## Campaign Orchestration MCP
+- Campaign drafts linked to one broker, one or more products, a target segment, consent purpose,
+  content version, sending identity, schedule, and lifecycle state.
+- MCP tools for draft generation, policy validation, preview, test delivery, approval, launch,
+  pause, and performance reporting.
+- Require human approval and explicit launch confirmation; never allow a content-generation call
+  to send a campaign directly.
+- Enforce suppression lists, marketing consent, product permissions, broker tenant boundaries,
+  rate limits, and immutable delivery/audit events before every dispatch.

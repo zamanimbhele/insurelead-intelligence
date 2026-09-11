@@ -12,7 +12,12 @@ function readJson<T>(file: string, fallback: T): T {
   catch { return fallback; }
 }
 function writeJson(file: string, value: unknown) { fs.writeFileSync(file, JSON.stringify(value, null, 2)); }
-export function getBuyers(): Buyer[] { return readJson<Buyer[]>(BUYERS_FILE, []); }
+export function getBuyers(): Buyer[] {
+  return readJson<Buyer[]>(BUYERS_FILE, []).map((buyer) => ({
+    ...buyer,
+    insuranceProducts: buyer.insuranceProducts ?? [],
+  }));
+}
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }
 
 export function getEligibleBuyersForLead(lead: Lead, buyers: Buyer[]): Buyer[] {
@@ -20,7 +25,8 @@ export function getEligibleBuyersForLead(lead: Lead, buyers: Buyer[]): Buyer[] {
     buyer.status === "active" &&
     buyer.minimumScore <= lead.score &&
     (buyer.provinces.length === 0 || buyer.provinces.includes(lead.province)) &&
-    (buyer.industries.length === 0 || buyer.industries.includes(lead.industry))
+    (buyer.industries.length === 0 || Boolean(lead.industry && buyer.industries.includes(lead.industry))) &&
+    (buyer.insuranceProducts.length === 0 || lead.insuranceProducts.some((product) => buyer.insuranceProducts.includes(product)))
   );
 }
 
