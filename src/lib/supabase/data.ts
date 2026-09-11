@@ -86,6 +86,7 @@ type PreferenceRow = {
   daily_lead_capacity: number;
   contact_sla_hours: number;
   accepts_shared_leads: boolean;
+  accepts_campaigns: boolean;
 };
 
 type AllocationRow = {
@@ -294,7 +295,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       .select("id, name, slug, organisation_type, status, onboarding_status, fsp_number, website_url, support_phone, contact_email")
       .in("organisation_type", ["broker", "insurer"]),
     client.from("buyer_preferences").select(
-      "organisation_id, provinces, cities, industries, insurance_products, minimum_score, daily_lead_capacity, contact_sla_hours, accepts_shared_leads",
+      "organisation_id, provinces, cities, industries, insurance_products, minimum_score, daily_lead_capacity, contact_sla_hours, accepts_shared_leads, accepts_campaigns",
     ),
   ]);
   fail("Unable to load buyer organisations", organisationResult.error);
@@ -324,6 +325,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       dailyLeadCapacity: preference?.daily_lead_capacity ?? 25,
       contactSlaHours: preference?.contact_sla_hours ?? 24,
       acceptsSharedLeads: preference?.accepts_shared_leads ?? false,
+      acceptsCampaigns: preference?.accepts_campaigns ?? false,
       contactEmail: organisation.contact_email,
     };
   });

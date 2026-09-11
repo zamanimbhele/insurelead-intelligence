@@ -9,7 +9,7 @@ import {
   saveLead,
   updateLead,
 } from "./demo-store.ts";
-import { allocateLead, getAllocations, getBuyers } from "./marketplace-store.ts";
+import { allocateLead, getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store.ts";
 import { createSupabaseAdminClient } from "./supabase/admin.ts";
 import { getDataMode } from "./supabase/config.ts";
 import {
@@ -23,6 +23,7 @@ import {
   fetchSupabaseConsent,
   fetchSupabaseLead,
   fetchSupabaseLeads,
+  fetchSupabaseSendingIdentities,
   hasRecentSupabaseDuplicate,
   reserveSupabaseLead,
   updateSupabaseLead,
@@ -80,7 +81,7 @@ export async function updateRuntimeLead(id: string, changes: Partial<Lead>) {
 }
 
 export async function appendRuntimeAuditLog(entry: {
-  entity: "lead" | "consent" | "assignment" | "status";
+  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression";
   entityId: string;
   action: string;
   actor: string;
@@ -124,6 +125,12 @@ export async function listRuntimeBuyers() {
 
 export async function listRuntimeAllocations() {
   return getDataMode() === "demo" ? getAllocations() : fetchSupabaseAllocations(requireAdminClient());
+}
+
+export async function listRuntimeSendingIdentities(organisationId?: string) {
+  return getDataMode() === "demo"
+    ? getSendingIdentities(organisationId)
+    : fetchSupabaseSendingIdentities(requireAdminClient(), organisationId);
 }
 
 export async function reserveRuntimeLead(input: {

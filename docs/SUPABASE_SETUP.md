@@ -67,6 +67,8 @@ The marketplace matches only active buyers whose stored appetite matches the lea
 reservation function locks the lead, verifies current consent, enforces recipient/exclusivity
 and daily-capacity limits, and records an audit entry atomically. Follow
 [`BROKER_TENANCY_SETUP.md`](BROKER_TENANCY_SETUP.md) to attach broker users and validate tenant isolation.
+After broker tenancy is working, follow [`CAMPAIGN_MCP_SETUP.md`](CAMPAIGN_MCP_SETUP.md) to apply
+the campaign migration and enable campaign delivery safely.
 
 ## 5. Validate before accepting real leads
 
@@ -74,6 +76,8 @@ and daily-capacity limits, and records an audit entry atomically. Follow
 npm ci
 npm run typecheck
 npm run lint
+npm run test:tenancy
+npm run test:campaigns
 npm run build
 npm run test:e2e
 ```

@@ -29,6 +29,7 @@ export function getBuyers(): Buyer[] {
     dailyLeadCapacity: buyer.dailyLeadCapacity ?? 25,
     contactSlaHours: buyer.contactSlaHours ?? 24,
     acceptsSharedLeads: buyer.acceptsSharedLeads ?? false,
+    acceptsCampaigns: buyer.acceptsCampaigns ?? false,
   }));
 }
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }

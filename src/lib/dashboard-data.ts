@@ -12,6 +12,8 @@ import {
   fetchSupabaseSendingIdentities,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
+import { getCampaignRecipients, getCampaigns } from "./campaign-store";
+import { fetchSupabaseCampaignRecipients, fetchSupabaseCampaigns } from "./supabase/campaign-data";
 
 async function requireServerClient() {
   const client = await createSupabaseServerClient();
@@ -97,4 +99,28 @@ export async function getDashboardBrokerWorkspace(identity: DashboardIdentity) {
     members,
     sendingIdentities,
   };
+}
+
+export async function getDashboardCampaignData(identity: DashboardIdentity) {
+  if (getDataMode() === "demo") {
+    const campaigns = getCampaigns();
+    return {
+      campaigns,
+      buyers: getBuyers(),
+      recipients: new Map(campaigns.map((campaign) => [campaign.id, getCampaignRecipients(campaign.id)])),
+    };
+  }
+
+  const client = await requireServerClient();
+  const organisationId = identity.organisationType === "broker" || identity.organisationType === "insurer"
+    ? identity.organisationId
+    : undefined;
+  const [campaigns, buyers] = await Promise.all([
+    fetchSupabaseCampaigns(client, organisationId),
+    fetchSupabaseBuyers(client),
+  ]);
+  const recipientEntries = await Promise.all(
+    campaigns.map(async (campaign) => [campaign.id, await fetchSupabaseCampaignRecipients(client, campaign.id)] as const),
+  );
+  return { campaigns, buyers, recipients: new Map(recipientEntries) };
 }

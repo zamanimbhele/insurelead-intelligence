@@ -32,21 +32,16 @@ Operational setup is documented in [`BROKER_TENANCY_SETUP.md`](BROKER_TENANCY_SE
 ## Increment 3 — campaign-generation MCP
 
 Campaign generation and campaign delivery remain separate capabilities. Generation creates a
-versioned draft; it cannot send.
+versioned draft; it cannot send. This increment is implemented by
+`202609110002_campaign_generation_mcp.sql` and the tenant-scoped campaign MCP tools.
 
 Planned tools:
 
-- `list_insurance_products`
-- `list_eligible_brokers`
-- `create_campaign_draft`
-- `generate_campaign_content`
-- `validate_campaign`
-- `preview_campaign`
-- `send_test_campaign`
-- `approve_campaign`
-- `launch_campaign`
-- `pause_campaign`
-- `get_campaign_performance`
+- `list_insurance_products` and `list_eligible_brokers`
+- `list_campaigns` and `create_campaign_draft`
+- `generate_campaign_content`, `validate_campaign`, and `preview_campaign`
+- `send_test_campaign`, `approve_campaign`, and explicit `launch_campaign`
+- `pause_campaign` and `get_campaign_performance`
 
 Before launch, the service must confirm broker/product permission, tenant ownership, consent or
 other approved contact basis, suppression status, approved content version, sending identity, and
@@ -55,3 +50,7 @@ an explicit human approval. Every attempt and delivery outcome must be auditable
 For the pilot, platform notifications and approved campaign tests may use
 `notify.indlelatechnologies.com`. Broker-specific verified sending domains should be supported
 before broader campaign volume so reputation and identity can be managed per broker.
+
+See [`CAMPAIGN_MCP_SETUP.md`](CAMPAIGN_MCP_SETUP.md) for role, Resend, delivery-mode, and launch
+instructions. Provider webhook ingestion for delivered, bounced, complained, and engagement events
+remains a production integration task.

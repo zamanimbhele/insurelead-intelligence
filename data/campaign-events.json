@@ -1,0 +1,18 @@
+[
+  {
+    "id": "event_demo_motor_content",
+    "campaignId": "campaign_demo_motor",
+    "eventType": "content_generated",
+    "actor": "demo_campaign_manager",
+    "details": { "contentVersion": 1 },
+    "occurredAt": "2026-09-11T10:05:00.000Z"
+  },
+  {
+    "id": "event_demo_business_content",
+    "campaignId": "campaign_demo_business",
+    "eventType": "content_generated",
+    "actor": "demo_campaign_manager",
+    "details": { "contentVersion": 1 },
+    "occurredAt": "2026-09-11T09:05:00.000Z"
+  }
+]

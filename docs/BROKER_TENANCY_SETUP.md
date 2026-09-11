@@ -12,7 +12,7 @@ to their own organisation.
 | `compliance_admin` | All tenants | Platform oversight and controlled administration |
 | `compliance_auditor` | All tenants, read-only | Review tenant configuration, leads, allocations, and audit evidence |
 | `broker_admin` | Own tenant | View organisation profile and accept or release allocated leads |
-| `campaign_manager` | Own tenant | View broker profile and, in the next increment, manage campaign drafts |
+| `campaign_manager` | Own tenant | View broker profile and manage campaign drafts/content; cannot approve |
 | `broker_agent` | Own tenant | View allocated leads and accept or release a reservation |
 
 Legacy `buyer_manager` and `broker` profiles are migrated to `broker_admin` and `broker_agent` respectively.
@@ -44,9 +44,9 @@ allocation is created. Each explicit evaluation is written to `lead_match_evalua
 ## Sending identities
 
 `broker_sending_identities` stores each tenant's Resend domain, From address, Reply-To address, verification status,
-and default identity. This increment does not send campaigns. The campaign-generation MCP must require a verified
-identity, tenant ownership, approved content, and human approval before delivery is introduced.
+and default identity. The campaign-generation MCP requires a verified identity, tenant ownership, approved content,
+and human approval before delivery.
 
-The current operational MCP still runs with trusted platform scope because it uses the server-only Supabase client.
-It must not be exposed directly to broker users. Tenant-scoped campaign tools and approval enforcement belong to
-the campaign-generation increment.
+The operational MCP uses the server-only Supabase client and must not be exposed directly to untrusted users.
+Tenant-scoped campaign actor settings and approval enforcement are documented in
+[`CAMPAIGN_MCP_SETUP.md`](CAMPAIGN_MCP_SETUP.md).

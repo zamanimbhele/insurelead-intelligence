@@ -1,0 +1,24 @@
+[
+  {
+    "id": "content_demo_motor_v1",
+    "campaignId": "campaign_demo_motor",
+    "version": 1,
+    "subject": "Review your Motor Insurance for the season ahead",
+    "preheader": "Motor Insurance information from Personal Lines Broker Pilot",
+    "htmlBody": "<p>Hello {{first_name}},</p><p>Review whether your motor cover still fits your needs.</p><p>Insurance information only. This is not advice, a quote, or confirmation of cover.</p><p><a href=\"{{unsubscribe_url}}\">Unsubscribe</a></p>",
+    "textBody": "Hello {{first_name}},\n\nReview whether your motor cover still fits your needs.\n\nInsurance information only. This is not advice, a quote, or confirmation of cover.\nUnsubscribe: {{unsubscribe_url}}",
+    "generatedBy": "demo_campaign_manager",
+    "createdAt": "2026-09-11T10:05:00.000Z"
+  },
+  {
+    "id": "content_demo_business_v1",
+    "campaignId": "campaign_demo_business",
+    "version": 1,
+    "subject": "Prepare for your upcoming Business Insurance review",
+    "preheader": "Business Insurance information from National SME Insurance Pilot",
+    "htmlBody": "<p>Hello {{first_name}},</p><p>Prepare early for your next business insurance review.</p><p>Insurance information only. This is not advice, a quote, or confirmation of cover.</p><p><a href=\"{{unsubscribe_url}}\">Unsubscribe</a></p>",
+    "textBody": "Hello {{first_name}},\n\nPrepare early for your next business insurance review.\n\nInsurance information only. This is not advice, a quote, or confirmation of cover.\nUnsubscribe: {{unsubscribe_url}}",
+    "generatedBy": "demo_campaign_manager",
+    "createdAt": "2026-09-11T09:05:00.000Z"
+  }
+]

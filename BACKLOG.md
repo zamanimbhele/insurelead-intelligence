@@ -13,6 +13,9 @@ Priced in the accompanying quotation.
 - Multi-broker tenancy completed: organisation-scoped broker roles, allocated-lead RLS, broker
   profile/directory views, territory and capacity controls, sending identities, auditable matching,
   and controlled allocation acceptance/release.
+- Campaign-generation MCP foundation completed: broker-owned product campaigns, immutable content
+  versions and approvals, consent/allocation/suppression audience gates, verified Resend identities,
+  explicit bounded launches, delivery events, aggregate performance, and a campaign dashboard.
 - Expand the Supabase schema for the full build: users, user_roles, broker_profiles,
   teams, leads, lead_contacts, lead_insurance_needs, lead_consents, lead_assignments,
   lead_activities, lead_notes, lead_tasks, lead_scores, lead_sources, campaigns,
@@ -32,8 +35,7 @@ Priced in the accompanying quotation.
   marketing wording, FSP disclosures, terms, retention policy) with version history.
 
 ## Broker Workflow
-- Add broker-owned campaigns on top of the completed product permissions, capacity limits, sending
-  identities, and strict organisation isolation for allocated lead data.
+- Add visual campaign authoring and approval forms on top of the completed MCP campaign workflow.
 - Kanban pipeline across all 13 lead statuses, with drag-and-drop reassignment.
 - Notes, tasks, call/email/meeting logging, and follow-up reminders on the lead profile.
 - Full activity timeline and loss-reason capture.
@@ -70,11 +72,6 @@ Priced in the accompanying quotation.
   performance, hotspot conversion performance.
 
 ## Campaign Orchestration MCP
-- Campaign drafts linked to one broker, one or more products, a target segment, consent purpose,
-  content version, sending identity, schedule, and lifecycle state.
-- MCP tools for draft generation, policy validation, preview, test delivery, approval, launch,
-  pause, and performance reporting.
-- Require human approval and explicit launch confirmation; never allow a content-generation call
-  to send a campaign directly.
-- Enforce suppression lists, marketing consent, product permissions, broker tenant boundaries,
-  rate limits, and immutable delivery/audit events before every dispatch.
+- Ingest signed Resend delivery, bounce, complaint, open, and click webhooks into immutable events.
+- Add scheduled-job execution and per-tenant daily/monthly delivery quotas beyond the bounded MCP batch.
+- Add visual campaign authoring, approval, version comparison, and recipient-exclusion drill-down.

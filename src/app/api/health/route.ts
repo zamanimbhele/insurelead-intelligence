@@ -4,6 +4,8 @@ import { getCaptchaStatus } from "@/lib/security/captcha";
 import { getRateLimitStatus } from "@/lib/security/rate-limit";
 import { getDataMode } from "@/lib/supabase/config";
 import { getLeadNotificationStatus } from "@/lib/notifications";
+import { getCampaignDeliveryStatus } from "@/lib/campaign-delivery";
+import { getCampaignUnsubscribeStatus } from "@/lib/campaign-unsubscribe";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +38,25 @@ export async function GET() {
     && captcha === "configured"
     && notifications === "configured";
   const status = !dataStoreHealthy ? "unavailable" : readyForPublicTraffic ? "ok" : "degraded";
+  const campaignDelivery = getCampaignDeliveryStatus();
+  const campaignUnsubscribe = getCampaignUnsubscribeStatus();
+  const readyForCampaignDelivery = mode === "supabase"
+    && campaignDelivery === "live"
+    && campaignUnsubscribe === "configured";
 
   return NextResponse.json(
     {
       status,
       mode,
       readyForPublicTraffic,
+      readyForCampaignDelivery,
       checks: {
         dataStore: dataStoreHealthy ? "ok" : "unavailable",
         durableRateLimit: rateLimit,
         captcha,
         notifications,
+        campaignDelivery,
+        campaignUnsubscribe,
       },
     },
     {

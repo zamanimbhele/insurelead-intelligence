@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import nextEnv from "@next/env";
 import { z } from "zod";
 
 import {
@@ -17,6 +18,9 @@ import { getAllocationEligibility, getEligibleBuyersForLead } from "../lib/marke
 import { getDataMode } from "../lib/supabase/config.ts";
 import { INSURANCE_PRODUCTS } from "../lib/constants.ts";
 import { getInsuranceProductLabels } from "../lib/lead-utils.ts";
+import { registerCampaignTools } from "./campaign-tools.ts";
+
+nextEnv.loadEnvConfig(process.cwd());
 
 const server = new McpServer({ name: "insurelead-intelligence", version: "0.1.0" });
 
@@ -299,6 +303,8 @@ server.registerTool(
       byProvince: countBy("province"), byProduct });
   },
 );
+
+registerCampaignTools(server);
 
 async function main() {
   const transport = new StdioServerTransport();
