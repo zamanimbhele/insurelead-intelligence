@@ -43,11 +43,12 @@ export default async function BrokerProfilePage() {
           </div>
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{buyer.onboardingStatus} · {buyer.status}</span>
         </div>
-        <dl className="mt-6 grid gap-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-6 grid gap-5 text-sm sm:grid-cols-2 lg:grid-cols-5">
           <div><dt className="text-slate-400">Daily capacity</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.dailyLeadCapacity} leads</dd></div>
           <div><dt className="text-slate-400">Contact SLA</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.contactSlaHours} hours</dd></div>
           <div><dt className="text-slate-400">Minimum score</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.minimumScore}/100</dd></div>
           <div><dt className="text-slate-400">Shared leads</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.acceptsSharedLeads ? "Accepted" : "Not accepted"}</dd></div>
+          <div><dt className="text-slate-400">Campaigns</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.acceptsCampaigns ? "Enabled" : "Disabled"}</dd></div>
         </dl>
       </section>
 

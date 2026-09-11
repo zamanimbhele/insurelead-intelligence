@@ -34,6 +34,9 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   matching, allocations, and audit logs.
 - Multi-broker tenancy with organisation-scoped broker users, role-aware navigation, capacity and
   SLA-aware matching, broker-specific sending identities, and audited allocation responses.
+- Tenant-scoped campaign orchestration with multi-product drafts, immutable content versions,
+  consent-aware audience previews, explicit human approval, bounded Resend delivery, suppression,
+  and aggregate performance reporting through MCP tools.
 - Password authentication for the internal dashboard, with profile, membership, and organisation checks.
 - Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
   and a deployment-readiness endpoint at `/api/health`.
@@ -83,9 +86,13 @@ Example MCP client configuration (replace the path with your local clone):
 ```
 
 Use `npm run mcp:inspect` to test each tool interactively. The server does not scrape websites,
-send campaigns or outreach, provide insurance advice, or make underwriting decisions. Contact details and
-follow-up drafts are available only for leads with recorded contact consent, and every draft
-requires human approval before sending.
+provide insurance advice, or make underwriting decisions. Contact details and follow-up drafts
+are available only for leads with recorded contact consent.
+
+Campaign generation and delivery are intentionally separate. Production sending is disabled by
+default and requires a tenant-scoped actor, verified broker sending identity, explicit marketing
+consent, accepted allocation, suppression recheck, current-version approval, and a separate exact
+launch confirmation. Follow [`docs/CAMPAIGN_MCP_SETUP.md`](docs/CAMPAIGN_MCP_SETUP.md).
 
 To regenerate the synthetic demo leads:
 
@@ -116,6 +123,7 @@ npx playwright install --with-deps chromium   # first time only
 npm run test:e2e                              # headless run
 npm run test:e2e:ui                           # interactive UI mode, useful while developing
 npm run test:e2e:report                       # open the last HTML report
+npm run test:campaigns                        # campaign policy and isolation assertions
 ```
 
 Tests run serially against a single worker on purpose: `src/lib/demo-store.ts` is a flat JSON
@@ -179,9 +187,8 @@ Turnstile and notification integrations using `docs/PILOT_HARDENING.md`.
 The remaining production work includes:
 
 1. Add administration workflows for broker invitations, role changes, appetite approval, and sending-domain verification.
-2. Expand the database schema (`lead_assignments`,
-   `campaigns`, `data_sources`, `audit_logs`, etc.) with Row Level Security on every sensitive
-   table.
+2. Expand the remaining database schema (`lead_assignments`, `data_sources`, retention workflows,
+   etc.) with Row Level Security on every sensitive table. Campaign tenancy is already included.
 3. Production monitoring, retention/deletion workflows, backup recovery tests, secret rotation,
    and a legal/compliance review before broader marketing.
 4. Contract, billing, dispute, refund, and full buyer self-service workflows. Broker operators can

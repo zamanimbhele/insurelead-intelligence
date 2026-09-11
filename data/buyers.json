@@ -15,6 +15,7 @@
     "dailyLeadCapacity": 15,
     "contactSlaHours": 4,
     "acceptsSharedLeads": false,
+    "acceptsCampaigns": true,
     "contactEmail": "pilot-broker@example-synthetic.co.za"
   },
   {
@@ -33,6 +34,7 @@
     "dailyLeadCapacity": 40,
     "contactSlaHours": 8,
     "acceptsSharedLeads": true,
+    "acceptsCampaigns": true,
     "contactEmail": "pilot-insurer@example-synthetic.co.za"
   },
   {
@@ -56,6 +58,7 @@
     "dailyLeadCapacity": 30,
     "contactSlaHours": 2,
     "acceptsSharedLeads": true,
+    "acceptsCampaigns": true,
     "contactEmail": "personal-lines@example-synthetic.co.za"
   }
 ]

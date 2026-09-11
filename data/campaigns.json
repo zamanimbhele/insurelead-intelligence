@@ -1,0 +1,32 @@
+[
+  {
+    "id": "campaign_demo_motor",
+    "organisationId": "buyer_personal_lines",
+    "name": "Spring motor cover review",
+    "objective": "seasonal",
+    "insuranceProducts": ["motor_insurance"],
+    "audienceRules": { "applicantTypes": ["individual"], "provinces": ["Gauteng"], "minimumScore": 20 },
+    "contactBasis": "marketing_consent",
+    "sendingIdentityId": "identity_personal_lines",
+    "status": "draft",
+    "currentContentVersion": 1,
+    "createdBy": "demo_campaign_manager",
+    "createdAt": "2026-09-11T10:00:00.000Z",
+    "updatedAt": "2026-09-11T10:05:00.000Z"
+  },
+  {
+    "id": "campaign_demo_business",
+    "organisationId": "buyer_sme_national",
+    "name": "SME renewal readiness",
+    "objective": "renewal_reminder",
+    "insuranceProducts": ["business_insurance"],
+    "audienceRules": { "applicantTypes": ["business"], "minimumScore": 30 },
+    "contactBasis": "marketing_consent",
+    "sendingIdentityId": "identity_sme_national",
+    "status": "draft",
+    "currentContentVersion": 1,
+    "createdBy": "demo_campaign_manager",
+    "createdAt": "2026-09-11T09:00:00.000Z",
+    "updatedAt": "2026-09-11T09:05:00.000Z"
+  }
+]

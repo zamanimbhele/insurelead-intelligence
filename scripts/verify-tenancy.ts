@@ -37,6 +37,7 @@ const buyer: Buyer = {
   dailyLeadCapacity: 1,
   contactSlaHours: 4,
   acceptsSharedLeads: false,
+  acceptsCampaigns: true,
   contactEmail: "broker@example.test",
 };
 

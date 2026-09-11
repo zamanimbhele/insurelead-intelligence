@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone } from "lucide-react";
 import { getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
 
@@ -19,6 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       ? [{ href: "/dashboard/brokers", label: "Broker Directory", icon: Building2 }]
       : []),
     { href: "/dashboard/allocations", label: "Allocations", icon: ClipboardList },
+    { href: "/dashboard/campaigns", label: "Campaigns", icon: Megaphone },
     ...(isBrokerUser(identity)
       ? [{ href: "/dashboard/broker-profile", label: "Broker Profile", icon: Settings }]
       : []),

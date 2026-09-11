@@ -14,6 +14,7 @@ test("health endpoint reports demo mode as operational but not public-ready", as
       durableRateLimit: "demo-only",
       captcha: "disabled",
       notifications: "disabled",
+      campaignDelivery: "disabled",
     },
   });
 });

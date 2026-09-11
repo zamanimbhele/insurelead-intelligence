@@ -43,10 +43,11 @@ export default async function BrokerDirectoryPage() {
                 </span>
               </div>
 
-              <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
+              <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 <div><dt className="text-slate-400">Daily capacity</dt><dd className="font-semibold text-slate-800">{buyer.dailyLeadCapacity} leads/day</dd></div>
                 <div><dt className="text-slate-400">Contact SLA</dt><dd className="font-semibold text-slate-800">{buyer.contactSlaHours}h</dd></div>
                 <div><dt className="text-slate-400">Lead model</dt><dd className="font-semibold text-slate-800">{buyer.acceptsSharedLeads ? "Shared allowed" : "Exclusive only"}</dd></div>
+                <div><dt className="text-slate-400">Campaigns</dt><dd className="font-semibold text-slate-800">{buyer.acceptsCampaigns ? "Enabled" : "Disabled"}</dd></div>
               </dl>
 
               <div className="mt-5">

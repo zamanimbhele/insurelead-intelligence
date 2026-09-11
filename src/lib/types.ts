@@ -122,6 +122,38 @@ export type LeadAllocationStatus = "reserved" | "accepted" | "disputed" | "relea
 export type BrokerMemberStatus = "invited" | "active" | "suspended";
 export type BrokerRole = "broker_admin" | "campaign_manager" | "broker_agent";
 export type SendingIdentityStatus = "pending" | "verified" | "disabled";
+export type CampaignStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "scheduled"
+  | "sending"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled";
+export type CampaignObjective =
+  | "awareness"
+  | "renewal_reminder"
+  | "cross_sell"
+  | "quote_follow_up"
+  | "seasonal";
+export type CampaignRecipientStatus =
+  | "queued"
+  | "sent"
+  | "delivered"
+  | "bounced"
+  | "complained"
+  | "failed"
+  | "suppressed";
+
+export interface CampaignAudienceRules {
+  applicantTypes?: ApplicantType[];
+  provinces?: string[];
+  cities?: string[];
+  industries?: string[];
+  minimumScore?: number;
+}
 
 export interface Buyer {
   id: string;
@@ -141,6 +173,7 @@ export interface Buyer {
   dailyLeadCapacity: number;
   contactSlaHours: number;
   acceptsSharedLeads: boolean;
+  acceptsCampaigns: boolean;
   contactEmail: string;
 }
 
@@ -179,6 +212,83 @@ export interface BrokerSendingIdentity {
   createdAt: string;
 }
 
+export interface Campaign {
+  id: string;
+  organisationId: string;
+  name: string;
+  objective: CampaignObjective;
+  insuranceProducts: InsuranceProduct[];
+  audienceRules: CampaignAudienceRules;
+  contactBasis: "marketing_consent";
+  sendingIdentityId?: string;
+  status: CampaignStatus;
+  currentContentVersion?: number;
+  approvedContentVersion?: number;
+  createdBy: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  scheduledAt?: string;
+  launchedAt?: string;
+  pausedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignContentVersion {
+  id: string;
+  campaignId: string;
+  version: number;
+  subject: string;
+  preheader: string;
+  htmlBody: string;
+  textBody: string;
+  generatedBy: string;
+  createdAt: string;
+}
+
+export interface CampaignRecipient {
+  id: string;
+  campaignId: string;
+  leadId: string;
+  status: CampaignRecipientStatus;
+  exclusionReason?: string;
+  providerMessageId?: string;
+  createdAt: string;
+  sentAt?: string;
+}
+
+export type CampaignEventType =
+  | "draft_created"
+  | "content_generated"
+  | "validation_completed"
+  | "test_sent"
+  | "approved"
+  | "launch_started"
+  | "recipient_sent"
+  | "recipient_failed"
+  | "paused"
+  | "completed"
+  | "recipient_unsubscribed";
+
+export interface CampaignEvent {
+  id: string;
+  campaignId: string;
+  recipientId?: string;
+  eventType: CampaignEventType;
+  actor: string;
+  details: Record<string, unknown>;
+  occurredAt: string;
+}
+
+export interface MarketingSuppression {
+  id: string;
+  organisationId: string;
+  leadId?: string;
+  emailHash: string;
+  reason: "recipient_request" | "bounce" | "complaint" | "manual";
+  createdAt: string;
+}
+
 export interface BuyerMatchDecision {
   buyerId: string;
   leadId: string;
@@ -188,7 +298,7 @@ export interface BuyerMatchDecision {
 
 export interface AuditLogEntry {
   id: string;
-  entity: "lead" | "consent" | "assignment" | "status";
+  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression";
   entityId: string;
   action: string;
   actor: string;

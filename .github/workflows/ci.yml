@@ -35,6 +35,9 @@ jobs:
       - name: Verify broker tenancy matching
         run: npm run test:tenancy
 
+      - name: Verify campaign policy controls
+        run: npm run test:campaigns
+
       - name: Build production bundle
         run: npm run build
 

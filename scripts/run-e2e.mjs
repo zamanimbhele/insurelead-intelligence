@@ -14,6 +14,9 @@ const child = spawn(process.execPath, [playwrightCli, "test", ...process.argv.sl
     TURNSTILE_SECRET_KEY: "",
     LEAD_NOTIFICATION_WEBHOOK_URL: "",
     LEAD_NOTIFICATION_WEBHOOK_TOKEN: "",
+    INSURELEAD_CAMPAIGN_DELIVERY_MODE: "disabled",
+    RESEND_API_KEY: "",
+    CAMPAIGN_UNSUBSCRIBE_SECRET: "",
   },
 });
 
