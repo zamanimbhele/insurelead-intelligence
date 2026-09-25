@@ -7,10 +7,12 @@ const ERRORS: Record<string, string> = {
   configuration: "Supabase authentication is not configured for this environment.",
   missing_credentials: "Enter both your email address and password.",
   invalid_credentials: "The email address or password is incorrect.",
+  confirmation_failed: "This confirmation link is invalid or has expired. Register again or request a new confirmation email.",
 };
 
 const MESSAGES: Record<string, string> = {
   account_created: "Your account was created. Sign in while the InsureLead team reviews your broker profile.",
+  email_confirmed: "Your email address has been confirmed. Sign in while the InsureLead team reviews your broker profile.",
 };
 
 export const metadata = { title: "Sign in | InsureLead Intelligence" };
