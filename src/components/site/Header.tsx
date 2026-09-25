@@ -6,12 +6,11 @@ import { Menu, X, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/solutions", label: "Insurance Products" },
-  { href: "/industries", label: "For Businesses" },
-  { href: "/about#brokers", label: "For Brokers" },
-  { href: "/about", label: "About" },
+  { href: "/#how-it-works", label: "How It Works" },
+  { href: "/#lead-categories", label: "Lead Categories" },
+  { href: "/#campaigns", label: "Campaigns" },
+  { href: "/#why-insurelead", label: "Why InsureLead" },
   { href: "/faq", label: "FAQs" },
-  { href: "/contact", label: "Contact" },
 ];
 
 export function Header() {
@@ -42,10 +41,10 @@ export function Header() {
             Broker Login
           </Link>
           <Link
-            href="/consultation"
+            href="/dashboard/campaigns"
             className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
           >
-            Find Insurance Options
+            Request Leads
           </Link>
         </div>
 
@@ -64,8 +63,8 @@ export function Header() {
           <Link href="/dashboard" className="rounded-md px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
             Broker Login
           </Link>
-          <Link href="/consultation" className="mt-2 rounded-md bg-primary-600 px-4 py-2 text-center text-sm font-semibold text-white">
-            Find Insurance Options
+          <Link href="/dashboard/campaigns" className="mt-2 rounded-md bg-primary-600 px-4 py-2 text-center text-sm font-semibold text-white">
+            Request Leads
           </Link>
         </nav>
       </div>

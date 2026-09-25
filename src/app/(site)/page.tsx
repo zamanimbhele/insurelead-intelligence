@@ -5,6 +5,7 @@ import { WhyReview } from "@/components/site/WhyReview";
 import { Checklist } from "@/components/site/Checklist";
 import { FAQSection } from "@/components/site/FAQSection";
 import { ComplianceReassurance } from "@/components/site/ComplianceReassurance";
+import { BrokerCTA } from "@/components/site/BrokerCTA";
 
 export default function HomePage() {
   return (
@@ -16,6 +17,7 @@ export default function HomePage() {
       <Checklist />
       <FAQSection />
       <ComplianceReassurance />
+      <BrokerCTA />
     </>
   );
 }

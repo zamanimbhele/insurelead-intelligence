@@ -4,7 +4,7 @@ test.describe("Internal broker dashboard (synthetic demo data)", () => {
   test("overview shows key widgets and the recent leads table", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await expect(page.getByRole("heading", { name: "Lead Management Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Lead & Campaign Overview|Platform Operations Overview/ })).toBeVisible();
 
     // Stat cards are targeted by data-testid rather than visible text: the
     // leads table's status filter <select> below also lists every status

@@ -26,7 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </span>
           <div>
             <h1 className="text-xl font-bold text-slate-900">InsureLead sign in</h1>
-            <p className="text-sm text-slate-500">Protected broker and marketplace workspace</p>
+            <p className="text-sm text-slate-500">Secure broker lead and campaign workspace</p>
           </div>
         </div>
 
