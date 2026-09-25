@@ -2,21 +2,21 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { CheckCircle2 } from "lucide-react";
 
 const CHECKLIST_ITEMS = [
-  "Choose whether the enquiry is for you, your household, or your business.",
-  "Select one or more insurance products you want to explore.",
-  "Tell us your preferred contact channel and the best time to reach you.",
-  "Choose whether one partner or up to three approved partners may receive the enquiry.",
+  "Choose the products, regions, customer profiles, and lead volumes you want to target.",
+  "InsureLead prepares and deploys a campaign aligned to your approved broker appetite.",
+  "Customer responses are captured with consent and assessed against transparent quality signals.",
+  "Matched, scored leads are delivered to your secure broker dashboard for follow-up.",
 ];
 
 export function Checklist() {
   return (
-    <Section className="bg-slate-50">
+    <Section id="how-it-works" className="bg-slate-50 scroll-mt-24">
       <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
         <div>
-          <SectionHeading eyebrow="How It Works" title="One Enquiry, Relevant Broker Options" />
+          <SectionHeading eyebrow="How It Works" title="From Lead Request to Broker Dashboard" />
           <p className="mt-4 text-slate-600">
-            InsureLead captures your product interest and consent, then helps route the enquiry to brokers whose
-            approved product appetite matches what you selected.
+            You define the opportunity you want to pursue. InsureLead manages the campaign, enquiry capture,
+            quality scoring, and controlled delivery workflow.
           </p>
         </div>
         <ul className="space-y-3">

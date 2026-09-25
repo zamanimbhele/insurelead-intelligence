@@ -6,24 +6,24 @@ import { cn } from "@/lib/utils";
 
 export const FAQ_ITEMS = [
   {
-    q: "Does submitting this form create an insurance policy or a binding quote?",
-    a: "No. Submitting an enquiry only registers your interest in the products selected. No cover, quote, or policy is created until a participating broker has engaged with you directly and you have agreed to proceed.",
+    q: "Who is InsureLead built for?",
+    a: "InsureLead is built for approved insurance brokers and platform teams that need product-specific lead generation, campaign oversight, controlled allocation, and a dedicated lead-management workspace.",
   },
   {
-    q: "Who will contact me after I submit my details?",
-    a: "One or more participating brokers whose approved product appetite matches your enquiry may contact you, up to the partner limit you select.",
+    q: "How do brokers request leads?",
+    a: "A broker defines the products, geographic coverage, audience criteria, and expected lead volume. The platform team can then prepare a campaign that reflects the broker's approved appetite and capacity.",
   },
   {
-    q: "How is my information used?",
-    a: "Your information is used to respond to your enquiry and, where you give separate optional marketing consent, to share relevant insurance information. See our Privacy Notice for full details.",
+    q: "How are leads generated and delivered?",
+    a: "InsureLead deploys targeted campaign experiences, captures consented responses, evaluates transparent quality signals, and delivers matched leads to the broker's access-controlled dashboard.",
   },
   {
-    q: "Can I ask you to stop contacting me?",
-    a: "Yes. Every communication includes an opt-out option, and you can request to be marked Do Not Contact at any time via our Contact Us page.",
+    q: "Can a broker choose specific products or markets?",
+    a: "Yes. Campaign requirements can be aligned to approved insurance products, locations, customer types, business industries, and operational lead capacity.",
   },
   {
-    q: "Do you provide insurance advice automatically on this website?",
-    a: "No. This platform does not generate automated advice, premiums, or underwriting decisions. All recommendations are made by a licensed human broker.",
+    q: "Does InsureLead make insurance or underwriting decisions?",
+    a: "No. Lead scores support internal prioritisation only. Appropriately authorised human brokers remain responsible for customer engagement, advice, quotations, and underwriting processes.",
   },
 ];
 
@@ -31,7 +31,7 @@ export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   return (
     <Section>
-      <SectionHeading eyebrow="Support" title="Frequently Asked Questions" center />
+      <SectionHeading eyebrow="Broker FAQs" title="Questions About the Platform" center />
       <div className="mx-auto mt-10 max-w-3xl divide-y divide-slate-200 rounded-xl border border-slate-200">
         {FAQ_ITEMS.map((item, idx) => (
           <div key={item.q} className="p-5">

@@ -1,28 +1,28 @@
 import { Section, SectionHeading } from "@/components/ui/Section";
-import { CalendarClock, TrendingUp, ShieldQuestion } from "lucide-react";
+import { Gauge, Megaphone, PanelsTopLeft } from "lucide-react";
 
 const REASONS = [
   {
-    icon: CalendarClock,
-    title: "Your circumstances have changed",
-    description: "A move, new vehicle, growing family, new assets, or changes in your business can affect the cover you need.",
+    icon: Megaphone,
+    title: "Campaign execution without the overhead",
+    description: "Request a product-specific campaign without assembling separate landing pages, intake tools, and routing workflows.",
   },
   {
-    icon: TrendingUp,
-    title: "Your risks have changed",
-    description: "New responsibilities, locations, equipment, travel, or digital activity can create different insurance needs.",
+    icon: Gauge,
+    title: "Quality signals before follow-up",
+    description: "Prioritise leads using transparent scores, consent status, product interest, and allocation context.",
   },
   {
-    icon: ShieldQuestion,
-    title: "You're not sure what you're covered for",
-    description: "A participating broker can explain relevant options without InsureLead making an automated recommendation.",
+    icon: PanelsTopLeft,
+    title: "One broker workspace",
+    description: "Track campaigns, allocations, lead status, follow-up activity, and market signals from a dedicated dashboard.",
   },
 ];
 
 export function WhyReview() {
   return (
-    <Section>
-      <SectionHeading eyebrow="Insurance Reviews" title="Why Review Your Insurance Needs?" />
+    <Section id="why-insurelead" className="bg-slate-50 scroll-mt-24">
+      <SectionHeading eyebrow="Why InsureLead" title="A Clearer Route From Campaign to Conversion" />
       <div className="mt-10 grid gap-8 sm:grid-cols-3">
         {REASONS.map((r) => (
           <div key={r.title}>

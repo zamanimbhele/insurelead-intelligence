@@ -2,10 +2,10 @@ import { Section } from "@/components/ui/Section";
 import { Lock, FileCheck, EyeOff, UserCheck } from "lucide-react";
 
 const POINTS = [
-  { icon: Lock, title: "Secure by design", text: "Your information is transmitted and stored securely and is never exposed in URLs, logs, or analytics tools." },
-  { icon: FileCheck, title: "Clear consent", text: "We record exactly what you consented to, when, and the wording version shown to you at the time." },
-  { icon: EyeOff, title: "No automated decisions", text: "No AI system makes insurance, pricing, or underwriting decisions about you. A human broker always reviews your enquiry." },
-  { icon: UserCheck, title: "You're in control", text: "You can opt out of marketing or request your data be deleted at any time." },
+  { icon: Lock, title: "Tenant-level access", text: "Broker organisations only access leads and campaign data allocated to their approved workspace." },
+  { icon: FileCheck, title: "Consent evidence", text: "Each lead retains the consent wording, timestamp, product context, and campaign source captured at submission." },
+  { icon: EyeOff, title: "No automated advice", text: "Lead scoring supports prioritisation and never replaces human advice, pricing, or underwriting decisions." },
+  { icon: UserCheck, title: "Controlled allocation", text: "Product appetite, geography, capacity, and contact restrictions are respected before leads reach a broker." },
 ];
 
 export function ComplianceReassurance() {
@@ -14,7 +14,7 @@ export function ComplianceReassurance() {
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-2xl font-bold text-white sm:text-3xl">Privacy and Compliance, By Design</h2>
         <p className="mt-3 text-slate-300">
-          Built to handle personal and business insurance enquiries responsibly, from first contact through to broker allocation.
+          Built to support responsible lead generation from campaign response through to broker allocation and follow-up.
         </p>
       </div>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
