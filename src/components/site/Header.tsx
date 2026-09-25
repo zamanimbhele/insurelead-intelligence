@@ -37,14 +37,14 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-primary-700">
+          <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-primary-700">
             Broker Login
           </Link>
           <Link
-            href="/dashboard/campaigns"
+            href="/signup"
             className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
           >
-            Request Leads
+            Create Broker Account
           </Link>
         </div>
 
@@ -60,11 +60,11 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <Link href="/dashboard" className="rounded-md px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <Link href="/login" className="rounded-md px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
             Broker Login
           </Link>
-          <Link href="/dashboard/campaigns" className="mt-2 rounded-md bg-primary-600 px-4 py-2 text-center text-sm font-semibold text-white">
-            Request Leads
+          <Link href="/signup" className="mt-2 rounded-md bg-primary-600 px-4 py-2 text-center text-sm font-semibold text-white">
+            Create Broker Account
           </Link>
         </nav>
       </div>

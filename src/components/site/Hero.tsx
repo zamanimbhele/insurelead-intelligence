@@ -18,11 +18,11 @@ export function Hero() {
             campaigns, captures consented enquiries, scores every lead, and delivers them to your broker dashboard.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <LinkButton href="/dashboard/campaigns" className="px-6 py-3.5 text-base">
-              Request Leads <ArrowRight className="h-4 w-4" />
+            <LinkButton href="/signup" className="px-6 py-3.5 text-base">
+              Create Broker Account <ArrowRight className="h-4 w-4" />
             </LinkButton>
-            <LinkButton href="#how-it-works" variant="secondary" className="bg-white/5 text-white border-white/20 hover:bg-white/10 px-6 py-3.5 text-base">
-              See How It Works
+            <LinkButton href="/login" variant="secondary" className="bg-white/5 text-white border-white/20 hover:bg-white/10 px-6 py-3.5 text-base">
+              Broker Login
             </LinkButton>
           </div>
           <div className="mt-12 flex flex-wrap gap-8 text-sm text-slate-300">
