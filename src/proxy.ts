@@ -8,6 +8,7 @@ export async function proxy(request: NextRequest) {
   const config = getSupabasePublicConfig();
   const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
   const isLogin = request.nextUrl.pathname === "/login";
+  const isSignup = request.nextUrl.pathname === "/signup";
 
   if (!config) {
     if (isDashboard) {
@@ -39,7 +40,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isLogin && data.user) {
+  if ((isLogin || isSignup) && data.user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
@@ -50,5 +51,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/login", "/signup"],
 };

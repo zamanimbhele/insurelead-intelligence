@@ -9,13 +9,18 @@ const ERRORS: Record<string, string> = {
   invalid_credentials: "The email address or password is incorrect.",
 };
 
+const MESSAGES: Record<string, string> = {
+  account_created: "Your account was created. Sign in while the InsureLead team reviews your broker profile.",
+};
+
 export const metadata = { title: "Sign in | InsureLead Intelligence" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; next?: string }> }) {
   const resolvedSearchParams = await searchParams;
   const demoMode = getDataMode() === "demo";
   const configured = Boolean(getSupabasePublicConfig());
   const error = resolvedSearchParams.error ? ERRORS[resolvedSearchParams.error] : null;
+  const message = resolvedSearchParams.message ? MESSAGES[resolvedSearchParams.message] : null;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
@@ -31,6 +36,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
 
         {error && <p className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {message && <p className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{message}</p>}
 
         {demoMode ? (
           <div className="mt-6">
@@ -61,6 +67,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             Add the Supabase URL and anonymous key to this deployment before signing in.
           </p>
         )}
+        <p className="mt-6 text-center text-sm text-slate-600">
+          New to InsureLead?{" "}
+          <Link href="/signup" className="font-semibold text-primary-700 hover:text-primary-800">
+            Create a broker account
+          </Link>
+        </p>
       </div>
     </main>
   );

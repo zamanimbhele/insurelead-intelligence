@@ -5,7 +5,7 @@ test.describe("Public site - home page", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: /Request Insurance Leads/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Request Leads/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /Create Broker Account/i }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Leads Across Multiple Insurance Products" })).toBeVisible();
   });
 
@@ -17,12 +17,12 @@ test.describe("Public site - home page", () => {
     await expect(page.getByText(/does not provide insurance advice/i)).toBeVisible();
   });
 
-  test("primary navigation sends brokers to the campaign workspace", async ({ page }) => {
+  test("primary navigation sends new brokers to registration", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Request Leads" }).first().click();
+    await page.getByRole("link", { name: "Create Broker Account" }).first().click();
 
-    await expect(page).toHaveURL(/\/dashboard\/campaigns$/);
-    await expect(page.getByRole("heading", { name: "Campaign Orchestration" })).toBeVisible();
+    await expect(page).toHaveURL(/\/signup$/);
+    await expect(page.getByRole("heading", { name: "Create a broker account" })).toBeVisible();
   });
 
   test("legal pages render configurable placeholder text", async ({ page }) => {
