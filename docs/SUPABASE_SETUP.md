@@ -42,7 +42,41 @@ Supabase projects or branches for preview/testing and production.
 After the core connection works, follow [`PILOT_HARDENING.md`](PILOT_HARDENING.md) to configure
 Turnstile, lead-queue notifications, and the readiness endpoint.
 
-## 3. Bootstrap the first administrator
+## 3. Configure the email confirmation template
+
+The app's `app/auth/confirm/route.ts` route handler verifies signups by reading
+`token_hash` and `type` query parameters and calling `supabase.auth.verifyOtp(...)`. Supabase's
+default "Confirm signup" email template does **not** link there: it links to the hosted
+`{{ .ConfirmationURL }}` on Supabase's own Auth server, which confirms the user directly and
+bypasses this app's route entirely.
+
+For the confirmation page and messaging on `/login` to actually be used in production, update
+the email template in the Supabase Dashboard:
+
+1. Go to Authentication → Email Templates → Confirm signup.
+2. Replace the default body's link so it points at this app's route instead of
+   `{{ .ConfirmationURL }}`:
+
+   ```html
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup">
+     Confirm your email
+   </a>
+   ```
+
+3. Under Authentication → URL Configuration, set **Site URL** to the deployment's public URL
+   (matching `NEXT_PUBLIC_APP_URL`), and add that same URL (and any preview URLs) to
+   **Redirect URLs**. `{{ .SiteURL }}` in the template above resolves from this setting.
+4. Repeat the same `token_hash`/`type` link pattern for any other enabled template that should
+   land on this route (for example "Reset password" uses `type=recovery`, "Change email address"
+   uses `type=email_change`) if those flows are enabled.
+5. Send a real test signup to a mailbox you control and confirm the link lands on
+   `/login?message=email_confirmed`; an expired or already-used link should land on
+   `/login?error=confirmation_failed`.
+
+Skipping this step is the most common reason "email confirmation isn't working" in a fresh
+Supabase project: the code path is correct, but the email never links to it.
+
+## 4. Bootstrap the first administrator
 
 1. In Supabase Authentication → Users, create or invite the initial administrator.
 2. Open `supabase/bootstrap-admin.example.sql`.
@@ -52,7 +86,7 @@ Turnstile, lead-queue notifications, and the readiness endpoint.
 The user can then sign in at `/login`. A valid Auth user without a profile is denied dashboard
 access; this prevents newly created accounts from becoming administrators automatically.
 
-## 4. Add approved pilot buyers
+## 5. Add approved pilot buyers
 
 For every contracted broker or insurer:
 
@@ -70,7 +104,7 @@ and daily-capacity limits, and records an audit entry atomically. Follow
 After broker tenancy is working, follow [`CAMPAIGN_MCP_SETUP.md`](CAMPAIGN_MCP_SETUP.md) to apply
 the campaign migration and enable campaign delivery safely.
 
-## 5. Validate before accepting real leads
+## 6. Validate before accepting real leads
 
 ```bash
 npm ci
@@ -94,7 +128,7 @@ Then validate in a non-production environment:
 - A buyer account sees only records permitted by RLS.
 - `/api/health` reports the Supabase data store and durable rate limiter as configured.
 
-## 6. MCP production mode
+## 7. MCP production mode
 
 The MCP server reads the same Supabase records when `INSURELEAD_DATA_MODE=supabase`. Its process
 has elevated server access, so run it only on a trusted machine. Production MCP mutations remain
