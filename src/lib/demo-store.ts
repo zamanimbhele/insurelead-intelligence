@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import type { Lead, ConsentRecord, AuditLogEntry } from "./types.ts";
 import { INSURANCE_PRODUCTS } from "./constants.ts";
+import { resolveDoNotContactForStatus } from "./lead-utils.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const LEADS_FILE = path.join(DATA_DIR, "leads.json");
@@ -61,6 +62,16 @@ export function updateLead(id: string, changes: Partial<Lead>): Lead | undefined
   leads[index] = updated;
   writeJson(LEADS_FILE, leads);
   return updated;
+}
+
+// Demo-mode equivalent of the Supabase update_lead_status() function: keeps
+// the Kanban board's status move and the doNotContact flag consistent
+// locally, the same way the database function does for Supabase mode.
+export function updateLeadStatus(id: string, nextStatus: Lead["status"]): Lead | undefined {
+  const lead = getLeadById(id);
+  if (!lead) return undefined;
+  const doNotContact = resolveDoNotContactForStatus(lead.status, nextStatus, lead.doNotContact);
+  return updateLead(id, { status: nextStatus, doNotContact });
 }
 
 export function saveLead(lead: Lead) {

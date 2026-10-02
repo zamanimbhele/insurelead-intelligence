@@ -1,4 +1,4 @@
-import type { ApplicantType, BusinessCoverInterest, InsuranceProduct } from "./types";
+import type { ApplicantType, BusinessCoverInterest, InsuranceProduct, LeadStatus } from "./types";
 
 export const INSURANCE_PRODUCTS: {
   value: InsuranceProduct;
@@ -110,3 +110,21 @@ export const LEAD_STATUS_LABELS: Record<string, string> = {
   do_not_contact: "Do Not Contact",
   archived: "Archived",
 };
+
+// Pipeline column order for the Kanban board and status filters. Mirrors the
+// build specification's 13-stage lead lifecycle.
+export const LEAD_STATUS_ORDER: LeadStatus[] = [
+  "new",
+  "contact_attempted",
+  "contacted",
+  "qualified",
+  "consultation_booked",
+  "quote_requested",
+  "quote_issued",
+  "negotiation",
+  "won",
+  "lost",
+  "nurture",
+  "do_not_contact",
+  "archived",
+];

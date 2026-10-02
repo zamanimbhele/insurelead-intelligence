@@ -161,3 +161,12 @@ export function isBrokerUser(identity: DashboardIdentity) {
 export function canRespondToAllocations(identity: DashboardIdentity) {
   return BROKER_OPERATOR_ROLES.includes(identity.role as (typeof BROKER_OPERATOR_ROLES)[number]);
 }
+
+// Platform admins manage the whole pipeline; a broker operator (admin or
+// agent - not campaign_manager, which is marketing-facing) may move only
+// the leads allocated and accepted by their own organisation. The
+// update_lead_status() database function re-checks this server-side for
+// Supabase mode, so this is a UX gate, not the authority boundary.
+export function canUpdateLeadStatus(identity: DashboardIdentity) {
+  return isPlatformAdmin(identity) || BROKER_OPERATOR_ROLES.includes(identity.role as (typeof BROKER_OPERATOR_ROLES)[number]);
+}
