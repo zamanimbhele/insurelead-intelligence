@@ -24,8 +24,8 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 - Internal dashboard (`/dashboard`): overview widgets, a searchable leads table with product and
   status filters, a lead detail page (score explanation, applicant/contact detail, source attribution, Do Not Contact
   flag), and a Market Intelligence view with aggregated, threshold-gated charts.
-- 64 synthetic demo leads seeded via `scripts/generate-seed.mjs` — no real business or personal
-  data anywhere in the repo.
+- 64 synthetic demo leads, each with a matching valid consent record, seeded via
+  `scripts/generate-seed.mjs` — no real business or personal data anywhere in the repo.
 - A Playwright end-to-end test suite and a GitHub Actions CI pipeline that lints, type-checks,
   builds, and runs the suite on every push and pull request to `main`.
 - A local MCP server that exposes the product catalogue plus consent-aware lead search,
@@ -117,11 +117,15 @@ default and requires a tenant-scoped actor, verified broker sending identity, ex
 consent, accepted allocation, suppression recheck, current-version approval, and a separate exact
 launch confirmation. Follow [`docs/CAMPAIGN_MCP_SETUP.md`](docs/CAMPAIGN_MCP_SETUP.md).
 
-To regenerate the synthetic demo leads:
+To regenerate the synthetic demo leads and their matching consent records:
 
 ```bash
 node scripts/generate-seed.mjs
 ```
+
+This overwrites both `data/leads.json` and `data/consents.json` - every generated lead gets a
+fully valid consent record (the same five fields the public form and `isConsentValid()` require),
+so demo-mode consent coverage reads realistically rather than near-zero.
 
 Copy `.env.example` to `.env.local` before running in an environment that needs Supabase or the
 optional integrations. Demo mode runs without populated secrets.
@@ -189,6 +193,7 @@ src/
     server.ts            Consent-aware MCP tools for AI assistants
 data/
   leads.json            Synthetic seeded leads (generated, not hand-written)
+  consents.json         Matching synthetic consent record per seeded lead (generated)
 scripts/
   generate-seed.mjs     Synthetic data generator
 e2e/

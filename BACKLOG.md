@@ -91,6 +91,16 @@ Priced in the accompanying quotation.
   concept of a formal request. Writes go through SECURITY DEFINER RPCs restricted to platform_
   admin/compliance_admin (broker operators and compliance auditors cannot create or resolve
   these), same lockdown pattern as lead_notes/lead_tasks/lead_activities.
+- Two demo-data accuracy fixes completed: `scripts/generate-seed.mjs` now writes a matching, fully
+  valid consent record (`data/consents.json`) for every synthetic lead it generates, so freshly
+  seeded demo data shows a realistic consent-coverage figure instead of near-zero; and the main
+  dashboard overview's "Unassigned" stat (`src/app/(dashboard)/dashboard/page.tsx`) now uses the
+  same real, allocation-based definition of "assigned" the Compliance overview already used
+  (`getActiveAllocationLeadIds()`/`isLeadUnassigned()`, extracted into `dashboard-data.ts` for both
+  to share) instead of the cosmetic, free-text `Lead.assignedBroker` field - which is still shown
+  as-is in the leads table and lead profile page as a display label, not a source of truth. A new
+  "Assigned to a Broker" stat card was added alongside it for the same reason the request asked to
+  "separate" the two: one real count for leads with no active allocation, one for leads with one.
 - Role-restricted, audited CSV/report exports with time-limited links.
 - Automated test suite: Vitest (unit) and Playwright (end-to-end).
 - Accessibility review and security review checklist.

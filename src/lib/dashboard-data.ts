@@ -249,6 +249,33 @@ const ACTIVE_ALLOCATION_STATUSES = new Set(["reserved", "accepted", "disputed"])
 const MAX_LISTED_LEADS = 10;
 const MAX_LISTED_REQUESTS = 25;
 
+// The set of lead IDs currently routed to a broker under an active
+// allocation. This is the one authoritative definition of "assigned" -
+// shared by the Compliance overview (below) and the main dashboard
+// overview (src/app/(dashboard)/dashboard/page.tsx) - so neither page can
+// drift back to the cosmetic, free-text Lead.assignedBroker field (seeded
+// as a random name with no real allocation behind it) for this decision.
+export async function getActiveAllocationLeadIds(): Promise<Set<string>> {
+  if (getDataMode() === "demo") {
+    return new Set(
+      getAllocations()
+        .filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status))
+        .map((allocation) => allocation.leadId),
+    );
+  }
+  const allocations = await fetchSupabaseAllocations(await requireServerClient());
+  return new Set(
+    allocations.filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status)).map((allocation) => allocation.leadId),
+  );
+}
+
+// A lead is genuinely unassigned only if it both needs a broker and has no
+// active allocation - see ASSIGNMENT_NOT_REQUIRED_STATUSES and
+// ACTIVE_ALLOCATION_STATUSES above.
+export function isLeadUnassigned(lead: Lead, assignedLeadIds: Set<string>): boolean {
+  return !ASSIGNMENT_NOT_REQUIRED_STATUSES.includes(lead.status) && !assignedLeadIds.has(lead.id);
+}
+
 function toSummary(lead: Lead): ComplianceLeadSummary {
   return { id: lead.id, displayName: getLeadDisplayName(lead), status: lead.status, createdAt: lead.createdAt };
 }
@@ -267,7 +294,6 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
 
   let leads: Lead[];
   let consentByLeadId: Map<string, ConsentRecord | undefined>;
-  let assignedLeadIds: Set<string>;
 
   if (dataMode === "demo") {
     leads = getLeads();
@@ -279,30 +305,16 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
       if (!latestConsentByLead.has(consent.leadId)) latestConsentByLead.set(consent.leadId, consent);
     }
     consentByLeadId = latestConsentByLead;
-    const { getAllocations } = await import("./marketplace-store");
-    assignedLeadIds = new Set(
-      getAllocations()
-        .filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status))
-        .map((allocation) => allocation.leadId),
-    );
   } else {
     const client = await requireServerClient();
     leads = await fetchSupabaseLeads(client);
-    const [consents, allocations] = await Promise.all([
-      fetchSupabaseConsents(client, leads.map((lead) => lead.id)),
-      fetchSupabaseAllocations(client),
-    ]);
-    consentByLeadId = consents;
-    assignedLeadIds = new Set(
-      allocations.filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status)).map((allocation) => allocation.leadId),
-    );
+    consentByLeadId = await fetchSupabaseConsents(client, leads.map((lead) => lead.id));
   }
 
+  const assignedLeadIds = await getActiveAllocationLeadIds();
   const invalidConsentLeads = leads.filter((lead) => !isConsentValid(consentByLeadId.get(lead.id)));
   const doNotContactLeads = leads.filter((lead) => lead.doNotContact);
-  const unassignedLeads = leads.filter(
-    (lead) => !ASSIGNMENT_NOT_REQUIRED_STATUSES.includes(lead.status) && !assignedLeadIds.has(lead.id),
-  );
+  const unassignedLeads = leads.filter((lead) => isLeadUnassigned(lead, assignedLeadIds));
 
   const retentionThresholdDays = settings.leadRetentionDays ?? DEFAULT_LEAD_RETENTION_DAYS;
   const retentionCutoff = Date.now() - retentionThresholdDays * 24 * 60 * 60 * 1000;
