@@ -482,6 +482,34 @@ export async function appendSupabaseAuditLog(
   fail("Unable to write audit log", error);
 }
 
+// Dashboard-initiated lead status changes (the Kanban board, and its
+// keyboard-accessible "Move to" fallback) run through this RPC rather than
+// a direct table update. Unlike updateSupabaseLead() - called only via the
+// service-role admin client for MCP/server-side writes - this call carries
+// the signed-in user's own session, and public.update_lead_status()
+// re-checks on the database side that a platform admin or an allocated
+// broker operator is making the change, keeps the Do Not Contact flag in
+// sync, and writes the audit log entry itself.
+export async function updateSupabaseLeadStatus(
+  client: SupabaseClient,
+  input: { leadId: string; status: string },
+): Promise<{ leadId: string; status: string; doNotContact: boolean }> {
+  const { data, error } = await client.rpc("update_lead_status", {
+    p_lead_id: input.leadId,
+    p_status: input.status,
+  });
+  fail("Unable to update lead status", error);
+  const result = data as { leadId?: string; status?: string; doNotContact?: boolean } | null;
+  if (!result || typeof result.status !== "string") {
+    throw new Error("Unable to update lead status: database did not return a result");
+  }
+  return {
+    leadId: result.leadId ?? input.leadId,
+    status: result.status,
+    doNotContact: Boolean(result.doNotContact),
+  };
+}
+
 export async function reserveSupabaseLead(
   client: SupabaseClient,
   input: { leadId: string; buyerId: string; priceCents: number; exclusive: boolean },

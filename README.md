@@ -34,6 +34,9 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   matching, allocations, and audit logs.
 - Multi-broker tenancy with organisation-scoped broker users, role-aware navigation, capacity and
   SLA-aware matching, broker-specific sending identities, and audited allocation responses.
+- A lead pipeline Kanban board (with a table view alongside it) across all 13 lead statuses, with
+  drag-and-drop and a keyboard-accessible fallback, gated to platform admins and the broker
+  operators a lead is actually allocated and accepted to, and fully audited.
 - Tenant-scoped campaign orchestration with multi-product drafts, immutable content versions,
   consent-aware audience previews, explicit human approval, bounded Resend delivery, suppression,
   and aggregate performance reporting through MCP tools.
@@ -44,7 +47,7 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): the Kanban pipeline, notes/tasks/call logging, broker invitation UI, the Data Source Registry,
+build (see `BACKLOG.md`): notes/tasks/call logging, broker invitation UI, the Data Source Registry,
 hotspot/industry opportunity dashboards, the financial
 year-end campaign planner, the compliance dashboard, CSV export controls, buyer self-service,
 contracting, and invoicing/payment collection. The full scope is documented in the project's

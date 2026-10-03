@@ -36,10 +36,13 @@ Priced in the accompanying quotation.
 
 ## Broker Workflow
 - Add visual campaign authoring and approval forms on top of the completed MCP campaign workflow.
-- Kanban pipeline across all 13 lead statuses, with drag-and-drop reassignment.
+- Kanban pipeline completed: drag-and-drop (plus a keyboard-accessible "Move to" select) across all
+  13 lead statuses, gated by a platform-admin-or-allocated-broker-operator check in a SECURITY
+  DEFINER database function, with the Do Not Contact flag kept in sync and every move audited.
 - Notes, tasks, call/email/meeting logging, and follow-up reminders on the lead profile.
 - Full activity timeline and loss-reason capture.
-- Do Not Contact workflow enforcement across all outreach surfaces.
+- Do Not Contact workflow enforcement across all outreach surfaces (the Kanban board can now set
+  and clear the flag; blocking it from campaign/notification surfaces is still open).
 
 ## Buyer Commerce
 - Extend the initial audited acceptance/release workspace with reassignment, dispute evidence, and
