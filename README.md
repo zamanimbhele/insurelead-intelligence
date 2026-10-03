@@ -45,10 +45,18 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   and a deployment-readiness endpoint at `/api/health`.
 - A Compliance dashboard (`/dashboard/compliance`): consent coverage, leads without a valid
   consent record, Do Not Contact count, unassigned leads, retention exceptions against a
-  configurable, admin-editable retention threshold, and opt-out/data-subject-request counts -
-  gated to platform admins, compliance admins, and (read-only) compliance auditors.
-  Data-source-approval and export-activity widgets remain explicit "not yet available"
-  placeholders, not fabricated data.
+  configurable, admin-editable retention threshold, opt-out/data-subject-request counts, and a
+  Data Source Registry summary - gated to platform admins, compliance admins, and (read-only)
+  compliance auditors. Only the export-activity widget remains an explicit "not yet available"
+  placeholder, not fabricated data.
+- A Data Source Registry (`/dashboard/data-sources`): every source of business or contact
+  information the platform uses, registered with its category (restricted to the project brief's
+  allowed list - no scraping), legal basis, consent status, licence reference, retention period,
+  approved use, data fields received, data quality rating, and refresh frequency, all required
+  before a source can be approved. A source cannot be marked allowed-for-marketing until it is
+  approved (enforced in the database, not just the UI), and every approve/reject/suspend/reinstate
+  decision is appended to an audit trail rather than overwriting history. Restricted to platform
+  and compliance admins, with read-only access for compliance auditors.
 - An opt-out and data subject request workflow on the Compliance dashboard: a log of opt-out
   requests received outside a form submission (processing one sets the linked lead to Do Not
   Contact), and a POPIA access/correction/deletion request log with a 30-day due date and status

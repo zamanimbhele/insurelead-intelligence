@@ -63,8 +63,25 @@ Priced in the accompanying quotation.
   urgency).
 - Financial-year-end campaign planner: filter by FYE month, campaign calendar, broker follow-up
   task lists, results tracking by month/sector/location/need.
-- Data Source Registry with governance fields (legal basis, consent status, licence reference,
-  retention period, approved use) and CSV import gated on source/legal-basis selection.
+- Data Source Registry completed: a dedicated `/dashboard/data-sources` page where a platform or
+  compliance admin registers every source of business or contact information the platform uses -
+  category restricted to the brief's allowed list (website forms, referral partners, approved
+  events/webinars, approved CSV uploads, CRM imports, permissioned email campaigns, Google Ads/
+  Search Console, organic analytics, approved directories/commercial providers, public aggregate
+  statistics, manual broker entry - deliberately no scraping category), with legal basis, consent
+  status, licence reference, retention period, approved use, data fields received, data quality
+  rating, refresh frequency, and PII/market-intelligence-only flags all required or explicitly set
+  at registration. A separate decision step (approve/reject/suspend/reinstate) is the only way to
+  change a source's approval status, and a source cannot be marked allowed-for-marketing until it
+  is approved (enforced by both a SECURITY DEFINER RPC and a database check constraint) - editing a
+  source's governance fields never silently keeps an outdated approval or marketing permission
+  alive. Every decision is appended to an audit-trail table (`data_source_approvals`) rather than
+  overwriting history. The Compliance dashboard's former "Data source approvals" placeholder is now
+  a real summary (pending/approved/rejected/suspended counts) linking to the full registry. This is
+  the registry only - CSV import gating on it is still open, because no CSV import feature exists
+  in the codebase yet to gate; a future importer should require `data_sources.approval_status =
+  'approved'` for the source it reads from, the same way this registry's own RPCs already require
+  every governance field to be supplied before a source exists at all.
 
 ## Compliance & Quality
 - Compliance dashboard completed (MVP): consent coverage, leads without a valid consent record
@@ -75,9 +92,10 @@ Priced in the accompanying quotation.
   and open/overdue data subject request counts - all computed from real demo/Supabase data, gated
   to platform admins, compliance admins, and read-only for compliance auditors (reusing the
   existing is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed
-  beyond the settings table itself). Data-source-approval and export-activity widgets remain
-  explicit "not yet available" placeholders rather than fabricated data - they need the two
-  backlog items below built first.
+  beyond the settings table itself). Its "Data source approvals" widget is now a real summary
+  (see the Data Source Registry item under Market Intelligence); the export-activity widget
+  remains an explicit "not yet available" placeholder - it needs the audited-exports backlog item
+  below built first.
 - Opt-out and data subject request workflows completed: a compliance-admin-only log of opt-out
   requests received outside a form submission (phone, email, WhatsApp, letter), where processing
   one sets the linked lead to Do Not Contact through the same update_lead_status() path the

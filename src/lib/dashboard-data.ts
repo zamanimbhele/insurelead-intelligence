@@ -1,15 +1,23 @@
-import { getApplicationSettings as getDemoApplicationSettings, getConsents as getDemoConsents, getLeads } from "./demo-store";
+import {
+  getApplicationSettings as getDemoApplicationSettings,
+  getConsents as getDemoConsents,
+  getDataSources as getDemoDataSources,
+  getLeads,
+} from "./demo-store";
 import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
+  createSupabaseDataSource,
   createSupabaseDataSubjectRequest,
   createSupabaseOptOutRequest,
+  decideSupabaseDataSourceApproval,
   fetchSupabaseAllocations,
   fetchSupabaseApplicationSettings,
   fetchSupabaseBrokerMembers,
   fetchSupabaseBuyers,
   fetchSupabaseConsents,
+  fetchSupabaseDataSources,
   fetchSupabaseDataSubjectRequests,
   fetchSupabaseLead,
   fetchSupabaseLeadActivities,
@@ -20,12 +28,19 @@ import {
   fetchSupabaseSendingIdentities,
   processSupabaseOptOutRequest,
   updateSupabaseApplicationSettings,
+  updateSupabaseDataSource,
   updateSupabaseDataSubjectRequestStatus,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
 import type {
   ApplicationSettings,
   ConsentRecord,
+  DataQualityRating,
+  DataSource,
+  DataSourceApprovalDecision,
+  DataSourceCategory,
+  DataSourceConsentStatus,
+  DataSourceRefreshFrequency,
   DataSubjectRequest,
   DataSubjectRequestStatus,
   DataSubjectRequestType,
@@ -233,6 +248,10 @@ export type ComplianceOverview = {
     // Date.now() during render.
     requests: (DataSubjectRequest & { overdue: boolean })[];
   };
+  // Counts only - the full registry (list, create, approve/reject/
+  // suspend) lives on its own /dashboard/data-sources page; this is what
+  // the Compliance overview's "Data source approvals" widget needs.
+  dataSourceRegistry: { pendingCount: number; approvedCount: number; rejectedCount: number; suspendedCount: number; totalCount: number };
 };
 
 // A lead in one of these statuses no longer needs an active broker
@@ -324,14 +343,18 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
 
   const validCount = leads.length - invalidConsentLeads.length;
 
-  const [optOutRequests, dataSubjectRequests] = dataMode === "demo"
+  const [optOutRequests, dataSubjectRequests, dataSources] = dataMode === "demo"
     ? await (async () => {
       const { getOptOutRequests, getDataSubjectRequests } = await import("./demo-store");
-      return [getOptOutRequests(), getDataSubjectRequests()];
+      return [getOptOutRequests(), getDataSubjectRequests(), getDemoDataSources()];
     })()
     : await (async () => {
       const client = await requireServerClient();
-      return Promise.all([fetchSupabaseOptOutRequests(client), fetchSupabaseDataSubjectRequests(client)]);
+      return Promise.all([
+        fetchSupabaseOptOutRequests(client),
+        fetchSupabaseDataSubjectRequests(client),
+        fetchSupabaseDataSources(client),
+      ]);
     })();
 
   return {
@@ -360,6 +383,13 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
       requests: dataSubjectRequests
         .slice(0, MAX_LISTED_REQUESTS)
         .map((request) => ({ ...request, overdue: isDataSubjectRequestOverdue(request) })),
+    },
+    dataSourceRegistry: {
+      pendingCount: dataSources.filter((source) => source.approvalStatus === "pending").length,
+      approvedCount: dataSources.filter((source) => source.approvalStatus === "approved").length,
+      rejectedCount: dataSources.filter((source) => source.approvalStatus === "rejected").length,
+      suspendedCount: dataSources.filter((source) => source.approvalStatus === "suspended").length,
+      totalCount: dataSources.length,
     },
   };
 }
@@ -433,5 +463,87 @@ export async function updateDashboardDataSubjectRequestStatus(
     return updated ? { id: updated.id } : undefined;
   }
   const id = await updateSupabaseDataSubjectRequestStatus(await requireServerClient(), { requestId, status, resolutionNotes });
+  return { id };
+}
+
+// --- Data Source Registry (project brief section 9). Same demo/supabase
+// branching pattern as the compliance functions above.
+
+export async function getDashboardDataSources(): Promise<DataSource[]> {
+  if (getDataMode() === "demo") return getDemoDataSources();
+  return fetchSupabaseDataSources(await requireServerClient());
+}
+
+export async function createDashboardDataSource(
+  input: {
+    name: string;
+    sourceType: DataSourceCategory;
+    owner: string;
+    legalBasis: string;
+    consentStatus: DataSourceConsentStatus;
+    approvedUse: string;
+    description?: string;
+    dataFieldsReceived?: string[];
+    licenceReference?: string;
+    retentionPeriodDays?: number;
+    dataQualityRating?: DataQualityRating;
+    refreshFrequency?: DataSourceRefreshFrequency;
+    containsPersonalInformation?: boolean;
+    allowedForMarketIntelligenceOnly?: boolean;
+  },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createDataSource } = await import("./demo-store");
+    return { id: createDataSource(input, actorLabel).id };
+  }
+  const id = await createSupabaseDataSource(await requireServerClient(), input);
+  return { id };
+}
+
+export async function updateDashboardDataSource(
+  dataSourceId: string,
+  changes: Partial<
+    Pick<
+      DataSource,
+      | "name"
+      | "owner"
+      | "description"
+      | "dataFieldsReceived"
+      | "legalBasis"
+      | "consentStatus"
+      | "licenceReference"
+      | "retentionPeriodDays"
+      | "approvedUse"
+      | "dataQualityRating"
+      | "refreshFrequency"
+      | "containsPersonalInformation"
+      | "allowedForMarketIntelligenceOnly"
+    >
+  >,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { updateDataSource } = await import("./demo-store");
+    const updated = updateDataSource(dataSourceId, changes, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await updateSupabaseDataSource(await requireServerClient(), { dataSourceId, ...changes });
+  return { id };
+}
+
+export async function decideDashboardDataSourceApproval(
+  dataSourceId: string,
+  decision: DataSourceApprovalDecision,
+  notes: string | undefined,
+  allowedForMarketing: boolean | undefined,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { decideDataSourceApproval } = await import("./demo-store");
+    const updated = decideDataSourceApproval(dataSourceId, decision, notes, allowedForMarketing, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await decideSupabaseDataSourceApproval(await requireServerClient(), { dataSourceId, decision, notes, allowedForMarketing });
   return { id };
 }

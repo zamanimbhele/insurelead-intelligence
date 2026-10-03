@@ -10,6 +10,9 @@ import type {
   ApplicationSettings,
   AuditLogEntry,
   ConsentRecord,
+  DataSource,
+  DataSourceApprovalDecision,
+  DataSourceApprovalRecord,
   DataSubjectRequest,
   DataSubjectRequestStatus,
   Lead,
@@ -35,6 +38,8 @@ const LEAD_TASKS_FILE = path.join(DATA_DIR, "lead-tasks.json");
 const LEAD_ACTIVITIES_FILE = path.join(DATA_DIR, "lead-activities.json");
 const OPT_OUT_REQUESTS_FILE = path.join(DATA_DIR, "opt-out-requests.json");
 const DATA_SUBJECT_REQUESTS_FILE = path.join(DATA_DIR, "data-subject-requests.json");
+const DATA_SOURCES_FILE = path.join(DATA_DIR, "data-sources.json");
+const DATA_SOURCE_APPROVALS_FILE = path.join(DATA_DIR, "data-source-approvals.json");
 
 function readJson<T>(file: string, fallback: T): T {
   try {
@@ -513,6 +518,178 @@ export function updateDataSubjectRequestStatus(
     action: "data_subject_request_status_changed",
     actor: actorLabel,
     details: `from=${existing.status} to=${status} redacted=${redacted}`,
+  });
+  return updated;
+}
+
+// --- Data Source Registry (project brief section 9). Demo-mode
+// equivalent of create_data_source() / update_data_source() /
+// decide_data_source_approval() - see
+// supabase/migrations/202610040001_data_source_registry.sql. A source
+// cannot be marked allowed-for-marketing until it is approved, mirroring
+// the database's data_sources_marketing_requires_approval check.
+
+export function getDataSources(): DataSource[] {
+  return readJson<DataSource[]>(DATA_SOURCES_FILE, []);
+}
+
+export function getDataSourceApprovals(dataSourceId?: string): DataSourceApprovalRecord[] {
+  const approvals = readJson<DataSourceApprovalRecord[]>(DATA_SOURCE_APPROVALS_FILE, []);
+  return dataSourceId ? approvals.filter((approval) => approval.dataSourceId === dataSourceId) : approvals;
+}
+
+export function createDataSource(
+  input: {
+    name: string;
+    sourceType: DataSource["sourceType"];
+    owner: string;
+    legalBasis: string;
+    consentStatus: DataSource["consentStatus"];
+    approvedUse: string;
+    description?: string;
+    dataFieldsReceived?: string[];
+    licenceReference?: string;
+    retentionPeriodDays?: number;
+    dataQualityRating?: DataSource["dataQualityRating"];
+    refreshFrequency?: DataSource["refreshFrequency"];
+    containsPersonalInformation?: boolean;
+    allowedForMarketIntelligenceOnly?: boolean;
+  },
+  actorLabel: string,
+): DataSource {
+  if (!input.name.trim()) throw new Error("Data source name must not be empty");
+  if (!input.owner.trim()) throw new Error("Data source owner must not be empty");
+  if (!input.legalBasis.trim()) throw new Error("Legal basis must not be empty");
+  if (!input.approvedUse.trim()) throw new Error("Approved use must not be empty");
+
+  const sources = getDataSources();
+  const now = new Date().toISOString();
+  const source: DataSource = {
+    id: generateId("datasource"),
+    name: input.name.trim(),
+    sourceType: input.sourceType,
+    owner: input.owner.trim(),
+    description: input.description?.trim() || undefined,
+    dataFieldsReceived: input.dataFieldsReceived ?? [],
+    legalBasis: input.legalBasis.trim(),
+    consentStatus: input.consentStatus,
+    licenceReference: input.licenceReference?.trim() || undefined,
+    retentionPeriodDays: input.retentionPeriodDays,
+    approvedUse: input.approvedUse.trim(),
+    approvalStatus: "pending",
+    dataQualityRating: input.dataQualityRating ?? "unrated",
+    refreshFrequency: input.refreshFrequency ?? "one_off",
+    containsPersonalInformation: input.containsPersonalInformation ?? false,
+    allowedForMarketing: false,
+    allowedForMarketIntelligenceOnly: input.allowedForMarketIntelligenceOnly ?? false,
+    createdBy: actorLabel,
+    createdAt: now,
+    updatedAt: now,
+  };
+  sources.unshift(source);
+  writeJson(DATA_SOURCES_FILE, sources);
+
+  appendAuditLog({
+    entity: "data_source",
+    entityId: source.id,
+    action: "data_source_registered",
+    actor: actorLabel,
+    details: `name=${source.name} sourceType=${source.sourceType}`,
+  });
+  return source;
+}
+
+export function updateDataSource(
+  dataSourceId: string,
+  changes: Partial<
+    Pick<
+      DataSource,
+      | "name"
+      | "owner"
+      | "description"
+      | "dataFieldsReceived"
+      | "legalBasis"
+      | "consentStatus"
+      | "licenceReference"
+      | "retentionPeriodDays"
+      | "approvedUse"
+      | "dataQualityRating"
+      | "refreshFrequency"
+      | "containsPersonalInformation"
+      | "allowedForMarketIntelligenceOnly"
+    >
+  >,
+  actorLabel: string,
+): DataSource | undefined {
+  const sources = getDataSources();
+  const index = sources.findIndex((source) => source.id === dataSourceId);
+  if (index === -1) return undefined;
+
+  const updated: DataSource = {
+    ...sources[index],
+    ...changes,
+    name: changes.name?.trim() || sources[index].name,
+    owner: changes.owner?.trim() || sources[index].owner,
+    legalBasis: changes.legalBasis?.trim() || sources[index].legalBasis,
+    approvedUse: changes.approvedUse?.trim() || sources[index].approvedUse,
+    updatedAt: new Date().toISOString(),
+  };
+  sources[index] = updated;
+  writeJson(DATA_SOURCES_FILE, sources);
+
+  appendAuditLog({
+    entity: "data_source",
+    entityId: dataSourceId,
+    action: "data_source_updated",
+    actor: actorLabel,
+  });
+  return updated;
+}
+
+export function decideDataSourceApproval(
+  dataSourceId: string,
+  decision: DataSourceApprovalDecision,
+  notes: string | undefined,
+  allowedForMarketing: boolean | undefined,
+  actorLabel: string,
+): DataSource | undefined {
+  const sources = getDataSources();
+  const index = sources.findIndex((source) => source.id === dataSourceId);
+  if (index === -1) return undefined;
+  const previousStatus = sources[index].approvalStatus;
+
+  const nextStatus: DataSource["approvalStatus"] =
+    decision === "approved" || decision === "reinstated" ? "approved" : decision === "rejected" ? "rejected" : "suspended";
+  const decidedAt = new Date().toISOString();
+
+  const updated: DataSource = {
+    ...sources[index],
+    approvalStatus: nextStatus,
+    lastReviewedAt: decidedAt,
+    allowedForMarketing: nextStatus === "approved" && Boolean(allowedForMarketing),
+    updatedAt: decidedAt,
+  };
+  sources[index] = updated;
+  writeJson(DATA_SOURCES_FILE, sources);
+
+  const approvals = getDataSourceApprovals();
+  const approval: DataSourceApprovalRecord = {
+    id: generateId("dsapproval"),
+    dataSourceId,
+    decision,
+    notes: notes?.trim() || undefined,
+    decidedBy: actorLabel,
+    decidedAt,
+  };
+  approvals.unshift(approval);
+  writeJson(DATA_SOURCE_APPROVALS_FILE, approvals);
+
+  appendAuditLog({
+    entity: "data_source",
+    entityId: dataSourceId,
+    action: "data_source_approval_decided",
+    actor: actorLabel,
+    details: `decision=${decision} from=${previousStatus} to=${nextStatus}`,
   });
   return updated;
 }

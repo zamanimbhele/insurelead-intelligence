@@ -6,6 +6,14 @@ import type {
   Buyer,
   BuyerMatchDecision,
   ConsentRecord,
+  DataQualityRating,
+  DataSource,
+  DataSourceApprovalDecision,
+  DataSourceApprovalRecord,
+  DataSourceApprovalStatus,
+  DataSourceCategory,
+  DataSourceConsentStatus,
+  DataSourceRefreshFrequency,
   DataSubjectRequest,
   DataSubjectRequestStatus,
   DataSubjectRequestType,
@@ -209,6 +217,39 @@ type DataSubjectRequestRow = {
   handled_by: string | null;
   resolution_notes: string | null;
   created_by: string;
+};
+
+type DataSourceRow = {
+  id: string;
+  name: string;
+  source_type: DataSourceCategory;
+  owner: string;
+  description: string | null;
+  data_fields_received: string[];
+  legal_basis: string;
+  consent_status: DataSourceConsentStatus;
+  licence_reference: string | null;
+  retention_period_days: number | null;
+  approved_use: string;
+  approval_status: DataSourceApprovalStatus;
+  last_reviewed_at: string | null;
+  data_quality_rating: DataQualityRating;
+  refresh_frequency: DataSourceRefreshFrequency;
+  contains_personal_information: boolean;
+  allowed_for_marketing: boolean;
+  allowed_for_market_intelligence_only: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type DataSourceApprovalRow = {
+  id: string;
+  data_source_id: string;
+  decision: DataSourceApprovalDecision;
+  notes: string | null;
+  decided_by: string;
+  decided_at: string;
 };
 
 function fail(operation: string, error: { message: string } | null) {
@@ -914,5 +955,162 @@ export async function updateSupabaseDataSubjectRequestStatus(
   fail("Unable to update data subject request", error);
   const result = data as { id?: string } | null;
   if (!result?.id) throw new Error("Unable to update data subject request: database did not return an ID");
+  return result.id;
+}
+
+// --- Data Source Registry. Every write goes through a SECURITY DEFINER
+// RPC in supabase/migrations/202610040001_data_source_registry.sql, not
+// a direct table insert/update - the authenticated role has select-only
+// access to both tables.
+
+function mapDataSource(row: DataSourceRow): DataSource {
+  return {
+    id: row.id,
+    name: row.name,
+    sourceType: row.source_type,
+    owner: row.owner,
+    description: optional(row.description),
+    dataFieldsReceived: row.data_fields_received ?? [],
+    legalBasis: row.legal_basis,
+    consentStatus: row.consent_status,
+    licenceReference: optional(row.licence_reference),
+    retentionPeriodDays: row.retention_period_days ?? undefined,
+    approvedUse: row.approved_use,
+    approvalStatus: row.approval_status,
+    lastReviewedAt: optional(row.last_reviewed_at),
+    dataQualityRating: row.data_quality_rating,
+    refreshFrequency: row.refresh_frequency,
+    containsPersonalInformation: row.contains_personal_information,
+    allowedForMarketing: row.allowed_for_marketing,
+    allowedForMarketIntelligenceOnly: row.allowed_for_market_intelligence_only,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapDataSourceApproval(row: DataSourceApprovalRow): DataSourceApprovalRecord {
+  return {
+    id: row.id,
+    dataSourceId: row.data_source_id,
+    decision: row.decision,
+    notes: optional(row.notes),
+    decidedBy: row.decided_by,
+    decidedAt: row.decided_at,
+  };
+}
+
+export async function fetchSupabaseDataSources(client: SupabaseClient): Promise<DataSource[]> {
+  const { data, error } = await client
+    .from("data_sources")
+    .select("*")
+    .order("created_at", { ascending: false });
+  fail("Unable to load data sources", error);
+  return ((data ?? []) as DataSourceRow[]).map(mapDataSource);
+}
+
+export async function fetchSupabaseDataSourceApprovals(client: SupabaseClient, dataSourceId?: string): Promise<DataSourceApprovalRecord[]> {
+  let query = client.from("data_source_approvals").select("*").order("decided_at", { ascending: false });
+  if (dataSourceId) query = query.eq("data_source_id", dataSourceId);
+  const { data, error } = await query;
+  fail("Unable to load data source approval history", error);
+  return ((data ?? []) as DataSourceApprovalRow[]).map(mapDataSourceApproval);
+}
+
+export async function createSupabaseDataSource(
+  client: SupabaseClient,
+  input: {
+    name: string;
+    sourceType: DataSourceCategory;
+    owner: string;
+    legalBasis: string;
+    consentStatus: DataSourceConsentStatus;
+    approvedUse: string;
+    description?: string;
+    dataFieldsReceived?: string[];
+    licenceReference?: string;
+    retentionPeriodDays?: number;
+    dataQualityRating?: DataQualityRating;
+    refreshFrequency?: DataSourceRefreshFrequency;
+    containsPersonalInformation?: boolean;
+    allowedForMarketIntelligenceOnly?: boolean;
+  },
+) {
+  const { data, error } = await client.rpc("create_data_source", {
+    p_name: input.name,
+    p_source_type: input.sourceType,
+    p_owner: input.owner,
+    p_legal_basis: input.legalBasis,
+    p_consent_status: input.consentStatus,
+    p_approved_use: input.approvedUse,
+    p_description: input.description ?? null,
+    p_data_fields_received: input.dataFieldsReceived ?? [],
+    p_licence_reference: input.licenceReference ?? null,
+    p_retention_period_days: input.retentionPeriodDays ?? null,
+    p_data_quality_rating: input.dataQualityRating ?? "unrated",
+    p_refresh_frequency: input.refreshFrequency ?? "one_off",
+    p_contains_personal_information: input.containsPersonalInformation ?? false,
+    p_allowed_for_market_intelligence_only: input.allowedForMarketIntelligenceOnly ?? false,
+  });
+  fail("Unable to register data source", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to register data source: database did not return an ID");
+  return result.id;
+}
+
+export async function updateSupabaseDataSource(
+  client: SupabaseClient,
+  input: {
+    dataSourceId: string;
+    name?: string;
+    owner?: string;
+    description?: string;
+    dataFieldsReceived?: string[];
+    legalBasis?: string;
+    consentStatus?: DataSourceConsentStatus;
+    licenceReference?: string;
+    retentionPeriodDays?: number;
+    approvedUse?: string;
+    dataQualityRating?: DataQualityRating;
+    refreshFrequency?: DataSourceRefreshFrequency;
+    containsPersonalInformation?: boolean;
+    allowedForMarketIntelligenceOnly?: boolean;
+  },
+) {
+  const { data, error } = await client.rpc("update_data_source", {
+    p_data_source_id: input.dataSourceId,
+    p_name: input.name ?? null,
+    p_owner: input.owner ?? null,
+    p_description: input.description ?? null,
+    p_data_fields_received: input.dataFieldsReceived ?? null,
+    p_legal_basis: input.legalBasis ?? null,
+    p_consent_status: input.consentStatus ?? null,
+    p_licence_reference: input.licenceReference ?? null,
+    p_retention_period_days: input.retentionPeriodDays ?? null,
+    p_approved_use: input.approvedUse ?? null,
+    p_data_quality_rating: input.dataQualityRating ?? null,
+    p_refresh_frequency: input.refreshFrequency ?? null,
+    p_contains_personal_information: input.containsPersonalInformation ?? null,
+    p_allowed_for_market_intelligence_only: input.allowedForMarketIntelligenceOnly ?? null,
+  });
+  fail("Unable to update data source", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to update data source: database did not return an ID");
+  return result.id;
+}
+
+export async function decideSupabaseDataSourceApproval(
+  client: SupabaseClient,
+  input: { dataSourceId: string; decision: DataSourceApprovalDecision; notes?: string; allowedForMarketing?: boolean },
+) {
+  const { data, error } = await client.rpc("decide_data_source_approval", {
+    p_data_source_id: input.dataSourceId,
+    p_decision: input.decision,
+    p_notes: input.notes ?? null,
+    p_allowed_for_marketing: input.allowedForMarketing ?? false,
+  });
+  fail("Unable to record the data source approval decision", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to record the data source approval decision: database did not return an ID");
   return result.id;
 }

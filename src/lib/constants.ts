@@ -1,6 +1,11 @@
 import type {
   ApplicantType,
   BusinessCoverInterest,
+  DataQualityRating,
+  DataSourceApprovalStatus,
+  DataSourceCategory,
+  DataSourceConsentStatus,
+  DataSourceRefreshFrequency,
   DataSubjectRequestStatus,
   DataSubjectRequestType,
   InsuranceProduct,
@@ -223,3 +228,53 @@ export const DATA_SUBJECT_REQUEST_STATUS_LABELS: Record<DataSubjectRequestStatus
 // "reasonable time" response, which this prototype treats as 30 days -
 // the same window create_data_subject_request() uses to set due_at.
 export const DATA_SUBJECT_REQUEST_DUE_DAYS = 30;
+
+// --- Data Source Registry (project brief section 9). Mirrors the
+// "Allowed data-source categories" list exactly - these are the only
+// source types the registry (and, eventually, a gated CSV importer) will
+// accept; there is deliberately no "other"/scraping category.
+export const DATA_SOURCE_CATEGORIES: { value: DataSourceCategory; label: string }[] = [
+  { value: "website_lead_form", label: "Website lead form" },
+  { value: "referral_partner", label: "Referral partner" },
+  { value: "approved_event_or_webinar", label: "Approved event or webinar" },
+  { value: "approved_csv_upload", label: "Approved uploaded CSV file" },
+  { value: "crm_import", label: "CRM import" },
+  { value: "email_campaign", label: "Email campaign (with valid permissions)" },
+  { value: "google_ads", label: "Google Ads campaign data" },
+  { value: "google_search_console", label: "Google Search Console aggregate data" },
+  { value: "organic_analytics", label: "Organic website analytics" },
+  { value: "approved_business_directory", label: "Approved business directory" },
+  { value: "approved_commercial_data_provider", label: "Approved commercial data provider" },
+  { value: "public_aggregate_statistics", label: "Public aggregate statistical data" },
+  { value: "manual_broker_entry", label: "Manual broker entry" },
+];
+
+export const DATA_SOURCE_CONSENT_STATUSES: { value: DataSourceConsentStatus; label: string }[] = [
+  { value: "consent_obtained", label: "Consent obtained" },
+  { value: "consent_pending", label: "Consent pending" },
+  { value: "not_required_aggregate", label: "Not required - aggregate/statistical data only" },
+  { value: "not_applicable", label: "Not applicable" },
+];
+
+export const DATA_SOURCE_APPROVAL_STATUS_LABELS: Record<DataSourceApprovalStatus, string> = {
+  pending: "Pending review",
+  approved: "Approved",
+  rejected: "Rejected",
+  suspended: "Suspended",
+};
+
+export const DATA_QUALITY_RATINGS: { value: DataQualityRating; label: string }[] = [
+  { value: "unrated", label: "Unrated" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+
+export const DATA_SOURCE_REFRESH_FREQUENCIES: { value: DataSourceRefreshFrequency; label: string }[] = [
+  { value: "one_off", label: "One-off" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "continuous", label: "Continuous" },
+];
