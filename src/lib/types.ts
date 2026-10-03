@@ -102,6 +102,16 @@ export interface Lead {
   createdAt: string;
 }
 
+export interface ApplicationSettings {
+  // Leads older than this, still active, are surfaced on the compliance
+  // dashboard as retention exceptions needing review or deletion. See
+  // BACKLOG.md "Configurable legal-text fields" for the broader retention
+  // *policy text* this number will eventually be configured alongside.
+  leadRetentionDays: number;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface ConsentRecord {
   leadId: string;
   privacyNoticeAccepted: boolean;
@@ -298,7 +308,7 @@ export interface BuyerMatchDecision {
 
 export interface AuditLogEntry {
   id: string;
-  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression";
+  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression" | "settings";
   entityId: string;
   action: string;
   actor: string;

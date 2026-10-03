@@ -128,3 +128,12 @@ export const LEAD_STATUS_ORDER: LeadStatus[] = [
   "do_not_contact",
   "archived",
 ];
+
+// The compliance dashboard's configurable "retention exception" threshold:
+// default and allowed bounds for how many days a lead may age before it is
+// flagged for review. Mirrors the check constraint on
+// application_settings.lead_retention_days (see the compliance-dashboard
+// migration) so client-side validation and the database agree.
+export const DEFAULT_LEAD_RETENTION_DAYS = 730;
+export const MIN_LEAD_RETENTION_DAYS = 30;
+export const MAX_LEAD_RETENTION_DAYS = 3650;

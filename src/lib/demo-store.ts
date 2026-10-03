@@ -6,14 +6,15 @@
 // architecture - see README "Moving to Production".
 import fs from "fs";
 import path from "path";
-import type { Lead, ConsentRecord, AuditLogEntry } from "./types.ts";
-import { INSURANCE_PRODUCTS } from "./constants.ts";
+import type { ApplicationSettings, Lead, ConsentRecord, AuditLogEntry } from "./types.ts";
+import { DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS } from "./constants.ts";
 import { resolveDoNotContactForStatus } from "./lead-utils.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const LEADS_FILE = path.join(DATA_DIR, "leads.json");
 const CONSENTS_FILE = path.join(DATA_DIR, "consents.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit-log.json");
+const APPLICATION_SETTINGS_FILE = path.join(DATA_DIR, "application-settings.json");
 
 function readJson<T>(file: string, fallback: T): T {
   try {
@@ -101,6 +102,10 @@ export function getConsentByLeadId(leadId: string): ConsentRecord | undefined {
   return readJson<ConsentRecord[]>(CONSENTS_FILE, []).find((record) => record.leadId === leadId);
 }
 
+export function getConsents(): ConsentRecord[] {
+  return readJson<ConsentRecord[]>(CONSENTS_FILE, []);
+}
+
 export function appendAuditLog(entry: Omit<AuditLogEntry, "id" | "timestamp">) {
   const log = readJson<AuditLogEntry[]>(AUDIT_FILE, []);
   const fullEntry: AuditLogEntry = {
@@ -115,4 +120,19 @@ export function appendAuditLog(entry: Omit<AuditLogEntry, "id" | "timestamp">) {
 
 export function getAuditLog(): AuditLogEntry[] {
   return readJson<AuditLogEntry[]>(AUDIT_FILE, []);
+}
+
+// Demo-mode equivalent of the Supabase application_settings singleton row:
+// a handful of platform-wide, compliance-admin-configurable values. Starts
+// with just the lead-retention threshold; more legal/compliance text
+// fields belong here too once BACKLOG.md's "Configurable legal-text
+// fields" item is built.
+export function getApplicationSettings(): ApplicationSettings {
+  return readJson<ApplicationSettings>(APPLICATION_SETTINGS_FILE, { leadRetentionDays: DEFAULT_LEAD_RETENTION_DAYS });
+}
+
+export function updateApplicationSettings(changes: Partial<ApplicationSettings>): ApplicationSettings {
+  const updated: ApplicationSettings = { ...getApplicationSettings(), ...changes, updatedAt: new Date().toISOString() };
+  writeJson(APPLICATION_SETTINGS_FILE, updated);
+  return updated;
 }

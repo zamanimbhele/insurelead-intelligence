@@ -60,9 +60,16 @@ Priced in the accompanying quotation.
   retention period, approved use) and CSV import gated on source/legal-basis selection.
 
 ## Compliance & Quality
-- Compliance dashboard: consent coverage, opt-outs, retention exceptions, unassigned leads,
-  leads without valid consent, pending data source approvals, export activity, data subject
-  requests.
+- Compliance dashboard completed (MVP): consent coverage, leads without a valid consent record
+  (the same five checks the public form enforces), Do Not Contact count, unassigned leads (no
+  reserved/accepted/disputed allocation and not already in a terminal status), and retention
+  exceptions against a configurable `application_settings.lead_retention_days` threshold editable
+  by a platform/compliance admin - all computed from real demo/Supabase data, gated to platform
+  admins, compliance admins, and read-only for compliance auditors (reusing the existing
+  is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed beyond
+  the settings table itself). Data-source-approval, export-activity, and data-subject-request
+  widgets show explicit "not yet available" placeholders rather than fabricated data - they need
+  the three backlog items below built first.
 - Opt-out and data subject request workflows (access, correction, deletion).
 - Role-restricted, audited CSV/report exports with time-limited links.
 - Automated test suite: Vitest (unit) and Playwright (end-to-end).

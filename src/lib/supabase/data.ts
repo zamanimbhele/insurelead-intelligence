@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  ApplicationSettings,
   BrokerMember,
   BrokerSendingIdentity,
   Buyer,
@@ -122,6 +123,13 @@ type SendingIdentityRow = {
   status: BrokerSendingIdentity["status"];
   is_default: boolean;
   created_at: string;
+};
+
+type ApplicationSettingsRow = {
+  id: number;
+  lead_retention_days: number;
+  updated_at: string;
+  updated_by: string | null;
 };
 
 function fail(operation: string, error: { message: string } | null) {
@@ -530,4 +538,35 @@ export async function reserveSupabaseLead(
     .single();
   fail("Unable to load allocation", loadError);
   return mapAllocation(data as AllocationRow);
+}
+
+function mapApplicationSettings(row: ApplicationSettingsRow): ApplicationSettings {
+  return {
+    leadRetentionDays: row.lead_retention_days,
+    updatedAt: row.updated_at,
+    updatedBy: optional(row.updated_by),
+  };
+}
+
+export async function fetchSupabaseApplicationSettings(client: SupabaseClient): Promise<ApplicationSettings> {
+  const { data, error } = await client.from("application_settings").select("*").eq("id", 1).maybeSingle();
+  fail("Unable to load application settings", error);
+  // The seed row ships in the migration, but fall back sensibly if a fresh
+  // environment somehow skipped it rather than erroring the whole dashboard.
+  if (!data) return { leadRetentionDays: 730 };
+  return mapApplicationSettings(data as ApplicationSettingsRow);
+}
+
+export async function updateSupabaseApplicationSettings(
+  client: SupabaseClient,
+  input: { leadRetentionDays: number; updatedBy?: string },
+): Promise<ApplicationSettings> {
+  const { data, error } = await client
+    .from("application_settings")
+    .update({ lead_retention_days: input.leadRetentionDays, updated_by: input.updatedBy ?? null, updated_at: new Date().toISOString() })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  fail("Unable to update application settings", error);
+  return mapApplicationSettings(data as ApplicationSettingsRow);
 }
