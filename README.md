@@ -24,8 +24,8 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 - Internal dashboard (`/dashboard`): overview widgets, a searchable leads table with product and
   status filters, a lead detail page (score explanation, applicant/contact detail, source attribution, Do Not Contact
   flag), and a Market Intelligence view with aggregated, threshold-gated charts.
-- 64 synthetic demo leads seeded via `scripts/generate-seed.mjs` — no real business or personal
-  data anywhere in the repo.
+- 64 synthetic demo leads, each with a matching valid consent record, seeded via
+  `scripts/generate-seed.mjs` — no real business or personal data anywhere in the repo.
 - A Playwright end-to-end test suite and a GitHub Actions CI pipeline that lints, type-checks,
   builds, and runs the suite on every push and pull request to `main`.
 - A local MCP server that exposes the product catalogue plus consent-aware lead search,
@@ -44,10 +44,26 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 - Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
   and a deployment-readiness endpoint at `/api/health`.
 - A Compliance dashboard (`/dashboard/compliance`): consent coverage, leads without a valid
-  consent record, Do Not Contact count, unassigned leads, and retention exceptions against a
-  configurable, admin-editable retention threshold - gated to platform admins, compliance admins,
-  and (read-only) compliance auditors. Data-source-approval, export-activity, and
-  data-subject-request widgets are explicit "not yet available" placeholders, not fabricated data.
+  consent record, Do Not Contact count, unassigned leads, retention exceptions against a
+  configurable, admin-editable retention threshold, opt-out/data-subject-request counts, and a
+  Data Source Registry summary - gated to platform admins, compliance admins, and (read-only)
+  compliance auditors. Only the export-activity widget remains an explicit "not yet available"
+  placeholder, not fabricated data.
+- A Data Source Registry (`/dashboard/data-sources`): every source of business or contact
+  information the platform uses, registered with its category (restricted to the project brief's
+  allowed list - no scraping), legal basis, consent status, licence reference, retention period,
+  approved use, data fields received, data quality rating, and refresh frequency, all required
+  before a source can be approved. A source cannot be marked allowed-for-marketing until it is
+  approved (enforced in the database, not just the UI), and every approve/reject/suspend/reinstate
+  decision is appended to an audit trail rather than overwriting history. Restricted to platform
+  and compliance admins, with read-only access for compliance auditors.
+- An opt-out and data subject request workflow on the Compliance dashboard: a log of opt-out
+  requests received outside a form submission (processing one sets the linked lead to Do Not
+  Contact), and a POPIA access/correction/deletion request log with a 30-day due date and status
+  progression, where completing a deletion request against a linked lead irreversibly redacts
+  that lead's personal-identifying fields. Both are restricted to platform/compliance admins and
+  fully audited, and are separate from the narrower, broker-campaign-scoped unsubscribe mechanism
+  described below.
 - A lead activity workflow on every lead profile: notes, call/email/meeting logging (channel and
   outcome, not just free text), follow-up tasks with an optional due date and assignee, and a single
   chronological activity timeline covering creation, notes, logged interactions, task lifecycle, and
@@ -59,11 +75,11 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
 build (see `BACKLOG.md`): broker invitation UI, the Data Source Registry, hotspot/industry
-opportunity dashboards, the financial year-end campaign planner, audited CSV export controls, the
-opt-out/data-subject-request workflow, buyer self-service, contracting, invoicing/payment
-collection, and a proactive due/overdue task notification mechanism (tasks themselves are built -
-see above). The full scope is documented in the project's build specification and priced in the
-accompanying quotation.
+opportunity dashboards, the financial year-end campaign planner, audited CSV export controls,
+buyer self-service, contracting, invoicing/payment collection, and a proactive due/overdue task
+notification mechanism (tasks themselves are built - see above; the opt-out/data-subject-request
+workflow is also built - see above). The full scope is documented in the project's build
+specification and priced in the accompanying quotation.
 
 ## Tech stack
 
@@ -109,11 +125,15 @@ default and requires a tenant-scoped actor, verified broker sending identity, ex
 consent, accepted allocation, suppression recheck, current-version approval, and a separate exact
 launch confirmation. Follow [`docs/CAMPAIGN_MCP_SETUP.md`](docs/CAMPAIGN_MCP_SETUP.md).
 
-To regenerate the synthetic demo leads:
+To regenerate the synthetic demo leads and their matching consent records:
 
 ```bash
 node scripts/generate-seed.mjs
 ```
+
+This overwrites both `data/leads.json` and `data/consents.json` - every generated lead gets a
+fully valid consent record (the same five fields the public form and `isConsentValid()` require),
+so demo-mode consent coverage reads realistically rather than near-zero.
 
 Copy `.env.example` to `.env.local` before running in an environment that needs Supabase or the
 optional integrations. Demo mode runs without populated secrets.
@@ -181,6 +201,7 @@ src/
     server.ts            Consent-aware MCP tools for AI assistants
 data/
   leads.json            Synthetic seeded leads (generated, not hand-written)
+  consents.json         Matching synthetic consent record per seeded lead (generated)
 scripts/
   generate-seed.mjs     Synthetic data generator
 e2e/

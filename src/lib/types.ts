@@ -99,6 +99,11 @@ export interface Lead {
   doNotContact: boolean;
   assignedBroker?: string;
   lossReason?: string;
+  // Set only once a data_subject_requests deletion request against this
+  // lead has been completed - see update_data_subject_request_status().
+  // The lead row itself is never hard-deleted (other tables still
+  // reference it), but its personal-identifying fields are redacted.
+  deletedAt?: string;
 
   createdAt: string;
 }
@@ -146,7 +151,8 @@ export type LeadActivityKind =
   | "task_created"
   | "task_completed"
   | "task_cancelled"
-  | "do_not_contact_set";
+  | "do_not_contact_set"
+  | "pii_redacted";
 
 export interface LeadActivity {
   id: string;
@@ -364,10 +370,142 @@ export interface BuyerMatchDecision {
 
 export interface AuditLogEntry {
   id: string;
-  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression" | "settings" | "note" | "task";
+  entity:
+    | "lead"
+    | "consent"
+    | "assignment"
+    | "status"
+    | "campaign"
+    | "suppression"
+    | "settings"
+    | "note"
+    | "task"
+    | "opt_out"
+    | "data_subject_request"
+    | "data_source";
   entityId: string;
   action: string;
   actor: string;
   timestamp: string;
   details?: string;
+}
+
+// --- Opt-out requests and data subject access/correction/deletion
+// requests (POPIA). Internal compliance-workflow records, created and
+// resolved only by platform/compliance admins - distinct from the
+// narrower, broker-campaign-scoped MarketingSuppression mechanism above.
+// See supabase/migrations/202610030003_opt_out_and_data_subject_requests.sql.
+
+export type OptOutChannel = "email" | "phone" | "whatsapp" | "all";
+
+export type OptOutSource = "phone_call" | "email" | "whatsapp" | "written_letter" | "dashboard_manual" | "other";
+
+export type OptOutRequestStatus = "new" | "processed";
+
+export interface OptOutRequest {
+  id: string;
+  leadId?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  channel: OptOutChannel;
+  reason?: string;
+  source: OptOutSource;
+  status: OptOutRequestStatus;
+  requestedAt: string;
+  processedAt?: string;
+  processedBy?: string;
+  resolutionNotes?: string;
+  createdBy: string;
+}
+
+export type DataSubjectRequestType = "access" | "correction" | "deletion";
+
+export type DataSubjectRequestStatus = "received" | "verifying" | "in_progress" | "completed" | "rejected";
+
+export interface DataSubjectRequest {
+  id: string;
+  leadId?: string;
+  requestType: DataSubjectRequestType;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  details?: string;
+  status: DataSubjectRequestStatus;
+  receivedAt: string;
+  dueAt: string;
+  completedAt?: string;
+  handledBy?: string;
+  resolutionNotes?: string;
+  createdBy: string;
+}
+
+// --- Data Source Registry (project brief section 9: "Data Sources and
+// Source Governance"). Every source of business or contact information
+// the platform uses - for leads, campaigns, or market intelligence - is
+// registered here with its legal basis, consent status, licence
+// reference, retention period, and approved use before anything may
+// import from it. Writes are restricted to platform/compliance admins -
+// same lockdown pattern as the opt-out/data subject requests above. See
+// supabase/migrations/202610040001_data_source_registry.sql.
+
+export type DataSourceCategory =
+  | "website_lead_form"
+  | "referral_partner"
+  | "approved_event_or_webinar"
+  | "approved_csv_upload"
+  | "crm_import"
+  | "email_campaign"
+  | "google_ads"
+  | "google_search_console"
+  | "organic_analytics"
+  | "approved_business_directory"
+  | "approved_commercial_data_provider"
+  | "public_aggregate_statistics"
+  | "manual_broker_entry";
+
+export type DataSourceConsentStatus = "consent_obtained" | "consent_pending" | "not_required_aggregate" | "not_applicable";
+
+export type DataSourceApprovalStatus = "pending" | "approved" | "rejected" | "suspended";
+
+export type DataQualityRating = "unrated" | "low" | "medium" | "high";
+
+export type DataSourceRefreshFrequency = "one_off" | "daily" | "weekly" | "monthly" | "quarterly" | "continuous";
+
+export interface DataSource {
+  id: string;
+  name: string;
+  sourceType: DataSourceCategory;
+  owner: string;
+  description?: string;
+  dataFieldsReceived: string[];
+  legalBasis: string;
+  consentStatus: DataSourceConsentStatus;
+  licenceReference?: string;
+  retentionPeriodDays?: number;
+  approvedUse: string;
+  approvalStatus: DataSourceApprovalStatus;
+  lastReviewedAt?: string;
+  dataQualityRating: DataQualityRating;
+  refreshFrequency: DataSourceRefreshFrequency;
+  containsPersonalInformation: boolean;
+  allowedForMarketing: boolean;
+  allowedForMarketIntelligenceOnly: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// An append-only decision history against one data source - kept
+// separate from DataSource.approvalStatus (its current state) so the
+// full review trail survives every later re-decision.
+export type DataSourceApprovalDecision = "approved" | "rejected" | "suspended" | "reinstated";
+
+export interface DataSourceApprovalRecord {
+  id: string;
+  dataSourceId: string;
+  decision: DataSourceApprovalDecision;
+  notes?: string;
+  decidedBy: string;
+  decidedAt: string;
 }

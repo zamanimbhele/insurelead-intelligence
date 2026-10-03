@@ -1,23 +1,57 @@
-import { getApplicationSettings as getDemoApplicationSettings, getConsents as getDemoConsents, getLeads } from "./demo-store";
+import {
+  getApplicationSettings as getDemoApplicationSettings,
+  getConsents as getDemoConsents,
+  getDataSources as getDemoDataSources,
+  getLeads,
+} from "./demo-store";
 import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
+  createSupabaseDataSource,
+  createSupabaseDataSubjectRequest,
+  createSupabaseOptOutRequest,
+  decideSupabaseDataSourceApproval,
   fetchSupabaseAllocations,
   fetchSupabaseApplicationSettings,
   fetchSupabaseBrokerMembers,
   fetchSupabaseBuyers,
   fetchSupabaseConsents,
+  fetchSupabaseDataSources,
+  fetchSupabaseDataSubjectRequests,
   fetchSupabaseLead,
   fetchSupabaseLeadActivities,
   fetchSupabaseLeadNotes,
   fetchSupabaseLeadTasks,
   fetchSupabaseLeads,
+  fetchSupabaseOptOutRequests,
   fetchSupabaseSendingIdentities,
+  processSupabaseOptOutRequest,
   updateSupabaseApplicationSettings,
+  updateSupabaseDataSource,
+  updateSupabaseDataSubjectRequestStatus,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
-import type { ApplicationSettings, ConsentRecord, Lead, LeadActivity, LeadNote, LeadTask } from "./types";
+import type {
+  ApplicationSettings,
+  ConsentRecord,
+  DataQualityRating,
+  DataSource,
+  DataSourceApprovalDecision,
+  DataSourceCategory,
+  DataSourceConsentStatus,
+  DataSourceRefreshFrequency,
+  DataSubjectRequest,
+  DataSubjectRequestStatus,
+  DataSubjectRequestType,
+  Lead,
+  LeadActivity,
+  LeadNote,
+  LeadTask,
+  OptOutChannel,
+  OptOutRequest,
+  OptOutSource,
+} from "./types";
 import { getLeadDisplayName, isConsentValid } from "./lead-utils";
 import { DEFAULT_LEAD_RETENTION_DAYS } from "./constants";
 import { getCampaignRecipients, getCampaigns } from "./campaign-store";
@@ -204,6 +238,20 @@ export type ComplianceOverview = {
   doNotContact: { count: number; leads: ComplianceLeadSummary[] };
   unassigned: { count: number; leads: ComplianceLeadSummary[] };
   retentionExceptions: { count: number; leads: ComplianceLeadSummary[] };
+  optOuts: { newCount: number; requests: OptOutRequest[] };
+  dataSubjectRequests: {
+    openCount: number;
+    overdueCount: number;
+    // "overdue" is computed here, server-side, rather than in the client
+    // component comparing dueAt against Date.now() on every render - React's
+    // purity rule (react-hooks/purity) flags calling an impure function like
+    // Date.now() during render.
+    requests: (DataSubjectRequest & { overdue: boolean })[];
+  };
+  // Counts only - the full registry (list, create, approve/reject/
+  // suspend) lives on its own /dashboard/data-sources page; this is what
+  // the Compliance overview's "Data source approvals" widget needs.
+  dataSourceRegistry: { pendingCount: number; approvedCount: number; rejectedCount: number; suspendedCount: number; totalCount: number };
 };
 
 // A lead in one of these statuses no longer needs an active broker
@@ -218,9 +266,45 @@ const ASSIGNMENT_NOT_REQUIRED_STATUSES: Lead["status"][] = ["won", "lost", "arch
 const ACTIVE_ALLOCATION_STATUSES = new Set(["reserved", "accepted", "disputed"]);
 
 const MAX_LISTED_LEADS = 10;
+const MAX_LISTED_REQUESTS = 25;
+
+// The set of lead IDs currently routed to a broker under an active
+// allocation. This is the one authoritative definition of "assigned" -
+// shared by the Compliance overview (below) and the main dashboard
+// overview (src/app/(dashboard)/dashboard/page.tsx) - so neither page can
+// drift back to the cosmetic, free-text Lead.assignedBroker field (seeded
+// as a random name with no real allocation behind it) for this decision.
+export async function getActiveAllocationLeadIds(): Promise<Set<string>> {
+  if (getDataMode() === "demo") {
+    return new Set(
+      getAllocations()
+        .filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status))
+        .map((allocation) => allocation.leadId),
+    );
+  }
+  const allocations = await fetchSupabaseAllocations(await requireServerClient());
+  return new Set(
+    allocations.filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status)).map((allocation) => allocation.leadId),
+  );
+}
+
+// A lead is genuinely unassigned only if it both needs a broker and has no
+// active allocation - see ASSIGNMENT_NOT_REQUIRED_STATUSES and
+// ACTIVE_ALLOCATION_STATUSES above.
+export function isLeadUnassigned(lead: Lead, assignedLeadIds: Set<string>): boolean {
+  return !ASSIGNMENT_NOT_REQUIRED_STATUSES.includes(lead.status) && !assignedLeadIds.has(lead.id);
+}
 
 function toSummary(lead: Lead): ComplianceLeadSummary {
   return { id: lead.id, displayName: getLeadDisplayName(lead), status: lead.status, createdAt: lead.createdAt };
+}
+
+function isDataSubjectRequestOverdue(request: DataSubjectRequest): boolean {
+  return (
+    request.status !== "completed" &&
+    request.status !== "rejected" &&
+    new Date(request.dueAt).getTime() < Date.now()
+  );
 }
 
 export async function getComplianceOverview(): Promise<ComplianceOverview> {
@@ -229,7 +313,6 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
 
   let leads: Lead[];
   let consentByLeadId: Map<string, ConsentRecord | undefined>;
-  let assignedLeadIds: Set<string>;
 
   if (dataMode === "demo") {
     leads = getLeads();
@@ -241,30 +324,16 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
       if (!latestConsentByLead.has(consent.leadId)) latestConsentByLead.set(consent.leadId, consent);
     }
     consentByLeadId = latestConsentByLead;
-    const { getAllocations } = await import("./marketplace-store");
-    assignedLeadIds = new Set(
-      getAllocations()
-        .filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status))
-        .map((allocation) => allocation.leadId),
-    );
   } else {
     const client = await requireServerClient();
     leads = await fetchSupabaseLeads(client);
-    const [consents, allocations] = await Promise.all([
-      fetchSupabaseConsents(client, leads.map((lead) => lead.id)),
-      fetchSupabaseAllocations(client),
-    ]);
-    consentByLeadId = consents;
-    assignedLeadIds = new Set(
-      allocations.filter((allocation) => ACTIVE_ALLOCATION_STATUSES.has(allocation.status)).map((allocation) => allocation.leadId),
-    );
+    consentByLeadId = await fetchSupabaseConsents(client, leads.map((lead) => lead.id));
   }
 
+  const assignedLeadIds = await getActiveAllocationLeadIds();
   const invalidConsentLeads = leads.filter((lead) => !isConsentValid(consentByLeadId.get(lead.id)));
   const doNotContactLeads = leads.filter((lead) => lead.doNotContact);
-  const unassignedLeads = leads.filter(
-    (lead) => !ASSIGNMENT_NOT_REQUIRED_STATUSES.includes(lead.status) && !assignedLeadIds.has(lead.id),
-  );
+  const unassignedLeads = leads.filter((lead) => isLeadUnassigned(lead, assignedLeadIds));
 
   const retentionThresholdDays = settings.leadRetentionDays ?? DEFAULT_LEAD_RETENTION_DAYS;
   const retentionCutoff = Date.now() - retentionThresholdDays * 24 * 60 * 60 * 1000;
@@ -273,6 +342,20 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
   );
 
   const validCount = leads.length - invalidConsentLeads.length;
+
+  const [optOutRequests, dataSubjectRequests, dataSources] = dataMode === "demo"
+    ? await (async () => {
+      const { getOptOutRequests, getDataSubjectRequests } = await import("./demo-store");
+      return [getOptOutRequests(), getDataSubjectRequests(), getDemoDataSources()];
+    })()
+    : await (async () => {
+      const client = await requireServerClient();
+      return Promise.all([
+        fetchSupabaseOptOutRequests(client),
+        fetchSupabaseDataSubjectRequests(client),
+        fetchSupabaseDataSources(client),
+      ]);
+    })();
 
   return {
     dataMode,
@@ -290,5 +373,177 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
       count: retentionExceptionLeads.length,
       leads: retentionExceptionLeads.slice(0, MAX_LISTED_LEADS).map(toSummary),
     },
+    optOuts: {
+      newCount: optOutRequests.filter((request) => request.status === "new").length,
+      requests: optOutRequests.slice(0, MAX_LISTED_REQUESTS),
+    },
+    dataSubjectRequests: {
+      openCount: dataSubjectRequests.filter((request) => request.status !== "completed" && request.status !== "rejected").length,
+      overdueCount: dataSubjectRequests.filter(isDataSubjectRequestOverdue).length,
+      requests: dataSubjectRequests
+        .slice(0, MAX_LISTED_REQUESTS)
+        .map((request) => ({ ...request, overdue: isDataSubjectRequestOverdue(request) })),
+    },
+    dataSourceRegistry: {
+      pendingCount: dataSources.filter((source) => source.approvalStatus === "pending").length,
+      approvedCount: dataSources.filter((source) => source.approvalStatus === "approved").length,
+      rejectedCount: dataSources.filter((source) => source.approvalStatus === "rejected").length,
+      suspendedCount: dataSources.filter((source) => source.approvalStatus === "suspended").length,
+      totalCount: dataSources.length,
+    },
   };
+}
+
+// --- Compliance: opt-out requests and data subject access/correction/
+// deletion requests. Mirrors updateApplicationSettings()'s demo/supabase
+// branching pattern above.
+
+export async function createDashboardOptOutRequest(
+  input: {
+    channel: OptOutChannel;
+    source: OptOutSource;
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    reason?: string;
+    leadId?: string;
+  },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createOptOutRequest } = await import("./demo-store");
+    return { id: createOptOutRequest(input, actorLabel).id };
+  }
+  const id = await createSupabaseOptOutRequest(await requireServerClient(), input);
+  return { id };
+}
+
+export async function processDashboardOptOutRequest(
+  requestId: string,
+  resolutionNotes: string | undefined,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { processOptOutRequest } = await import("./demo-store");
+    const updated = processOptOutRequest(requestId, resolutionNotes, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await processSupabaseOptOutRequest(await requireServerClient(), { requestId, resolutionNotes });
+  return { id };
+}
+
+export async function createDashboardDataSubjectRequest(
+  input: {
+    requestType: DataSubjectRequestType;
+    requesterName: string;
+    requesterEmail: string;
+    requesterPhone?: string;
+    details?: string;
+    leadId?: string;
+  },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createDataSubjectRequest } = await import("./demo-store");
+    return { id: createDataSubjectRequest(input, actorLabel).id };
+  }
+  const id = await createSupabaseDataSubjectRequest(await requireServerClient(), input);
+  return { id };
+}
+
+export async function updateDashboardDataSubjectRequestStatus(
+  requestId: string,
+  status: Extract<DataSubjectRequestStatus, "verifying" | "in_progress" | "completed" | "rejected">,
+  resolutionNotes: string | undefined,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { updateDataSubjectRequestStatus } = await import("./demo-store");
+    const updated = updateDataSubjectRequestStatus(requestId, status, resolutionNotes, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await updateSupabaseDataSubjectRequestStatus(await requireServerClient(), { requestId, status, resolutionNotes });
+  return { id };
+}
+
+// --- Data Source Registry (project brief section 9). Same demo/supabase
+// branching pattern as the compliance functions above.
+
+export async function getDashboardDataSources(): Promise<DataSource[]> {
+  if (getDataMode() === "demo") return getDemoDataSources();
+  return fetchSupabaseDataSources(await requireServerClient());
+}
+
+export async function createDashboardDataSource(
+  input: {
+    name: string;
+    sourceType: DataSourceCategory;
+    owner: string;
+    legalBasis: string;
+    consentStatus: DataSourceConsentStatus;
+    approvedUse: string;
+    description?: string;
+    dataFieldsReceived?: string[];
+    licenceReference?: string;
+    retentionPeriodDays?: number;
+    dataQualityRating?: DataQualityRating;
+    refreshFrequency?: DataSourceRefreshFrequency;
+    containsPersonalInformation?: boolean;
+    allowedForMarketIntelligenceOnly?: boolean;
+  },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createDataSource } = await import("./demo-store");
+    return { id: createDataSource(input, actorLabel).id };
+  }
+  const id = await createSupabaseDataSource(await requireServerClient(), input);
+  return { id };
+}
+
+export async function updateDashboardDataSource(
+  dataSourceId: string,
+  changes: Partial<
+    Pick<
+      DataSource,
+      | "name"
+      | "owner"
+      | "description"
+      | "dataFieldsReceived"
+      | "legalBasis"
+      | "consentStatus"
+      | "licenceReference"
+      | "retentionPeriodDays"
+      | "approvedUse"
+      | "dataQualityRating"
+      | "refreshFrequency"
+      | "containsPersonalInformation"
+      | "allowedForMarketIntelligenceOnly"
+    >
+  >,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { updateDataSource } = await import("./demo-store");
+    const updated = updateDataSource(dataSourceId, changes, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await updateSupabaseDataSource(await requireServerClient(), { dataSourceId, ...changes });
+  return { id };
+}
+
+export async function decideDashboardDataSourceApproval(
+  dataSourceId: string,
+  decision: DataSourceApprovalDecision,
+  notes: string | undefined,
+  allowedForMarketing: boolean | undefined,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { decideDataSourceApproval } = await import("./demo-store");
+    const updated = decideDataSourceApproval(dataSourceId, decision, notes, allowedForMarketing, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await decideSupabaseDataSourceApproval(await requireServerClient(), { dataSourceId, decision, notes, allowedForMarketing });
+  return { id };
 }

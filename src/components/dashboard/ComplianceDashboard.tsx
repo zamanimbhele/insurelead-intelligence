@@ -11,10 +11,12 @@ import {
   Archive,
   Database,
   Download,
+  UserMinus,
   UserCog,
   Loader2,
 } from "lucide-react";
 import { StatCard } from "./StatCard";
+import { ComplianceRequestsPanel } from "./ComplianceRequestsPanel";
 import { LEAD_STATUS_LABELS, MAX_LEAD_RETENTION_DAYS, MIN_LEAD_RETENTION_DAYS } from "@/lib/constants";
 import type { ComplianceLeadSummary, ComplianceOverview } from "@/lib/dashboard-data";
 
@@ -117,7 +119,7 @@ function RetentionSettingCard({ thresholdDays, canManage }: { thresholdDays: num
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div data-testid="retention-setting-card" className="rounded-xl border border-slate-200 bg-white p-5">
       <h3 className="text-sm font-semibold text-slate-900">Retention threshold</h3>
       <p className="mt-1 text-xs text-slate-500">
         Leads older than this, and not yet archived, are flagged above as retention exceptions for compliance review.
@@ -193,6 +195,20 @@ export function ComplianceDashboard({ overview, canManage }: { overview: Complia
           icon={Archive}
           accent={overview.retentionExceptions.count > 0 ? "red" : "slate"}
         />
+        <StatCard
+          testId="stat-new-opt-outs"
+          label="New Opt-Out Requests"
+          value={overview.optOuts.newCount}
+          icon={UserMinus}
+          accent={overview.optOuts.newCount > 0 ? "amber" : "slate"}
+        />
+        <StatCard
+          testId="stat-data-subject-requests"
+          label="Open Data Subject Requests"
+          value={overview.dataSubjectRequests.openCount}
+          icon={UserCog}
+          accent={overview.dataSubjectRequests.overdueCount > 0 ? "red" : overview.dataSubjectRequests.openCount > 0 ? "amber" : "slate"}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -229,25 +245,55 @@ export function ComplianceDashboard({ overview, canManage }: { overview: Complia
       <RetentionSettingCard thresholdDays={overview.retentionThresholdDays} canManage={canManage} />
 
       <div>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Opt-outs &amp; data subject requests</h2>
+        <ComplianceRequestsPanel
+          optOutRequests={overview.optOuts.requests}
+          dataSubjectRequests={overview.dataSubjectRequests.requests}
+          canManage={canManage}
+        />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Data source approvals</h2>
+        <div data-testid="data-source-registry-card" className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Every source of business or contact information the platform uses, with its legal basis, consent status,
+              and approved use recorded before any import is allowed.
+            </p>
+            <Link href="/dashboard/data-sources" className="flex-shrink-0 text-xs font-semibold text-primary-700 hover:underline">
+              Open registry
+            </Link>
+          </div>
+          {overview.dataSourceRegistry.totalCount === 0 ? (
+            <p className="mt-4 text-sm text-slate-400">No data sources have been registered yet.</p>
+          ) : (
+            <div className="mt-4 flex flex-wrap gap-3 text-sm">
+              <span data-testid="data-source-pending-count" className="rounded-lg bg-amber-50 px-3 py-2 font-medium text-amber-700">
+                {overview.dataSourceRegistry.pendingCount} pending review
+              </span>
+              <span className="rounded-lg bg-emerald-50 px-3 py-2 font-medium text-emerald-700">
+                {overview.dataSourceRegistry.approvedCount} approved
+              </span>
+              <span className="rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700">
+                {overview.dataSourceRegistry.rejectedCount} rejected
+              </span>
+              <span className="rounded-lg bg-slate-100 px-3 py-2 font-medium text-slate-600">
+                {overview.dataSourceRegistry.suspendedCount} suspended
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Not yet available</h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <PlaceholderCard
-            icon={Database}
-            title="Data source approvals"
-            description="Pending and approved third-party data sources, with legal basis, licence reference, and approved use, before any import is allowed."
-            backlogItem="Data Source Registry"
-          />
+        <div className="grid gap-4 lg:grid-cols-2">
           <PlaceholderCard
             icon={Download}
             title="Export activity"
             description="Who exported what, when, with which filters, and how many records - role-restricted and fully audited."
             backlogItem="Role-restricted, audited CSV/report exports"
-          />
-          <PlaceholderCard
-            icon={UserCog}
-            title="Data subject requests"
-            description="Access, correction, and deletion requests, their status, and resolution timelines."
-            backlogItem="Opt-out and data subject request workflows"
           />
         </div>
       </div>

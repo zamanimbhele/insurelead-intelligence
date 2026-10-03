@@ -1,23 +1,32 @@
-import { getDashboardLeads } from "@/lib/dashboard-data";
+import { getActiveAllocationLeadIds, getDashboardLeads, isLeadUnassigned } from "@/lib/dashboard-data";
 import { getDataMode } from "@/lib/supabase/config";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { LeadsTable } from "@/components/dashboard/LeadsTable";
 import { INSURANCE_PRODUCTS, LEAD_STATUS_LABELS } from "@/lib/constants";
-import { Users, Clock, AlertTriangle, TrendingUp, ShieldOff } from "lucide-react";
+import { Users, Clock, AlertTriangle, TrendingUp, ShieldOff, UserCheck } from "lucide-react";
 import { isToday, isThisWeek } from "date-fns";
 import { getDashboardIdentity, isBrokerUser } from "@/lib/auth";
 
 export const metadata = { title: "Dashboard | InsureLead Intelligence" };
 
 export default async function DashboardPage() {
-  const [leads, identity] = await Promise.all([getDashboardLeads(), getDashboardIdentity()]);
+  const [leads, identity, assignedLeadIds] = await Promise.all([
+    getDashboardLeads(),
+    getDashboardIdentity(),
+    getActiveAllocationLeadIds(),
+  ]);
   const demoMode = getDataMode() === "demo";
 
   const newToday = leads.filter((l) => isToday(new Date(l.createdAt))).length;
   const newThisWeek = leads.filter((l) => isThisWeek(new Date(l.createdAt), { weekStartsOn: 1 })).length;
   const needsFollowUp = leads.filter((l) => ["new", "contact_attempted"].includes(l.status) && !l.doNotContact).length;
   const dncCount = leads.filter((l) => l.doNotContact).length;
-  const unassigned = leads.filter((l) => !l.assignedBroker).length;
+  // Based on real broker allocations (reserved/accepted/disputed), not the
+  // cosmetic, free-text Lead.assignedBroker field - see
+  // getActiveAllocationLeadIds() / isLeadUnassigned() in dashboard-data.ts,
+  // the same logic the Compliance overview uses for its "Unassigned" count.
+  const unassigned = leads.filter((l) => isLeadUnassigned(l, assignedLeadIds)).length;
+  const assigned = leads.filter((l) => assignedLeadIds.has(l.id)).length;
   const won = leads.filter((l) => l.status === "won").length;
   const conversionRate = leads.length ? Math.round((won / leads.length) * 100) : 0;
 
@@ -47,11 +56,12 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
         <StatCard testId="stat-new-today" label="New Today" value={newToday} icon={Users} />
         <StatCard testId="stat-new-this-week" label="New This Week" value={newThisWeek} icon={TrendingUp} />
         <StatCard testId="stat-needs-follow-up" label="Needs Follow-Up" value={needsFollowUp} icon={Clock} accent="amber" />
         <StatCard testId="stat-unassigned" label="Unassigned" value={unassigned} icon={AlertTriangle} accent="red" />
+        <StatCard testId="stat-assigned" label="Assigned to a Broker" value={assigned} icon={UserCheck} accent="primary" />
         <StatCard testId="stat-do-not-contact" label="Do Not Contact" value={dncCount} icon={ShieldOff} accent="slate" />
         <StatCard testId="stat-win-rate" label="Win Rate" value={`${conversionRate}%`} icon={TrendingUp} accent="primary" />
       </div>

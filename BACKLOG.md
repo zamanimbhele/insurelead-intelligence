@@ -63,21 +63,62 @@ Priced in the accompanying quotation.
   urgency).
 - Financial-year-end campaign planner: filter by FYE month, campaign calendar, broker follow-up
   task lists, results tracking by month/sector/location/need.
-- Data Source Registry with governance fields (legal basis, consent status, licence reference,
-  retention period, approved use) and CSV import gated on source/legal-basis selection.
+- Data Source Registry completed: a dedicated `/dashboard/data-sources` page where a platform or
+  compliance admin registers every source of business or contact information the platform uses -
+  category restricted to the brief's allowed list (website forms, referral partners, approved
+  events/webinars, approved CSV uploads, CRM imports, permissioned email campaigns, Google Ads/
+  Search Console, organic analytics, approved directories/commercial providers, public aggregate
+  statistics, manual broker entry - deliberately no scraping category), with legal basis, consent
+  status, licence reference, retention period, approved use, data fields received, data quality
+  rating, refresh frequency, and PII/market-intelligence-only flags all required or explicitly set
+  at registration. A separate decision step (approve/reject/suspend/reinstate) is the only way to
+  change a source's approval status, and a source cannot be marked allowed-for-marketing until it
+  is approved (enforced by both a SECURITY DEFINER RPC and a database check constraint) - editing a
+  source's governance fields never silently keeps an outdated approval or marketing permission
+  alive. Every decision is appended to an audit-trail table (`data_source_approvals`) rather than
+  overwriting history. The Compliance dashboard's former "Data source approvals" placeholder is now
+  a real summary (pending/approved/rejected/suspended counts) linking to the full registry. This is
+  the registry only - CSV import gating on it is still open, because no CSV import feature exists
+  in the codebase yet to gate; a future importer should require `data_sources.approval_status =
+  'approved'` for the source it reads from, the same way this registry's own RPCs already require
+  every governance field to be supplied before a source exists at all.
 
 ## Compliance & Quality
 - Compliance dashboard completed (MVP): consent coverage, leads without a valid consent record
   (the same five checks the public form enforces), Do Not Contact count, unassigned leads (no
-  reserved/accepted/disputed allocation and not already in a terminal status), and retention
+  reserved/accepted/disputed allocation and not already in a terminal status), retention
   exceptions against a configurable `application_settings.lead_retention_days` threshold editable
-  by a platform/compliance admin - all computed from real demo/Supabase data, gated to platform
-  admins, compliance admins, and read-only for compliance auditors (reusing the existing
-  is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed beyond
-  the settings table itself). Data-source-approval, export-activity, and data-subject-request
-  widgets show explicit "not yet available" placeholders rather than fabricated data - they need
-  the three backlog items below built first.
-- Opt-out and data subject request workflows (access, correction, deletion).
+  by a platform/compliance admin, and (since the opt-out/DSR workflow below) new opt-out request
+  and open/overdue data subject request counts - all computed from real demo/Supabase data, gated
+  to platform admins, compliance admins, and read-only for compliance auditors (reusing the
+  existing is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed
+  beyond the settings table itself). Its "Data source approvals" widget is now a real summary
+  (see the Data Source Registry item under Market Intelligence); the export-activity widget
+  remains an explicit "not yet available" placeholder - it needs the audited-exports backlog item
+  below built first.
+- Opt-out and data subject request workflows completed: a compliance-admin-only log of opt-out
+  requests received outside a form submission (phone, email, WhatsApp, letter), where processing
+  one sets the linked lead to Do Not Contact through the same update_lead_status() path the
+  Kanban board and lead profile use; and a POPIA access/correction/deletion request log with a
+  30-day due date, status progression (received -> verifying -> in progress -> completed/
+  rejected), and, for a completed deletion request against a linked lead, an irreversible
+  redaction of that lead's personal-identifying fields (name, email, mobile, business/trading
+  name, website) with its own audit-log entry and activity-timeline entry. Both are deliberately
+  separate from the existing broker-campaign-scoped marketing-suppression/unsubscribe mechanism
+  (campaign-unsubscribe.ts), which only stops future campaign *sends* for one broker and has no
+  concept of a formal request. Writes go through SECURITY DEFINER RPCs restricted to platform_
+  admin/compliance_admin (broker operators and compliance auditors cannot create or resolve
+  these), same lockdown pattern as lead_notes/lead_tasks/lead_activities.
+- Two demo-data accuracy fixes completed: `scripts/generate-seed.mjs` now writes a matching, fully
+  valid consent record (`data/consents.json`) for every synthetic lead it generates, so freshly
+  seeded demo data shows a realistic consent-coverage figure instead of near-zero; and the main
+  dashboard overview's "Unassigned" stat (`src/app/(dashboard)/dashboard/page.tsx`) now uses the
+  same real, allocation-based definition of "assigned" the Compliance overview already used
+  (`getActiveAllocationLeadIds()`/`isLeadUnassigned()`, extracted into `dashboard-data.ts` for both
+  to share) instead of the cosmetic, free-text `Lead.assignedBroker` field - which is still shown
+  as-is in the leads table and lead profile page as a display label, not a source of truth. A new
+  "Assigned to a Broker" stat card was added alongside it for the same reason the request asked to
+  "separate" the two: one real count for leads with no active allocation, one for leads with one.
 - Role-restricted, audited CSV/report exports with time-limited links.
 - Automated test suite: Vitest (unit) and Playwright (end-to-end).
 - Accessibility review and security review checklist.
