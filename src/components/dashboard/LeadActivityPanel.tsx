@@ -7,6 +7,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardList,
+  Eraser,
   Loader2,
   MessageSquarePlus,
   PhoneCall,
@@ -137,6 +138,7 @@ const ACTIVITY_ICONS: Record<LeadActivityKind, typeof ClipboardList> = {
   task_completed: CheckCircle2,
   task_cancelled: XCircle,
   do_not_contact_set: ShieldOff,
+  pii_redacted: Eraser,
 };
 
 function AddNoteForm({ leadId, canEdit, onAdded }: { leadId: string; canEdit: boolean; onAdded: () => void }) {

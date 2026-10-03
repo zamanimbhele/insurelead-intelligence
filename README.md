@@ -44,10 +44,18 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 - Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
   and a deployment-readiness endpoint at `/api/health`.
 - A Compliance dashboard (`/dashboard/compliance`): consent coverage, leads without a valid
-  consent record, Do Not Contact count, unassigned leads, and retention exceptions against a
-  configurable, admin-editable retention threshold - gated to platform admins, compliance admins,
-  and (read-only) compliance auditors. Data-source-approval, export-activity, and
-  data-subject-request widgets are explicit "not yet available" placeholders, not fabricated data.
+  consent record, Do Not Contact count, unassigned leads, retention exceptions against a
+  configurable, admin-editable retention threshold, and opt-out/data-subject-request counts -
+  gated to platform admins, compliance admins, and (read-only) compliance auditors.
+  Data-source-approval and export-activity widgets remain explicit "not yet available"
+  placeholders, not fabricated data.
+- An opt-out and data subject request workflow on the Compliance dashboard: a log of opt-out
+  requests received outside a form submission (processing one sets the linked lead to Do Not
+  Contact), and a POPIA access/correction/deletion request log with a 30-day due date and status
+  progression, where completing a deletion request against a linked lead irreversibly redacts
+  that lead's personal-identifying fields. Both are restricted to platform/compliance admins and
+  fully audited, and are separate from the narrower, broker-campaign-scoped unsubscribe mechanism
+  described below.
 - A lead activity workflow on every lead profile: notes, call/email/meeting logging (channel and
   outcome, not just free text), follow-up tasks with an optional due date and assignee, and a single
   chronological activity timeline covering creation, notes, logged interactions, task lifecycle, and
@@ -59,11 +67,11 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
 build (see `BACKLOG.md`): broker invitation UI, the Data Source Registry, hotspot/industry
-opportunity dashboards, the financial year-end campaign planner, audited CSV export controls, the
-opt-out/data-subject-request workflow, buyer self-service, contracting, invoicing/payment
-collection, and a proactive due/overdue task notification mechanism (tasks themselves are built -
-see above). The full scope is documented in the project's build specification and priced in the
-accompanying quotation.
+opportunity dashboards, the financial year-end campaign planner, audited CSV export controls,
+buyer self-service, contracting, invoicing/payment collection, and a proactive due/overdue task
+notification mechanism (tasks themselves are built - see above; the opt-out/data-subject-request
+workflow is also built - see above). The full scope is documented in the project's build
+specification and priced in the accompanying quotation.
 
 ## Tech stack
 

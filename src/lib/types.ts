@@ -99,6 +99,11 @@ export interface Lead {
   doNotContact: boolean;
   assignedBroker?: string;
   lossReason?: string;
+  // Set only once a data_subject_requests deletion request against this
+  // lead has been completed - see update_data_subject_request_status().
+  // The lead row itself is never hard-deleted (other tables still
+  // reference it), but its personal-identifying fields are redacted.
+  deletedAt?: string;
 
   createdAt: string;
 }
@@ -146,7 +151,8 @@ export type LeadActivityKind =
   | "task_created"
   | "task_completed"
   | "task_cancelled"
-  | "do_not_contact_set";
+  | "do_not_contact_set"
+  | "pii_redacted";
 
 export interface LeadActivity {
   id: string;
@@ -364,10 +370,71 @@ export interface BuyerMatchDecision {
 
 export interface AuditLogEntry {
   id: string;
-  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression" | "settings" | "note" | "task";
+  entity:
+    | "lead"
+    | "consent"
+    | "assignment"
+    | "status"
+    | "campaign"
+    | "suppression"
+    | "settings"
+    | "note"
+    | "task"
+    | "opt_out"
+    | "data_subject_request";
   entityId: string;
   action: string;
   actor: string;
   timestamp: string;
   details?: string;
+}
+
+// --- Opt-out requests and data subject access/correction/deletion
+// requests (POPIA). Internal compliance-workflow records, created and
+// resolved only by platform/compliance admins - distinct from the
+// narrower, broker-campaign-scoped MarketingSuppression mechanism above.
+// See supabase/migrations/202610030003_opt_out_and_data_subject_requests.sql.
+
+export type OptOutChannel = "email" | "phone" | "whatsapp" | "all";
+
+export type OptOutSource = "phone_call" | "email" | "whatsapp" | "written_letter" | "dashboard_manual" | "other";
+
+export type OptOutRequestStatus = "new" | "processed";
+
+export interface OptOutRequest {
+  id: string;
+  leadId?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  channel: OptOutChannel;
+  reason?: string;
+  source: OptOutSource;
+  status: OptOutRequestStatus;
+  requestedAt: string;
+  processedAt?: string;
+  processedBy?: string;
+  resolutionNotes?: string;
+  createdBy: string;
+}
+
+export type DataSubjectRequestType = "access" | "correction" | "deletion";
+
+export type DataSubjectRequestStatus = "received" | "verifying" | "in_progress" | "completed" | "rejected";
+
+export interface DataSubjectRequest {
+  id: string;
+  leadId?: string;
+  requestType: DataSubjectRequestType;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  details?: string;
+  status: DataSubjectRequestStatus;
+  receivedAt: string;
+  dueAt: string;
+  completedAt?: string;
+  handledBy?: string;
+  resolutionNotes?: string;
+  createdBy: string;
 }

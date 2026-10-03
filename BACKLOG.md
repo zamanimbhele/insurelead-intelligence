@@ -69,15 +69,28 @@ Priced in the accompanying quotation.
 ## Compliance & Quality
 - Compliance dashboard completed (MVP): consent coverage, leads without a valid consent record
   (the same five checks the public form enforces), Do Not Contact count, unassigned leads (no
-  reserved/accepted/disputed allocation and not already in a terminal status), and retention
+  reserved/accepted/disputed allocation and not already in a terminal status), retention
   exceptions against a configurable `application_settings.lead_retention_days` threshold editable
-  by a platform/compliance admin - all computed from real demo/Supabase data, gated to platform
-  admins, compliance admins, and read-only for compliance auditors (reusing the existing
-  is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed beyond
-  the settings table itself). Data-source-approval, export-activity, and data-subject-request
-  widgets show explicit "not yet available" placeholders rather than fabricated data - they need
-  the three backlog items below built first.
-- Opt-out and data subject request workflows (access, correction, deletion).
+  by a platform/compliance admin, and (since the opt-out/DSR workflow below) new opt-out request
+  and open/overdue data subject request counts - all computed from real demo/Supabase data, gated
+  to platform admins, compliance admins, and read-only for compliance auditors (reusing the
+  existing is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed
+  beyond the settings table itself). Data-source-approval and export-activity widgets remain
+  explicit "not yet available" placeholders rather than fabricated data - they need the two
+  backlog items below built first.
+- Opt-out and data subject request workflows completed: a compliance-admin-only log of opt-out
+  requests received outside a form submission (phone, email, WhatsApp, letter), where processing
+  one sets the linked lead to Do Not Contact through the same update_lead_status() path the
+  Kanban board and lead profile use; and a POPIA access/correction/deletion request log with a
+  30-day due date, status progression (received -> verifying -> in progress -> completed/
+  rejected), and, for a completed deletion request against a linked lead, an irreversible
+  redaction of that lead's personal-identifying fields (name, email, mobile, business/trading
+  name, website) with its own audit-log entry and activity-timeline entry. Both are deliberately
+  separate from the existing broker-campaign-scoped marketing-suppression/unsubscribe mechanism
+  (campaign-unsubscribe.ts), which only stops future campaign *sends* for one broker and has no
+  concept of a formal request. Writes go through SECURITY DEFINER RPCs restricted to platform_
+  admin/compliance_admin (broker operators and compliance auditors cannot create or resolve
+  these), same lockdown pattern as lead_notes/lead_tasks/lead_activities.
 - Role-restricted, audited CSV/report exports with time-limited links.
 - Automated test suite: Vitest (unit) and Playwright (end-to-end).
 - Accessibility review and security review checklist.

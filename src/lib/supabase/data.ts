@@ -6,6 +6,9 @@ import type {
   Buyer,
   BuyerMatchDecision,
   ConsentRecord,
+  DataSubjectRequest,
+  DataSubjectRequestStatus,
+  DataSubjectRequestType,
   Lead,
   LeadActivity,
   LeadActivityKind,
@@ -15,6 +18,10 @@ import type {
   LeadNote,
   LeadTask,
   LeadTaskStatus,
+  OptOutChannel,
+  OptOutRequest,
+  OptOutRequestStatus,
+  OptOutSource,
 } from "../types.ts";
 import { INSURANCE_PRODUCTS } from "../constants.ts";
 
@@ -55,6 +62,7 @@ type LeadRow = {
   do_not_contact: boolean;
   assigned_broker: string | null;
   loss_reason: string | null;
+  deleted_at: string | null;
   created_at: string;
 };
 
@@ -169,6 +177,40 @@ type LeadActivityRow = {
   occurred_at: string;
 };
 
+type OptOutRequestRow = {
+  id: string;
+  lead_id: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  channel: OptOutChannel;
+  reason: string | null;
+  source: OptOutSource;
+  status: OptOutRequestStatus;
+  requested_at: string;
+  processed_at: string | null;
+  processed_by: string | null;
+  resolution_notes: string | null;
+  created_by: string;
+};
+
+type DataSubjectRequestRow = {
+  id: string;
+  lead_id: string | null;
+  request_type: DataSubjectRequestType;
+  requester_name: string;
+  requester_email: string;
+  requester_phone: string | null;
+  details: string | null;
+  status: DataSubjectRequestStatus;
+  received_at: string;
+  due_at: string;
+  completed_at: string | null;
+  handled_by: string | null;
+  resolution_notes: string | null;
+  created_by: string;
+};
+
 function fail(operation: string, error: { message: string } | null) {
   if (error) throw new Error(`${operation}: ${error.message}`);
 }
@@ -220,6 +262,7 @@ export function mapLead(row: LeadRow): Lead {
     doNotContact: row.do_not_contact,
     assignedBroker: optional(row.assigned_broker),
     lossReason: optional(row.loss_reason),
+    deletedAt: optional(row.deleted_at),
     createdAt: row.created_at,
   };
 }
@@ -724,5 +767,152 @@ export async function completeSupabaseLeadTask(
   fail("Unable to update task", error);
   const result = data as { id?: string; status?: string } | null;
   if (!result?.id) throw new Error("Unable to update task: database did not return an ID");
+  return result.id;
+}
+
+// --- Compliance: opt-out requests and data subject access/correction/
+// deletion requests. Writes all go through the SECURITY DEFINER RPCs in
+// 202610030003_opt_out_and_data_subject_requests.sql, not a direct table
+// insert/update - the authenticated role has select-only access to both
+// tables.
+
+function mapOptOutRequest(row: OptOutRequestRow): OptOutRequest {
+  return {
+    id: row.id,
+    leadId: optional(row.lead_id),
+    contactName: optional(row.contact_name),
+    contactEmail: optional(row.contact_email),
+    contactPhone: optional(row.contact_phone),
+    channel: row.channel,
+    reason: optional(row.reason),
+    source: row.source,
+    status: row.status,
+    requestedAt: row.requested_at,
+    processedAt: optional(row.processed_at),
+    processedBy: optional(row.processed_by),
+    resolutionNotes: optional(row.resolution_notes),
+    createdBy: row.created_by,
+  };
+}
+
+function mapDataSubjectRequest(row: DataSubjectRequestRow): DataSubjectRequest {
+  return {
+    id: row.id,
+    leadId: optional(row.lead_id),
+    requestType: row.request_type,
+    requesterName: row.requester_name,
+    requesterEmail: row.requester_email,
+    requesterPhone: optional(row.requester_phone),
+    details: optional(row.details),
+    status: row.status,
+    receivedAt: row.received_at,
+    dueAt: row.due_at,
+    completedAt: optional(row.completed_at),
+    handledBy: optional(row.handled_by),
+    resolutionNotes: optional(row.resolution_notes),
+    createdBy: row.created_by,
+  };
+}
+
+export async function fetchSupabaseOptOutRequests(client: SupabaseClient): Promise<OptOutRequest[]> {
+  const { data, error } = await client
+    .from("opt_out_requests")
+    .select("*")
+    .order("requested_at", { ascending: false });
+  fail("Unable to load opt-out requests", error);
+  return ((data ?? []) as OptOutRequestRow[]).map(mapOptOutRequest);
+}
+
+export async function fetchSupabaseDataSubjectRequests(client: SupabaseClient): Promise<DataSubjectRequest[]> {
+  const { data, error } = await client
+    .from("data_subject_requests")
+    .select("*")
+    .order("received_at", { ascending: false });
+  fail("Unable to load data subject requests", error);
+  return ((data ?? []) as DataSubjectRequestRow[]).map(mapDataSubjectRequest);
+}
+
+export async function createSupabaseOptOutRequest(
+  client: SupabaseClient,
+  input: {
+    channel: OptOutChannel;
+    source: OptOutSource;
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    reason?: string;
+    leadId?: string;
+  },
+) {
+  const { data, error } = await client.rpc("create_opt_out_request", {
+    p_channel: input.channel,
+    p_source: input.source,
+    p_contact_name: input.contactName ?? null,
+    p_contact_email: input.contactEmail ?? null,
+    p_contact_phone: input.contactPhone ?? null,
+    p_reason: input.reason ?? null,
+    p_lead_id: input.leadId ?? null,
+  });
+  fail("Unable to log opt-out request", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to log opt-out request: database did not return an ID");
+  return result.id;
+}
+
+export async function processSupabaseOptOutRequest(
+  client: SupabaseClient,
+  input: { requestId: string; resolutionNotes?: string },
+) {
+  const { data, error } = await client.rpc("process_opt_out_request", {
+    p_request_id: input.requestId,
+    p_resolution_notes: input.resolutionNotes ?? null,
+  });
+  fail("Unable to process opt-out request", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to process opt-out request: database did not return an ID");
+  return result.id;
+}
+
+export async function createSupabaseDataSubjectRequest(
+  client: SupabaseClient,
+  input: {
+    requestType: DataSubjectRequestType;
+    requesterName: string;
+    requesterEmail: string;
+    requesterPhone?: string;
+    details?: string;
+    leadId?: string;
+  },
+) {
+  const { data, error } = await client.rpc("create_data_subject_request", {
+    p_request_type: input.requestType,
+    p_requester_name: input.requesterName,
+    p_requester_email: input.requesterEmail,
+    p_requester_phone: input.requesterPhone ?? null,
+    p_details: input.details ?? null,
+    p_lead_id: input.leadId ?? null,
+  });
+  fail("Unable to log data subject request", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to log data subject request: database did not return an ID");
+  return result.id;
+}
+
+export async function updateSupabaseDataSubjectRequestStatus(
+  client: SupabaseClient,
+  input: {
+    requestId: string;
+    status: Extract<DataSubjectRequestStatus, "verifying" | "in_progress" | "completed" | "rejected">;
+    resolutionNotes?: string;
+  },
+) {
+  const { data, error } = await client.rpc("update_data_subject_request_status", {
+    p_request_id: input.requestId,
+    p_status: input.status,
+    p_resolution_notes: input.resolutionNotes ?? null,
+  });
+  fail("Unable to update data subject request", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to update data subject request: database did not return an ID");
   return result.id;
 }

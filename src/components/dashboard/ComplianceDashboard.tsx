@@ -11,10 +11,12 @@ import {
   Archive,
   Database,
   Download,
+  UserMinus,
   UserCog,
   Loader2,
 } from "lucide-react";
 import { StatCard } from "./StatCard";
+import { ComplianceRequestsPanel } from "./ComplianceRequestsPanel";
 import { LEAD_STATUS_LABELS, MAX_LEAD_RETENTION_DAYS, MIN_LEAD_RETENTION_DAYS } from "@/lib/constants";
 import type { ComplianceLeadSummary, ComplianceOverview } from "@/lib/dashboard-data";
 
@@ -193,6 +195,20 @@ export function ComplianceDashboard({ overview, canManage }: { overview: Complia
           icon={Archive}
           accent={overview.retentionExceptions.count > 0 ? "red" : "slate"}
         />
+        <StatCard
+          testId="stat-new-opt-outs"
+          label="New Opt-Out Requests"
+          value={overview.optOuts.newCount}
+          icon={UserMinus}
+          accent={overview.optOuts.newCount > 0 ? "amber" : "slate"}
+        />
+        <StatCard
+          testId="stat-data-subject-requests"
+          label="Open Data Subject Requests"
+          value={overview.dataSubjectRequests.openCount}
+          icon={UserCog}
+          accent={overview.dataSubjectRequests.overdueCount > 0 ? "red" : overview.dataSubjectRequests.openCount > 0 ? "amber" : "slate"}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -229,8 +245,17 @@ export function ComplianceDashboard({ overview, canManage }: { overview: Complia
       <RetentionSettingCard thresholdDays={overview.retentionThresholdDays} canManage={canManage} />
 
       <div>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Opt-outs &amp; data subject requests</h2>
+        <ComplianceRequestsPanel
+          optOutRequests={overview.optOuts.requests}
+          dataSubjectRequests={overview.dataSubjectRequests.requests}
+          canManage={canManage}
+        />
+      </div>
+
+      <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Not yet available</h2>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2">
           <PlaceholderCard
             icon={Database}
             title="Data source approvals"
@@ -242,12 +267,6 @@ export function ComplianceDashboard({ overview, canManage }: { overview: Complia
             title="Export activity"
             description="Who exported what, when, with which filters, and how many records - role-restricted and fully audited."
             backlogItem="Role-restricted, audited CSV/report exports"
-          />
-          <PlaceholderCard
-            icon={UserCog}
-            title="Data subject requests"
-            description="Access, correction, and deletion requests, their status, and resolution timelines."
-            backlogItem="Opt-out and data subject request workflows"
           />
         </div>
       </div>

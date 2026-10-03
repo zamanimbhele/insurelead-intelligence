@@ -1,11 +1,15 @@
 import type {
   ApplicantType,
   BusinessCoverInterest,
+  DataSubjectRequestStatus,
+  DataSubjectRequestType,
   InsuranceProduct,
   LeadActivityKind,
   LeadInteractionChannel,
   LeadInteractionOutcome,
   LeadStatus,
+  OptOutChannel,
+  OptOutSource,
 } from "./types";
 
 export const INSURANCE_PRODUCTS: {
@@ -177,4 +181,45 @@ export const LEAD_ACTIVITY_KIND_LABELS: Record<LeadActivityKind, string> = {
   task_completed: "Task completed",
   task_cancelled: "Task cancelled",
   do_not_contact_set: "Marked Do Not Contact",
+  pii_redacted: "Personal data redacted",
 };
+
+// Compliance: opt-out requests and data subject access/correction/deletion
+// requests. Mirrors the check constraints in
+// 202610030003_opt_out_and_data_subject_requests.sql so client-side
+// validation and the database agree.
+export const OPT_OUT_CHANNELS: { value: OptOutChannel; label: string }[] = [
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "all", label: "All channels" },
+];
+
+export const OPT_OUT_SOURCES: { value: OptOutSource; label: string }[] = [
+  { value: "phone_call", label: "Phone call" },
+  { value: "email", label: "Email" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "written_letter", label: "Written letter" },
+  { value: "dashboard_manual", label: "Manual dashboard entry" },
+  { value: "other", label: "Other" },
+];
+
+export const DATA_SUBJECT_REQUEST_TYPES: { value: DataSubjectRequestType; label: string }[] = [
+  { value: "access", label: "Access" },
+  { value: "correction", label: "Correction" },
+  { value: "deletion", label: "Deletion" },
+];
+
+export const DATA_SUBJECT_REQUEST_STATUS_LABELS: Record<DataSubjectRequestStatus, string> = {
+  received: "Received",
+  verifying: "Verifying identity",
+  in_progress: "In progress",
+  completed: "Completed",
+  rejected: "Rejected",
+};
+
+// How many days a data subject request has to be resolved before it is
+// flagged as overdue on the compliance dashboard. POPIA requires a
+// "reasonable time" response, which this prototype treats as 30 days -
+// the same window create_data_subject_request() uses to set due_at.
+export const DATA_SUBJECT_REQUEST_DUE_DAYS = 30;

@@ -3,21 +3,40 @@ import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-s
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
+  createSupabaseDataSubjectRequest,
+  createSupabaseOptOutRequest,
   fetchSupabaseAllocations,
   fetchSupabaseApplicationSettings,
   fetchSupabaseBrokerMembers,
   fetchSupabaseBuyers,
   fetchSupabaseConsents,
+  fetchSupabaseDataSubjectRequests,
   fetchSupabaseLead,
   fetchSupabaseLeadActivities,
   fetchSupabaseLeadNotes,
   fetchSupabaseLeadTasks,
   fetchSupabaseLeads,
+  fetchSupabaseOptOutRequests,
   fetchSupabaseSendingIdentities,
+  processSupabaseOptOutRequest,
   updateSupabaseApplicationSettings,
+  updateSupabaseDataSubjectRequestStatus,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
-import type { ApplicationSettings, ConsentRecord, Lead, LeadActivity, LeadNote, LeadTask } from "./types";
+import type {
+  ApplicationSettings,
+  ConsentRecord,
+  DataSubjectRequest,
+  DataSubjectRequestStatus,
+  DataSubjectRequestType,
+  Lead,
+  LeadActivity,
+  LeadNote,
+  LeadTask,
+  OptOutChannel,
+  OptOutRequest,
+  OptOutSource,
+} from "./types";
 import { getLeadDisplayName, isConsentValid } from "./lead-utils";
 import { DEFAULT_LEAD_RETENTION_DAYS } from "./constants";
 import { getCampaignRecipients, getCampaigns } from "./campaign-store";
@@ -204,6 +223,16 @@ export type ComplianceOverview = {
   doNotContact: { count: number; leads: ComplianceLeadSummary[] };
   unassigned: { count: number; leads: ComplianceLeadSummary[] };
   retentionExceptions: { count: number; leads: ComplianceLeadSummary[] };
+  optOuts: { newCount: number; requests: OptOutRequest[] };
+  dataSubjectRequests: {
+    openCount: number;
+    overdueCount: number;
+    // "overdue" is computed here, server-side, rather than in the client
+    // component comparing dueAt against Date.now() on every render - React's
+    // purity rule (react-hooks/purity) flags calling an impure function like
+    // Date.now() during render.
+    requests: (DataSubjectRequest & { overdue: boolean })[];
+  };
 };
 
 // A lead in one of these statuses no longer needs an active broker
@@ -218,9 +247,18 @@ const ASSIGNMENT_NOT_REQUIRED_STATUSES: Lead["status"][] = ["won", "lost", "arch
 const ACTIVE_ALLOCATION_STATUSES = new Set(["reserved", "accepted", "disputed"]);
 
 const MAX_LISTED_LEADS = 10;
+const MAX_LISTED_REQUESTS = 25;
 
 function toSummary(lead: Lead): ComplianceLeadSummary {
   return { id: lead.id, displayName: getLeadDisplayName(lead), status: lead.status, createdAt: lead.createdAt };
+}
+
+function isDataSubjectRequestOverdue(request: DataSubjectRequest): boolean {
+  return (
+    request.status !== "completed" &&
+    request.status !== "rejected" &&
+    new Date(request.dueAt).getTime() < Date.now()
+  );
 }
 
 export async function getComplianceOverview(): Promise<ComplianceOverview> {
@@ -274,6 +312,16 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
 
   const validCount = leads.length - invalidConsentLeads.length;
 
+  const [optOutRequests, dataSubjectRequests] = dataMode === "demo"
+    ? await (async () => {
+      const { getOptOutRequests, getDataSubjectRequests } = await import("./demo-store");
+      return [getOptOutRequests(), getDataSubjectRequests()];
+    })()
+    : await (async () => {
+      const client = await requireServerClient();
+      return Promise.all([fetchSupabaseOptOutRequests(client), fetchSupabaseDataSubjectRequests(client)]);
+    })();
+
   return {
     dataMode,
     totalLeads: leads.length,
@@ -290,5 +338,88 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
       count: retentionExceptionLeads.length,
       leads: retentionExceptionLeads.slice(0, MAX_LISTED_LEADS).map(toSummary),
     },
+    optOuts: {
+      newCount: optOutRequests.filter((request) => request.status === "new").length,
+      requests: optOutRequests.slice(0, MAX_LISTED_REQUESTS),
+    },
+    dataSubjectRequests: {
+      openCount: dataSubjectRequests.filter((request) => request.status !== "completed" && request.status !== "rejected").length,
+      overdueCount: dataSubjectRequests.filter(isDataSubjectRequestOverdue).length,
+      requests: dataSubjectRequests
+        .slice(0, MAX_LISTED_REQUESTS)
+        .map((request) => ({ ...request, overdue: isDataSubjectRequestOverdue(request) })),
+    },
   };
+}
+
+// --- Compliance: opt-out requests and data subject access/correction/
+// deletion requests. Mirrors updateApplicationSettings()'s demo/supabase
+// branching pattern above.
+
+export async function createDashboardOptOutRequest(
+  input: {
+    channel: OptOutChannel;
+    source: OptOutSource;
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    reason?: string;
+    leadId?: string;
+  },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createOptOutRequest } = await import("./demo-store");
+    return { id: createOptOutRequest(input, actorLabel).id };
+  }
+  const id = await createSupabaseOptOutRequest(await requireServerClient(), input);
+  return { id };
+}
+
+export async function processDashboardOptOutRequest(
+  requestId: string,
+  resolutionNotes: string | undefined,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { processOptOutRequest } = await import("./demo-store");
+    const updated = processOptOutRequest(requestId, resolutionNotes, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await processSupabaseOptOutRequest(await requireServerClient(), { requestId, resolutionNotes });
+  return { id };
+}
+
+export async function createDashboardDataSubjectRequest(
+  input: {
+    requestType: DataSubjectRequestType;
+    requesterName: string;
+    requesterEmail: string;
+    requesterPhone?: string;
+    details?: string;
+    leadId?: string;
+  },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createDataSubjectRequest } = await import("./demo-store");
+    return { id: createDataSubjectRequest(input, actorLabel).id };
+  }
+  const id = await createSupabaseDataSubjectRequest(await requireServerClient(), input);
+  return { id };
+}
+
+export async function updateDashboardDataSubjectRequestStatus(
+  requestId: string,
+  status: Extract<DataSubjectRequestStatus, "verifying" | "in_progress" | "completed" | "rejected">,
+  resolutionNotes: string | undefined,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { updateDataSubjectRequestStatus } = await import("./demo-store");
+    const updated = updateDataSubjectRequestStatus(requestId, status, resolutionNotes, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await updateSupabaseDataSubjectRequestStatus(await requireServerClient(), { requestId, status, resolutionNotes });
+  return { id };
 }

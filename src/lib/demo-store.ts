@@ -10,6 +10,8 @@ import type {
   ApplicationSettings,
   AuditLogEntry,
   ConsentRecord,
+  DataSubjectRequest,
+  DataSubjectRequestStatus,
   Lead,
   LeadActivity,
   LeadActivityKind,
@@ -18,6 +20,7 @@ import type {
   LeadNote,
   LeadTask,
   LeadTaskStatus,
+  OptOutRequest,
 } from "./types.ts";
 import { DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS } from "./constants.ts";
 import { resolveDoNotContactForStatus } from "./lead-utils.ts";
@@ -30,6 +33,8 @@ const APPLICATION_SETTINGS_FILE = path.join(DATA_DIR, "application-settings.json
 const LEAD_NOTES_FILE = path.join(DATA_DIR, "lead-notes.json");
 const LEAD_TASKS_FILE = path.join(DATA_DIR, "lead-tasks.json");
 const LEAD_ACTIVITIES_FILE = path.join(DATA_DIR, "lead-activities.json");
+const OPT_OUT_REQUESTS_FILE = path.join(DATA_DIR, "opt-out-requests.json");
+const DATA_SUBJECT_REQUESTS_FILE = path.join(DATA_DIR, "data-subject-requests.json");
 
 function readJson<T>(file: string, fallback: T): T {
   try {
@@ -300,6 +305,214 @@ export function completeLeadTask(
     summary: `${status === "completed" ? "Task completed" : "Task cancelled"}: ${updated.title}`,
     actorLabel,
     metadata: { taskId },
+  });
+  return updated;
+}
+
+// --- Compliance: opt-out requests and data subject access/correction/
+// deletion requests (POPIA). Demo-mode equivalent of the
+// create_opt_out_request() / process_opt_out_request() /
+// create_data_subject_request() / update_data_subject_request_status()
+// RPCs - see
+// supabase/migrations/202610030003_opt_out_and_data_subject_requests.sql.
+// Deliberately separate from the broker-campaign-scoped marketing
+// suppression list in campaign-store.ts: this is the compliance team's
+// own opt-out/DSR log, not an email-send suppression mechanism.
+
+export function getOptOutRequests(): OptOutRequest[] {
+  return readJson<OptOutRequest[]>(OPT_OUT_REQUESTS_FILE, []);
+}
+
+export function createOptOutRequest(
+  input: {
+    channel: OptOutRequest["channel"];
+    source: OptOutRequest["source"];
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    reason?: string;
+    leadId?: string;
+  },
+  actorLabel: string,
+): OptOutRequest {
+  if (!input.contactEmail?.trim() && !input.contactPhone?.trim() && !input.leadId) {
+    throw new Error("Provide a contact email, contact phone, or lead to identify who is opting out");
+  }
+  if (input.leadId && !getLeadById(input.leadId)) throw new Error("Lead not found");
+
+  const requests = getOptOutRequests();
+  const request: OptOutRequest = {
+    id: generateId("optout"),
+    leadId: input.leadId,
+    contactName: input.contactName?.trim() || undefined,
+    contactEmail: input.contactEmail?.trim() || undefined,
+    contactPhone: input.contactPhone?.trim() || undefined,
+    channel: input.channel,
+    reason: input.reason?.trim() || undefined,
+    source: input.source,
+    status: "new",
+    requestedAt: new Date().toISOString(),
+    createdBy: actorLabel,
+  };
+  requests.unshift(request);
+  writeJson(OPT_OUT_REQUESTS_FILE, requests);
+
+  appendAuditLog({
+    entity: "opt_out",
+    entityId: request.id,
+    action: "opt_out_request_created",
+    actor: actorLabel,
+    details: `leadId=${request.leadId ?? "none"} channel=${request.channel} source=${request.source}`,
+  });
+  return request;
+}
+
+export function processOptOutRequest(
+  requestId: string,
+  resolutionNotes: string | undefined,
+  actorLabel: string,
+): OptOutRequest | undefined {
+  const requests = getOptOutRequests();
+  const index = requests.findIndex((request) => request.id === requestId);
+  if (index === -1) return undefined;
+  if (requests[index].status === "processed") {
+    throw new Error("This opt-out request has already been processed");
+  }
+
+  const leadId = requests[index].leadId;
+  if (leadId) updateLeadStatus(leadId, "do_not_contact", undefined, actorLabel);
+
+  const updated: OptOutRequest = {
+    ...requests[index],
+    status: "processed",
+    processedAt: new Date().toISOString(),
+    processedBy: actorLabel,
+    resolutionNotes: resolutionNotes?.trim() || undefined,
+  };
+  requests[index] = updated;
+  writeJson(OPT_OUT_REQUESTS_FILE, requests);
+
+  appendAuditLog({
+    entity: "opt_out",
+    entityId: requestId,
+    action: "opt_out_request_processed",
+    actor: actorLabel,
+    details: `leadId=${leadId ?? "none"}`,
+  });
+  return updated;
+}
+
+export function getDataSubjectRequests(): DataSubjectRequest[] {
+  return readJson<DataSubjectRequest[]>(DATA_SUBJECT_REQUESTS_FILE, []);
+}
+
+export function createDataSubjectRequest(
+  input: {
+    requestType: DataSubjectRequest["requestType"];
+    requesterName: string;
+    requesterEmail: string;
+    requesterPhone?: string;
+    details?: string;
+    leadId?: string;
+  },
+  actorLabel: string,
+): DataSubjectRequest {
+  if (!input.requesterName.trim()) throw new Error("Requester name must not be empty");
+  if (!input.requesterEmail.trim()) throw new Error("Requester email must not be empty");
+  if (input.leadId && !getLeadById(input.leadId)) throw new Error("Lead not found");
+
+  const requests = getDataSubjectRequests();
+  const receivedAt = new Date();
+  const dueAt = new Date(receivedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const request: DataSubjectRequest = {
+    id: generateId("dsr"),
+    leadId: input.leadId,
+    requestType: input.requestType,
+    requesterName: input.requesterName.trim(),
+    requesterEmail: input.requesterEmail.trim(),
+    requesterPhone: input.requesterPhone?.trim() || undefined,
+    details: input.details?.trim() || undefined,
+    status: "received",
+    receivedAt: receivedAt.toISOString(),
+    dueAt: dueAt.toISOString(),
+    createdBy: actorLabel,
+  };
+  requests.unshift(request);
+  writeJson(DATA_SUBJECT_REQUESTS_FILE, requests);
+
+  appendAuditLog({
+    entity: "data_subject_request",
+    entityId: request.id,
+    action: "data_subject_request_created",
+    actor: actorLabel,
+    details: `leadId=${request.leadId ?? "none"} requestType=${request.requestType} dueAt=${request.dueAt}`,
+  });
+  return request;
+}
+
+export function updateDataSubjectRequestStatus(
+  requestId: string,
+  status: Extract<DataSubjectRequestStatus, "verifying" | "in_progress" | "completed" | "rejected">,
+  resolutionNotes: string | undefined,
+  actorLabel: string,
+): DataSubjectRequest | undefined {
+  const requests = getDataSubjectRequests();
+  const index = requests.findIndex((request) => request.id === requestId);
+  if (index === -1) return undefined;
+  const existing = requests[index];
+  if (existing.status === "completed" || existing.status === "rejected") {
+    throw new Error("This request has already been finalised");
+  }
+
+  let redacted = false;
+  if (status === "completed" && existing.requestType === "deletion" && existing.leadId) {
+    const lead = getLeadById(existing.leadId);
+    if (lead) {
+      updateLead(existing.leadId, {
+        contactFullName: "[redacted - data subject deletion request]",
+        contactEmail: `redacted-${existing.leadId}@deleted.invalid`,
+        contactMobile: "",
+        businessName: lead.businessName ? "[redacted]" : lead.businessName,
+        tradingName: undefined,
+        website: undefined,
+        deletedAt: new Date().toISOString(),
+        doNotContact: true,
+      });
+      redacted = true;
+
+      appendLeadActivity({
+        leadId: existing.leadId,
+        kind: "pii_redacted",
+        summary: "Personal data redacted following a data subject deletion request",
+        actorLabel,
+        metadata: { dataSubjectRequestId: existing.id },
+      });
+      appendAuditLog({
+        entity: "lead",
+        entityId: existing.leadId,
+        action: "lead_pii_redacted",
+        actor: actorLabel,
+        details: `dataSubjectRequestId=${existing.id}`,
+      });
+    }
+  }
+
+  const updated: DataSubjectRequest = {
+    ...existing,
+    status,
+    resolutionNotes: resolutionNotes?.trim() || existing.resolutionNotes,
+    handledBy: actorLabel,
+    completedAt: status === "completed" || status === "rejected" ? new Date().toISOString() : existing.completedAt,
+  };
+  requests[index] = updated;
+  writeJson(DATA_SUBJECT_REQUESTS_FILE, requests);
+
+  appendAuditLog({
+    entity: "data_subject_request",
+    entityId: requestId,
+    action: "data_subject_request_status_changed",
+    actor: actorLabel,
+    details: `from=${existing.status} to=${status} redacted=${redacted}`,
   });
   return updated;
 }
