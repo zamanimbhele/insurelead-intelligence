@@ -31,9 +31,18 @@ test.describe("Lead pipeline Kanban board (synthetic demo data)", () => {
     await page.goto("/dashboard/leads");
     await page.getByRole("tab", { name: "Kanban" }).click();
 
+    // Identify the lead by its profile link (stable) rather than DOM
+    // position: moving a lead to a different status column changes which
+    // <article> renders first, so a positional locator like
+    // `page.locator("article").first()` silently starts pointing at a
+    // different, untouched lead the moment this one's column changes.
     const firstCard = page.locator("article").first();
     await expect(firstCard).toBeVisible();
-    const select = firstCard.getByLabel(/Move .* to a different pipeline stage/);
+    const leadHref = await firstCard.locator("a[href^='/dashboard/leads/']").first().getAttribute("href");
+    if (!leadHref) throw new Error("Could not resolve the lead profile link for the first Kanban card");
+    const card = page.locator(`article:has(a[href="${leadHref}"])`);
+
+    const select = card.getByLabel(/Move .* to a different pipeline stage/);
     const originalStatus = await select.inputValue();
     const nextStatus = originalStatus === "qualified" ? "contacted" : "qualified";
 
@@ -43,7 +52,7 @@ test.describe("Lead pipeline Kanban board (synthetic demo data)", () => {
     // Reload to confirm the change was persisted server-side, not just local state.
     await page.reload();
     await page.getByRole("tab", { name: "Kanban" }).click();
-    const movedCard = page.locator("article").filter({ hasText: await firstCard.locator("span.truncate").first().textContent() ?? "" }).first();
+    const movedCard = page.locator(`article:has(a[href="${leadHref}"])`);
     await expect(movedCard.getByLabel(/Move .* to a different pipeline stage/)).toHaveValue(nextStatus);
 
     // Revert so the demo dataset is unchanged for the next local run.
