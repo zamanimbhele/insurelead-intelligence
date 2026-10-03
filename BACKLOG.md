@@ -57,8 +57,24 @@ Priced in the accompanying quotation.
 - Contract, pricing-plan, invoice, payment, credit/refund, and lead-dispute workflows.
 
 ## Market Intelligence
-- Geographic hotspot dashboard (province → municipality → suburb) with opportunity score, growth
-  rate, conversion rate, and configurable minimum-volume threshold.
+- Geographic hotspot dashboard completed: a `/dashboard/market-intelligence/hotspots` page breaking
+  demand down by province, by municipality (province + city), and by suburb (province + city +
+  suburb) - each level independently gated by the same admin-configurable minimum lead volume
+  (`application_settings.hotspot_min_lead_threshold`, default 10 per the brief's own example) so a
+  small, potentially identifiable area is never shown; lowering it is instant and the suburb table
+  honestly reports "no suburb meets the minimum yet" rather than fabricating a row. Each visible
+  area carries a lead volume, a growth rate (trailing 60 days vs. the 60 days before that - null,
+  not a fake 0%, when there isn't enough prior-period history yet), a conversion rate (won ÷
+  (won + lost), null when nothing has closed yet), a top industry/insurance need/campaign source,
+  and a transparent 0-100 opportunity score with a hover explanation, scored by the same
+  additive-points-plus-explanation convention as the lead scoring engine (`scoreHotspot()` in
+  `src/lib/scoring.ts`, next to `scoreLead()`). Computed live from already-captured, consented
+  leads on every page load - there is no `hotspot_snapshots` table or background refresh job yet,
+  so "computed as of" means "as of this page load," not "last refreshed by a job." The synthetic
+  seed script now also generates a `suburb` per lead for any future reseed, and the already-
+  committed demo dataset was deterministically backfilled with one (derived from each lead's id,
+  not randomised, so it is a stable one-time patch rather than a full reseed) so the suburb-level
+  breakdown has real demo data to gate once the threshold is lowered.
 - Industry opportunity dashboard (highest-volume, fastest-growing, best-converting, renewal
   urgency).
 - Financial-year-end campaign planner: filter by FYE month, campaign calendar, broker follow-up

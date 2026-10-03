@@ -152,6 +152,7 @@ type SendingIdentityRow = {
 type ApplicationSettingsRow = {
   id: number;
   lead_retention_days: number;
+  hotspot_min_lead_threshold: number;
   updated_at: string;
   updated_by: string | null;
 };
@@ -667,6 +668,7 @@ export async function reserveSupabaseLead(
 function mapApplicationSettings(row: ApplicationSettingsRow): ApplicationSettings {
   return {
     leadRetentionDays: row.lead_retention_days,
+    hotspotMinLeadThreshold: row.hotspot_min_lead_threshold,
     updatedAt: row.updated_at,
     updatedBy: optional(row.updated_by),
   };
@@ -677,17 +679,21 @@ export async function fetchSupabaseApplicationSettings(client: SupabaseClient): 
   fail("Unable to load application settings", error);
   // The seed row ships in the migration, but fall back sensibly if a fresh
   // environment somehow skipped it rather than erroring the whole dashboard.
-  if (!data) return { leadRetentionDays: 730 };
+  if (!data) return { leadRetentionDays: 730, hotspotMinLeadThreshold: 10 };
   return mapApplicationSettings(data as ApplicationSettingsRow);
 }
 
 export async function updateSupabaseApplicationSettings(
   client: SupabaseClient,
-  input: { leadRetentionDays: number; updatedBy?: string },
+  input: { leadRetentionDays?: number; hotspotMinLeadThreshold?: number; updatedBy?: string },
 ): Promise<ApplicationSettings> {
+  const updatePayload: Record<string, unknown> = { updated_by: input.updatedBy ?? null, updated_at: new Date().toISOString() };
+  if (input.leadRetentionDays !== undefined) updatePayload.lead_retention_days = input.leadRetentionDays;
+  if (input.hotspotMinLeadThreshold !== undefined) updatePayload.hotspot_min_lead_threshold = input.hotspotMinLeadThreshold;
+
   const { data, error } = await client
     .from("application_settings")
-    .update({ lead_retention_days: input.leadRetentionDays, updated_by: input.updatedBy ?? null, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq("id", 1)
     .select("*")
     .single();

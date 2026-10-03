@@ -57,6 +57,14 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   approved (enforced in the database, not just the UI), and every approve/reject/suspend/reinstate
   decision is appended to an audit trail rather than overwriting history. Restricted to platform
   and compliance admins, with read-only access for compliance auditors.
+- A Geographic Hotspot dashboard (`/dashboard/market-intelligence/hotspots`): demand broken down
+  by province, municipality, and suburb, each level independently suppressed below an admin-
+  configurable minimum lead volume (default 10) so a small, potentially identifiable area is never
+  shown. Every visible area gets a lead volume, a growth rate (trailing 60 days vs. the prior 60 -
+  null, never a fabricated 0%, without enough history), a conversion rate, a top industry/
+  insurance need/campaign source, and a transparent 0-100 opportunity score with a hover
+  explanation, scored the same additive-points-plus-explanation way as the lead scoring engine.
+  Computed live from already-captured leads on every page load, not from a stored snapshot.
 - An opt-out and data subject request workflow on the Compliance dashboard: a log of opt-out
   requests received outside a form submission (processing one sets the linked lead to Do Not
   Contact), and a POPIA access/correction/deletion request log with a 30-day due date and status
@@ -74,8 +82,8 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): broker invitation UI, the Data Source Registry, hotspot/industry
-opportunity dashboards, the financial year-end campaign planner, audited CSV export controls,
+build (see `BACKLOG.md`): broker invitation UI, the industry opportunity dashboard, the
+financial year-end campaign planner, audited CSV export controls,
 buyer self-service, contracting, invoicing/payment collection, and a proactive due/overdue task
 notification mechanism (tasks themselves are built - see above; the opt-out/data-subject-request
 workflow is also built - see above). The full scope is documented in the project's build
