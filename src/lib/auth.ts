@@ -170,3 +170,16 @@ export function canRespondToAllocations(identity: DashboardIdentity) {
 export function canUpdateLeadStatus(identity: DashboardIdentity) {
   return isPlatformAdmin(identity) || BROKER_OPERATOR_ROLES.includes(identity.role as (typeof BROKER_OPERATOR_ROLES)[number]);
 }
+
+// Compliance dashboard: platform admins, compliance admins (both covered by
+// isPlatformAdmin - see ADMIN_ROLES) and compliance auditors may all view
+// it; only the admin roles may change the configurable retention
+// threshold. Mirrors the Supabase is_platform_admin()/is_compliance_auditor()
+// RLS helpers so the UI gate and the database's actual enforcement agree.
+export function canViewCompliance(identity: DashboardIdentity) {
+  return isPlatformAdmin(identity) || isComplianceAuditor(identity);
+}
+
+export function canManageCompliance(identity: DashboardIdentity) {
+  return isPlatformAdmin(identity);
+}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone } from "lucide-react";
-import { getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
+import { canViewCompliance, getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +24,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       ? [{ href: "/dashboard/broker-profile", label: "Broker Profile", icon: Settings }]
       : []),
     { href: "/dashboard/market-intelligence", label: "Market Intelligence", icon: BarChart3 },
+    ...(canViewCompliance(identity)
+      ? [{ href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck }]
+      : []),
   ];
 
   return (

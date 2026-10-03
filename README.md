@@ -43,15 +43,21 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 - Password authentication for the internal dashboard, with profile, membership, and organisation checks.
 - Configurable Cloudflare Turnstile verification, PII-minimised lead-queue webhook notifications,
   and a deployment-readiness endpoint at `/api/health`.
+- A Compliance dashboard (`/dashboard/compliance`): consent coverage, leads without a valid
+  consent record, Do Not Contact count, unassigned leads, and retention exceptions against a
+  configurable, admin-editable retention threshold - gated to platform admins, compliance admins,
+  and (read-only) compliance auditors. Data-source-approval, export-activity, and
+  data-subject-request widgets are explicit "not yet available" placeholders, not fabricated data.
 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
 build (see `BACKLOG.md`): notes/tasks/call logging, broker invitation UI, the Data Source Registry,
 hotspot/industry opportunity dashboards, the financial
-year-end campaign planner, the compliance dashboard, CSV export controls, buyer self-service,
-contracting, and invoicing/payment collection. The full scope is documented in the project's
-build specification and priced in the accompanying quotation.
+year-end campaign planner, audited CSV export controls, the opt-out/data-subject-request workflow,
+buyer self-service, contracting, and invoicing/payment collection (the compliance dashboard's MVP
+is built - see above - but those last three feed widgets it still shows as placeholders). The full
+scope is documented in the project's build specification and priced in the accompanying quotation.
 
 ## Tech stack
 
