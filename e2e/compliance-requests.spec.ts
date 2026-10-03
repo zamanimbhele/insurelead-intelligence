@@ -41,8 +41,11 @@ test.describe("Opt-out and data subject requests (synthetic demo data)", () => {
     // The status select defaults to "Verifying identity" for a freshly received
     // request (see DataSubjectRequestRow) - save it as-is to progress the request
     // without touching the destructive "completed" + deletion redaction path.
+    // Scoped to the status badge's own testid: "Verifying identity" is also the
+    // text of the (hidden, but still DOM-present) <option> inside the same row's
+    // status <select>, which a plain getByText also matches.
     await row.getByRole("button", { name: "Save" }).click();
-    await expect(row.getByText("Verifying identity", { exact: true })).toBeVisible();
+    await expect(row.getByTestId("dsr-status-badge")).toHaveText("Verifying identity");
   });
 
   test("a deletion request warns before it would redact a linked lead", async ({ page }) => {

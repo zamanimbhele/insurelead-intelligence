@@ -25,37 +25,54 @@ test.describe("Compliance dashboard (synthetic demo data)", () => {
     await expect(page.getByRole("heading", { name: "Unassigned leads" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Retention exceptions" })).toBeVisible();
 
-    // Three widgets genuinely aren't built yet (Data Source Registry,
-    // audited exports, DSR workflow) - the dashboard says so rather than
-    // faking the data, and this guards against someone silently papering
-    // over that with mock numbers later.
+    // Two widgets genuinely aren't built yet (Data Source Registry, audited
+    // exports) - the dashboard says so rather than faking the data, and this
+    // guards against someone silently papering over that with mock numbers
+    // later. The opt-out/data-subject-request workflow itself is built (see
+    // below), so it is no longer one of these placeholders.
     await expect(page.getByText("Not yet available")).toBeVisible();
     await expect(page.getByText("Data source approvals")).toBeVisible();
     await expect(page.getByText("Export activity")).toBeVisible();
-    await expect(page.getByText("Data subject requests")).toBeVisible();
-    await expect(page.getByText("Planned")).toHaveCount(3);
+    await expect(page.getByText("Planned")).toHaveCount(2);
+
+    // Opt-out and data subject request workflow: stat cards plus both panels.
+    // Scoped to each panel's testid - "Data subject requests" alone is
+    // ambiguous (it's also in the "Open Data Subject Requests" stat label and
+    // the section's own h2).
+    await expect(page.getByTestId("stat-new-opt-outs")).toBeVisible();
+    await expect(page.getByTestId("stat-data-subject-requests")).toBeVisible();
+    await expect(page.getByTestId("opt-out-requests-panel").getByRole("heading", { name: "Opt-out requests" })).toBeVisible();
+    await expect(
+      page.getByTestId("data-subject-requests-panel").getByRole("heading", { name: "Data subject requests" }),
+    ).toBeVisible();
   });
 
   test("a platform/compliance admin can change the retention threshold and it persists", async ({ page }) => {
     await page.goto("/dashboard/compliance");
 
-    const input = page.getByLabel("Days");
+    // Scoped to the retention card's own testid: a plain
+    // getByRole("button", { name: "Save" }) is ambiguous once any opt-out or
+    // data subject request rows exist, since each open row has its own Save
+    // button (see ComplianceRequestsPanel.tsx).
+    const retentionCard = page.getByTestId("retention-setting-card");
+    const input = retentionCard.getByLabel("Days");
     await expect(input).toBeVisible();
     const originalValue = await input.inputValue();
     const nextValue = String(Number(originalValue) === 365 ? 400 : 365);
 
     await input.fill(nextValue);
-    await page.getByRole("button", { name: "Save" }).click();
+    await retentionCard.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText(/could not be updated/)).not.toBeVisible();
 
     await page.reload();
-    await expect(page.getByLabel("Days")).toHaveValue(nextValue);
+    await expect(page.getByTestId("retention-setting-card").getByLabel("Days")).toHaveValue(nextValue);
     await expect(page.getByRole("heading", { name: "Retention exceptions" })).toBeVisible();
 
     // Revert so the demo dataset is unchanged for the next local run.
-    await page.getByLabel("Days").fill(originalValue);
-    await page.getByRole("button", { name: "Save" }).click();
+    const retentionCardAfterReload = page.getByTestId("retention-setting-card");
+    await retentionCardAfterReload.getByLabel("Days").fill(originalValue);
+    await retentionCardAfterReload.getByRole("button", { name: "Save" }).click();
     await page.reload();
-    await expect(page.getByLabel("Days")).toHaveValue(originalValue);
+    await expect(page.getByTestId("retention-setting-card").getByLabel("Days")).toHaveValue(originalValue);
   });
 });

@@ -119,7 +119,7 @@ function RetentionSettingCard({ thresholdDays, canManage }: { thresholdDays: num
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div data-testid="retention-setting-card" className="rounded-xl border border-slate-200 bg-white p-5">
       <h3 className="text-sm font-semibold text-slate-900">Retention threshold</h3>
       <p className="mt-1 text-xs text-slate-500">
         Leads older than this, and not yet archived, are flagged above as retention exceptions for compliance review.

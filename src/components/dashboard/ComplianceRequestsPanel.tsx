@@ -360,6 +360,7 @@ function DataSubjectRequestRow({
           </span>
         </div>
         <span
+          data-testid="dsr-status-badge"
           className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
             isFinal ? "bg-slate-100 text-slate-500" : overdue ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
           }`}
