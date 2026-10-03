@@ -25,15 +25,22 @@ test.describe("Compliance dashboard (synthetic demo data)", () => {
     await expect(page.getByRole("heading", { name: "Unassigned leads" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Retention exceptions" })).toBeVisible();
 
-    // Two widgets genuinely aren't built yet (Data Source Registry, audited
-    // exports) - the dashboard says so rather than faking the data, and this
-    // guards against someone silently papering over that with mock numbers
-    // later. The opt-out/data-subject-request workflow itself is built (see
-    // below), so it is no longer one of these placeholders.
+    // Only audited exports genuinely aren't built yet - the dashboard says so
+    // rather than faking the data, which guards against someone silently
+    // papering over that with mock numbers later. The opt-out/data-subject-
+    // request workflow and the Data Source Registry are both real now (see
+    // below and data-source-registry.spec.ts), so neither is a placeholder
+    // any more.
     await expect(page.getByText("Not yet available")).toBeVisible();
-    await expect(page.getByText("Data source approvals")).toBeVisible();
     await expect(page.getByText("Export activity")).toBeVisible();
-    await expect(page.getByText("Planned")).toHaveCount(2);
+    await expect(page.getByText("Planned")).toHaveCount(1);
+
+    // Data Source Registry summary: a real pending/approved/rejected/
+    // suspended count, not a placeholder, linking through to the full
+    // registry at /dashboard/data-sources.
+    const dataSourceCard = page.getByTestId("data-source-registry-card");
+    await expect(page.getByText("Data source approvals")).toBeVisible();
+    await expect(dataSourceCard.getByRole("link", { name: "Open registry" })).toBeVisible();
 
     // Opt-out and data subject request workflow: stat cards plus both panels.
     // Scoped to each panel's testid - "Data subject requests" alone is
