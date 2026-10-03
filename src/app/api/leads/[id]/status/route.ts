@@ -8,11 +8,15 @@ import { updateLeadStatus as updateDemoLeadStatus, appendAuditLog } from "@/lib/
 import { LEAD_STATUS_ORDER } from "@/lib/constants";
 import type { LeadStatus } from "@/lib/types";
 
-const schema = z.object({ status: z.enum(LEAD_STATUS_ORDER as [LeadStatus, ...LeadStatus[]]) });
+const schema = z.object({
+  status: z.enum(LEAD_STATUS_ORDER as [LeadStatus, ...LeadStatus[]]),
+  lossReason: z.string().trim().min(1).max(500).optional(),
+});
 
 const safeErrors = [
   "Lead not found",
   "Status must be a recognised lead pipeline stage",
+  "A loss reason is required when marking a lead as lost",
   "Only an active platform member may update lead status",
   "Only a platform administrator or broker operator may update lead status",
   "Lead is not allocated to your organisation",
@@ -30,6 +34,9 @@ export async function POST(
 ) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid lead status" }, { status: 400 });
+  if (parsed.data.status === "lost" && !parsed.data.lossReason) {
+    return NextResponse.json({ error: "A loss reason is required when marking a lead as lost" }, { status: 400 });
+  }
 
   const identity = await getDashboardIdentity();
   if (!identity.authenticated) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
@@ -38,26 +45,45 @@ export async function POST(
   }
 
   const { id } = await params;
+  const actor = identity.displayName ?? identity.organisationName;
 
   if (getDataMode() === "demo") {
-    const previous = updateDemoLeadStatus(id, parsed.data.status);
-    if (!previous) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
-    appendAuditLog({
-      entity: "status",
-      entityId: id,
-      action: "lead_status_changed",
-      actor: identity.displayName ?? identity.organisationName,
-      details: `status -> ${parsed.data.status}`,
-    });
-    return NextResponse.json({ ok: true, status: previous.status, doNotContact: previous.doNotContact });
+    try {
+      const previous = updateDemoLeadStatus(id, parsed.data.status, parsed.data.lossReason, actor);
+      if (!previous) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+      appendAuditLog({
+        entity: "status",
+        entityId: id,
+        action: "lead_status_changed",
+        actor,
+        details: `status -> ${parsed.data.status}`,
+      });
+      return NextResponse.json({
+        ok: true,
+        status: previous.status,
+        doNotContact: previous.doNotContact,
+        lossReason: previous.lossReason,
+      });
+    } catch (error) {
+      return NextResponse.json({ error: safeError(error) }, { status: 409 });
+    }
   }
 
   const client = await createSupabaseServerClient();
   if (!client) return NextResponse.json({ error: "Broker workspace is not configured" }, { status: 503 });
 
   try {
-    const result = await updateSupabaseLeadStatus(client, { leadId: id, status: parsed.data.status });
-    return NextResponse.json({ ok: true, status: result.status, doNotContact: result.doNotContact });
+    const result = await updateSupabaseLeadStatus(client, {
+      leadId: id,
+      status: parsed.data.status,
+      lossReason: parsed.data.lossReason,
+    });
+    return NextResponse.json({
+      ok: true,
+      status: result.status,
+      doNotContact: result.doNotContact,
+      lossReason: result.lossReason,
+    });
   } catch (error) {
     return NextResponse.json({ error: safeError(error) }, { status: 409 });
   }

@@ -39,10 +39,17 @@ Priced in the accompanying quotation.
 - Kanban pipeline completed: drag-and-drop (plus a keyboard-accessible "Move to" select) across all
   13 lead statuses, gated by a platform-admin-or-allocated-broker-operator check in a SECURITY
   DEFINER database function, with the Do Not Contact flag kept in sync and every move audited.
-- Notes, tasks, call/email/meeting logging, and follow-up reminders on the lead profile.
-- Full activity timeline and loss-reason capture.
-- Do Not Contact workflow enforcement across all outreach surfaces (the Kanban board can now set
-  and clear the flag; blocking it from campaign/notification surfaces is still open).
+- Lead activity workflow completed: notes, call/email/meeting logging, follow-up tasks (with due
+  dates and an optional assignee), a unified chronological activity timeline covering creation,
+  notes, logged interactions, task lifecycle, and status/Do Not Contact changes, and required
+  loss-reason capture when a lead moves to Lost - all behind the same platform-admin-or-allocated-
+  broker-operator SECURITY DEFINER checks as the Kanban board's update_lead_status(), reusing
+  canUpdateLeadStatus() as the single write-gate across notes/tasks/interactions/status. "Follow-up
+  reminders" here means due-dated tasks surfaced on the lead profile; a separate notification/digest
+  mechanism that proactively alerts a broker when a task is due or overdue is still open.
+- Do Not Contact workflow enforcement across all outreach surfaces (the Kanban board and the lead
+  profile's Pipeline & Outcome card can now set and clear the flag; blocking it from campaign/
+  notification surfaces is still open).
 
 ## Buyer Commerce
 - Extend the initial audited acceptance/release workspace with reassignment, dispute evidence, and

@@ -98,8 +98,64 @@ export interface Lead {
 
   doNotContact: boolean;
   assignedBroker?: string;
+  lossReason?: string;
 
   createdAt: string;
+}
+
+export interface LeadNote {
+  id: string;
+  leadId: string;
+  authorLabel: string;
+  body: string;
+  createdAt: string;
+}
+
+export type LeadInteractionChannel = "call" | "email" | "meeting" | "whatsapp" | "other";
+
+export type LeadInteractionOutcome =
+  | "connected"
+  | "left_message"
+  | "no_answer"
+  | "follow_up_required"
+  | "not_interested"
+  | "other";
+
+export type LeadTaskStatus = "open" | "completed" | "cancelled";
+
+export interface LeadTask {
+  id: string;
+  leadId: string;
+  title: string;
+  dueAt?: string;
+  assigneeLabel?: string;
+  status: LeadTaskStatus;
+  createdAt: string;
+  completedAt?: string;
+}
+
+// A single, chronological feed per lead. Status changes, notes, logged
+// interactions, and task lifecycle events all land here so the lead
+// profile page can render one timeline rather than stitching several
+// tables together on every render.
+export type LeadActivityKind =
+  | "lead_created"
+  | "status_change"
+  | "note_added"
+  | "interaction_logged"
+  | "task_created"
+  | "task_completed"
+  | "task_cancelled"
+  | "do_not_contact_set";
+
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  kind: LeadActivityKind;
+  summary: string;
+  actorLabel: string;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ApplicationSettings {
@@ -308,7 +364,7 @@ export interface BuyerMatchDecision {
 
 export interface AuditLogEntry {
   id: string;
-  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression" | "settings";
+  entity: "lead" | "consent" | "assignment" | "status" | "campaign" | "suppression" | "settings" | "note" | "task";
   entityId: string;
   action: string;
   actor: string;

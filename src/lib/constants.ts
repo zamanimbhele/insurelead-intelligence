@@ -1,4 +1,12 @@
-import type { ApplicantType, BusinessCoverInterest, InsuranceProduct, LeadStatus } from "./types";
+import type {
+  ApplicantType,
+  BusinessCoverInterest,
+  InsuranceProduct,
+  LeadActivityKind,
+  LeadInteractionChannel,
+  LeadInteractionOutcome,
+  LeadStatus,
+} from "./types";
 
 export const INSURANCE_PRODUCTS: {
   value: InsuranceProduct;
@@ -137,3 +145,36 @@ export const LEAD_STATUS_ORDER: LeadStatus[] = [
 export const DEFAULT_LEAD_RETENTION_DAYS = 730;
 export const MIN_LEAD_RETENTION_DAYS = 30;
 export const MAX_LEAD_RETENTION_DAYS = 3650;
+
+// Broker workflow: call/email/meeting logging and the follow-up-task form
+// on the lead profile page. Mirrors the check constraints on
+// lead_activities.kind / the channel and outcome checks inside
+// log_lead_interaction() (see the lead-activity-workflow migration) so
+// client-side validation and the database agree.
+export const LEAD_INTERACTION_CHANNELS: { value: LeadInteractionChannel; label: string }[] = [
+  { value: "call", label: "Phone call" },
+  { value: "email", label: "Email" },
+  { value: "meeting", label: "Meeting" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "other", label: "Other" },
+];
+
+export const LEAD_INTERACTION_OUTCOMES: { value: LeadInteractionOutcome; label: string }[] = [
+  { value: "connected", label: "Connected" },
+  { value: "left_message", label: "Left a message" },
+  { value: "no_answer", label: "No answer" },
+  { value: "follow_up_required", label: "Follow-up required" },
+  { value: "not_interested", label: "Not interested" },
+  { value: "other", label: "Other" },
+];
+
+export const LEAD_ACTIVITY_KIND_LABELS: Record<LeadActivityKind, string> = {
+  lead_created: "Lead created",
+  status_change: "Status changed",
+  note_added: "Note added",
+  interaction_logged: "Interaction logged",
+  task_created: "Task created",
+  task_completed: "Task completed",
+  task_cancelled: "Task cancelled",
+  do_not_contact_set: "Marked Do Not Contact",
+};

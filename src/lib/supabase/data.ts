@@ -7,7 +7,14 @@ import type {
   BuyerMatchDecision,
   ConsentRecord,
   Lead,
+  LeadActivity,
+  LeadActivityKind,
   LeadAllocation,
+  LeadInteractionChannel,
+  LeadInteractionOutcome,
+  LeadNote,
+  LeadTask,
+  LeadTaskStatus,
 } from "../types.ts";
 import { INSURANCE_PRODUCTS } from "../constants.ts";
 
@@ -47,6 +54,7 @@ type LeadRow = {
   referrer: string | null;
   do_not_contact: boolean;
   assigned_broker: string | null;
+  loss_reason: string | null;
   created_at: string;
 };
 
@@ -132,6 +140,35 @@ type ApplicationSettingsRow = {
   updated_by: string | null;
 };
 
+type LeadNoteRow = {
+  id: string;
+  lead_id: string;
+  author_label: string;
+  body: string;
+  created_at: string;
+};
+
+type LeadTaskRow = {
+  id: string;
+  lead_id: string;
+  title: string;
+  due_at: string | null;
+  assignee_label: string | null;
+  status: LeadTaskStatus;
+  created_at: string;
+  completed_at: string | null;
+};
+
+type LeadActivityRow = {
+  id: string;
+  lead_id: string;
+  kind: LeadActivityKind;
+  summary: string;
+  actor_label: string;
+  metadata: Record<string, unknown> | null;
+  occurred_at: string;
+};
+
 function fail(operation: string, error: { message: string } | null) {
   if (error) throw new Error(`${operation}: ${error.message}`);
 }
@@ -182,6 +219,7 @@ export function mapLead(row: LeadRow): Lead {
     referrer: optional(row.referrer),
     doNotContact: row.do_not_contact,
     assignedBroker: optional(row.assigned_broker),
+    lossReason: optional(row.loss_reason),
     createdAt: row.created_at,
   };
 }
@@ -500,14 +538,15 @@ export async function appendSupabaseAuditLog(
 // sync, and writes the audit log entry itself.
 export async function updateSupabaseLeadStatus(
   client: SupabaseClient,
-  input: { leadId: string; status: string },
-): Promise<{ leadId: string; status: string; doNotContact: boolean }> {
+  input: { leadId: string; status: string; lossReason?: string },
+): Promise<{ leadId: string; status: string; doNotContact: boolean; lossReason?: string }> {
   const { data, error } = await client.rpc("update_lead_status", {
     p_lead_id: input.leadId,
     p_status: input.status,
+    p_loss_reason: input.lossReason ?? null,
   });
   fail("Unable to update lead status", error);
-  const result = data as { leadId?: string; status?: string; doNotContact?: boolean } | null;
+  const result = data as { leadId?: string; status?: string; doNotContact?: boolean; lossReason?: string } | null;
   if (!result || typeof result.status !== "string") {
     throw new Error("Unable to update lead status: database did not return a result");
   }
@@ -515,6 +554,7 @@ export async function updateSupabaseLeadStatus(
     leadId: result.leadId ?? input.leadId,
     status: result.status,
     doNotContact: Boolean(result.doNotContact),
+    lossReason: result.lossReason ?? undefined,
   };
 }
 
@@ -569,4 +609,120 @@ export async function updateSupabaseApplicationSettings(
     .single();
   fail("Unable to update application settings", error);
   return mapApplicationSettings(data as ApplicationSettingsRow);
+}
+
+// --- Broker workflow: notes, call/email/meeting logging, follow-up tasks,
+// and the unified activity timeline. Writes all go through the
+// SECURITY DEFINER RPCs in 202610030002_lead_activity_workflow.sql, not a
+// direct table insert/update, for the same reason update_lead_status() is
+// an RPC: the authenticated role has select-only access to these tables.
+
+function mapLeadNote(row: LeadNoteRow): LeadNote {
+  return { id: row.id, leadId: row.lead_id, authorLabel: row.author_label, body: row.body, createdAt: row.created_at };
+}
+
+function mapLeadTask(row: LeadTaskRow): LeadTask {
+  return {
+    id: row.id,
+    leadId: row.lead_id,
+    title: row.title,
+    dueAt: optional(row.due_at),
+    assigneeLabel: optional(row.assignee_label),
+    status: row.status,
+    createdAt: row.created_at,
+    completedAt: optional(row.completed_at),
+  };
+}
+
+function mapLeadActivity(row: LeadActivityRow): LeadActivity {
+  return {
+    id: row.id,
+    leadId: row.lead_id,
+    kind: row.kind,
+    summary: row.summary,
+    actorLabel: row.actor_label,
+    occurredAt: row.occurred_at,
+    metadata: row.metadata ?? undefined,
+  };
+}
+
+export async function fetchSupabaseLeadNotes(client: SupabaseClient, leadId: string): Promise<LeadNote[]> {
+  const { data, error } = await client
+    .from("lead_notes")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false });
+  fail("Unable to load lead notes", error);
+  return ((data ?? []) as LeadNoteRow[]).map(mapLeadNote);
+}
+
+export async function fetchSupabaseLeadTasks(client: SupabaseClient, leadId: string): Promise<LeadTask[]> {
+  const { data, error } = await client
+    .from("lead_tasks")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false });
+  fail("Unable to load lead tasks", error);
+  return ((data ?? []) as LeadTaskRow[]).map(mapLeadTask);
+}
+
+export async function fetchSupabaseLeadActivities(client: SupabaseClient, leadId: string): Promise<LeadActivity[]> {
+  const { data, error } = await client
+    .from("lead_activities")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("occurred_at", { ascending: false });
+  fail("Unable to load lead activity timeline", error);
+  return ((data ?? []) as LeadActivityRow[]).map(mapLeadActivity);
+}
+
+export async function addSupabaseLeadNote(client: SupabaseClient, input: { leadId: string; body: string }) {
+  const { data, error } = await client.rpc("add_lead_note", { p_lead_id: input.leadId, p_body: input.body });
+  fail("Unable to add note", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to add note: database did not return an ID");
+  return result.id;
+}
+
+export async function logSupabaseLeadInteraction(
+  client: SupabaseClient,
+  input: { leadId: string; channel: LeadInteractionChannel; outcome: LeadInteractionOutcome; summary: string },
+) {
+  const { data, error } = await client.rpc("log_lead_interaction", {
+    p_lead_id: input.leadId,
+    p_channel: input.channel,
+    p_outcome: input.outcome,
+    p_summary: input.summary,
+  });
+  fail("Unable to log interaction", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to log interaction: database did not return an ID");
+  return result.id;
+}
+
+export async function createSupabaseLeadTask(
+  client: SupabaseClient,
+  input: { leadId: string; title: string; dueAt?: string; assigneeLabel?: string },
+) {
+  const { data, error } = await client.rpc("create_lead_task", {
+    p_lead_id: input.leadId,
+    p_title: input.title,
+    p_due_at: input.dueAt ?? null,
+    p_assignee_label: input.assigneeLabel ?? null,
+  });
+  fail("Unable to create task", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to create task: database did not return an ID");
+  return result.id;
+}
+
+export async function completeSupabaseLeadTask(
+  client: SupabaseClient,
+  input: { taskId: string; status: Extract<LeadTaskStatus, "completed" | "cancelled"> },
+) {
+  const { data, error } = await client.rpc("complete_lead_task", { p_task_id: input.taskId, p_status: input.status });
+  fail("Unable to update task", error);
+  const result = data as { id?: string; status?: string } | null;
+  if (!result?.id) throw new Error("Unable to update task: database did not return an ID");
+  return result.id;
 }
