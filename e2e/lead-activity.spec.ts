@@ -48,7 +48,13 @@ test.describe("Lead activity workflow (synthetic demo data)", () => {
     await page.getByPlaceholder("e.g. Call to confirm renewal date").fill(title);
     await page.getByRole("button", { name: "Add task" }).click();
 
-    const taskRow = page.locator("li", { hasText: title });
+    // Scoped to the Follow-up Tasks section specifically: a plain
+    // `page.locator("li", { hasText: title })` also matches the "Task
+    // created: <title>" entry the same action adds to the Activity
+    // Timeline section below, which is a strict-mode violation (two <li>
+    // elements both contain the task title text).
+    const tasksSection = page.locator("section", { has: page.getByRole("heading", { name: "Follow-up Tasks" }) });
+    const taskRow = tasksSection.locator("li", { hasText: title });
     await expect(taskRow).toBeVisible();
 
     await taskRow.getByRole("button", { name: "Complete" }).click();
