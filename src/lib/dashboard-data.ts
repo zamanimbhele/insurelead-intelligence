@@ -9,12 +9,15 @@ import {
   fetchSupabaseBuyers,
   fetchSupabaseConsents,
   fetchSupabaseLead,
+  fetchSupabaseLeadActivities,
+  fetchSupabaseLeadNotes,
+  fetchSupabaseLeadTasks,
   fetchSupabaseLeads,
   fetchSupabaseSendingIdentities,
   updateSupabaseApplicationSettings,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
-import type { ApplicationSettings, ConsentRecord, Lead } from "./types";
+import type { ApplicationSettings, ConsentRecord, Lead, LeadActivity, LeadNote, LeadTask } from "./types";
 import { getLeadDisplayName, isConsentValid } from "./lead-utils";
 import { DEFAULT_LEAD_RETENTION_DAYS } from "./constants";
 import { getCampaignRecipients, getCampaigns } from "./campaign-store";
@@ -33,6 +36,46 @@ export async function getDashboardLeads() {
 export async function getDashboardLead(id: string) {
   if (getDataMode() === "demo") return getLeads().find((lead) => lead.id === id);
   return fetchSupabaseLead(await requireServerClient(), id);
+}
+
+export type LeadWorkspace = { notes: LeadNote[]; tasks: LeadTask[]; activities: LeadActivity[] };
+
+// A lead always has a creation event even before any note, call, or task
+// is ever logged against it, and that event isn't a stored row in either
+// data mode - it's just the lead's own createdAt - so it's synthesised
+// here, once, rather than duplicated into both demo-store.ts and the
+// Supabase RPC migration.
+function withCreationActivity(lead: Lead, activities: LeadActivity[]): LeadActivity[] {
+  const creation: LeadActivity = {
+    id: `lead_created_${lead.id}`,
+    leadId: lead.id,
+    kind: "lead_created",
+    summary: "Lead created via public consultation form",
+    actorLabel: "Public website",
+    occurredAt: lead.createdAt,
+  };
+  return [...activities, creation].sort(
+    (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+  );
+}
+
+export async function getDashboardLeadWorkspace(lead: Lead): Promise<LeadWorkspace> {
+  if (getDataMode() === "demo") {
+    const { getLeadActivities, getLeadNotes, getLeadTasks } = await import("./demo-store");
+    return {
+      notes: getLeadNotes(lead.id),
+      tasks: getLeadTasks(lead.id),
+      activities: withCreationActivity(lead, getLeadActivities(lead.id)),
+    };
+  }
+
+  const client = await requireServerClient();
+  const [notes, tasks, activities] = await Promise.all([
+    fetchSupabaseLeadNotes(client, lead.id),
+    fetchSupabaseLeadTasks(client, lead.id),
+    fetchSupabaseLeadActivities(client, lead.id),
+  ]);
+  return { notes, tasks, activities: withCreationActivity(lead, activities) };
 }
 
 export async function getDashboardMarketplaceData() {

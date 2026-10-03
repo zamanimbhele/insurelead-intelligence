@@ -1,16 +1,22 @@
-import { getDashboardLead } from "@/lib/dashboard-data";
+import { getDashboardLead, getDashboardLeadWorkspace } from "@/lib/dashboard-data";
+import { canUpdateLeadStatus, getDashboardIdentity } from "@/lib/auth";
 import { LEAD_STATUS_LABELS } from "@/lib/constants";
 import { getBusinessCoverLabels, getInsuranceProductLabels, getLeadDisplayName } from "@/lib/lead-utils";
 import { ScoreBadge, StatusBadge } from "@/components/dashboard/ScoreBadge";
+import { LeadActivityPanel, LeadPipelineCard } from "@/components/dashboard/LeadActivityPanel";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Mail, Phone, MapPin, Building2, ShieldOff, User } from "lucide-react";
-import { format } from "date-fns";
+
+export const dynamic = "force-dynamic";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const lead = await getDashboardLead(id);
   if (!lead) return notFound();
+
+  const [identity, workspace] = await Promise.all([getDashboardIdentity(), getDashboardLeadWorkspace(lead)]);
+  const canEdit = canUpdateLeadStatus(identity);
 
   const productLabels = getInsuranceProductLabels(lead);
   const businessCoverLabels = getBusinessCoverLabels(lead);
@@ -88,25 +94,18 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             </dl>
           </section>}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-sm font-semibold text-slate-900">Activity Timeline</h2>
-            <ul className="mt-3 space-y-3 text-sm">
-              <li className="flex items-start gap-3">
-                <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" />
-                <span>
-                  <span className="font-medium text-slate-700">Lead created</span> via public consultation form
-                  <div className="text-xs text-slate-400">{format(new Date(lead.createdAt), "d MMM yyyy, HH:mm")}</div>
-                </span>
-              </li>
-            </ul>
-            <p className="mt-4 text-xs text-slate-400">
-              Notes, tasks, call logs, and status-change history are part of the full Broker Workflow build - see the
-              Phase 2 backlog document.
-            </p>
-          </section>
+          <LeadActivityPanel
+            leadId={lead.id}
+            canEdit={canEdit}
+            notes={workspace.notes}
+            tasks={workspace.tasks}
+            activities={workspace.activities}
+          />
         </div>
 
         <div className="flex flex-col gap-6">
+          <LeadPipelineCard lead={lead} canEdit={canEdit} />
+
           <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-sm font-semibold text-slate-900">Contact Person</h2>
             <p className="mt-2 text-sm font-medium text-slate-800">{lead.contactFullName}</p>

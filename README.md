@@ -48,16 +48,22 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   configurable, admin-editable retention threshold - gated to platform admins, compliance admins,
   and (read-only) compliance auditors. Data-source-approval, export-activity, and
   data-subject-request widgets are explicit "not yet available" placeholders, not fabricated data.
+- A lead activity workflow on every lead profile: notes, call/email/meeting logging (channel and
+  outcome, not just free text), follow-up tasks with an optional due date and assignee, and a single
+  chronological activity timeline covering creation, notes, logged interactions, task lifecycle, and
+  status/Do Not Contact changes. Moving a lead to Lost now requires a loss reason, which is recorded
+  on the lead and surfaced on the timeline. All writes share the Kanban board's authorisation model
+  (platform admin, or a broker operator with an accepted allocation on the lead).
 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): notes/tasks/call logging, broker invitation UI, the Data Source Registry,
-hotspot/industry opportunity dashboards, the financial
-year-end campaign planner, audited CSV export controls, the opt-out/data-subject-request workflow,
-buyer self-service, contracting, and invoicing/payment collection (the compliance dashboard's MVP
-is built - see above - but those last three feed widgets it still shows as placeholders). The full
-scope is documented in the project's build specification and priced in the accompanying quotation.
+build (see `BACKLOG.md`): broker invitation UI, the Data Source Registry, hotspot/industry
+opportunity dashboards, the financial year-end campaign planner, audited CSV export controls, the
+opt-out/data-subject-request workflow, buyer self-service, contracting, invoicing/payment
+collection, and a proactive due/overdue task notification mechanism (tasks themselves are built -
+see above). The full scope is documented in the project's build specification and priced in the
+accompanying quotation.
 
 ## Tech stack
 
