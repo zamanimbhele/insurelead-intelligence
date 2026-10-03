@@ -17,9 +17,13 @@ test.describe("Compliance dashboard (synthetic demo data)", () => {
     // by zero or a bad lookup.
     await expect(page.getByTestId("stat-consent-coverage")).toContainText("%");
 
-    await expect(page.getByText("Leads without valid consent")).toBeVisible();
-    await expect(page.getByText("Unassigned leads")).toBeVisible();
-    await expect(page.getByText("Retention exceptions")).toBeVisible();
+    // Scoped to the heading role: "retention exceptions" (case-insensitive
+    // substring match, Playwright's getByText default) also appears inside
+    // the retention-threshold card's own description sentence below, so a
+    // plain getByText on these headings is ambiguous.
+    await expect(page.getByRole("heading", { name: "Leads without valid consent" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Unassigned leads" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Retention exceptions" })).toBeVisible();
 
     // Three widgets genuinely aren't built yet (Data Source Registry,
     // audited exports, DSR workflow) - the dashboard says so rather than
@@ -46,7 +50,7 @@ test.describe("Compliance dashboard (synthetic demo data)", () => {
 
     await page.reload();
     await expect(page.getByLabel("Days")).toHaveValue(nextValue);
-    await expect(page.getByText("Retention exceptions")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Retention exceptions" })).toBeVisible();
 
     // Revert so the demo dataset is unchanged for the next local run.
     await page.getByLabel("Days").fill(originalValue);
