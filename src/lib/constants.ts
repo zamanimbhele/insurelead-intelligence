@@ -155,6 +155,22 @@ export const DEFAULT_LEAD_RETENTION_DAYS = 730;
 export const MIN_LEAD_RETENTION_DAYS = 30;
 export const MAX_LEAD_RETENTION_DAYS = 3650;
 
+// Geographic hotspot dashboard's configurable minimum-lead threshold: the
+// brief's own example ("do not display a hotspot based on fewer than 10
+// leads") is the default. Mirrors the check constraint on
+// application_settings.hotspot_min_lead_threshold.
+export const DEFAULT_HOTSPOT_MIN_LEAD_THRESHOLD = 10;
+export const MIN_HOTSPOT_THRESHOLD = 1;
+export const MAX_HOTSPOT_THRESHOLD = 500;
+
+// Growth-rate comparison windows for the hotspot dashboard: the trailing
+// window vs. the equal-length window immediately before it. 60/60 (rather
+// than a rounder 90/90) was picked to fit inside the synthetic seed data's
+// 0-120-day lead age range so the demo has a non-empty prior window to
+// compare against - see scripts/generate-seed.mjs.
+export const HOTSPOT_RECENT_WINDOW_DAYS = 60;
+export const HOTSPOT_PRIOR_WINDOW_DAYS = 60;
+
 // Broker workflow: call/email/meeting logging and the follow-up-task form
 // on the lead profile page. Mirrors the check constraints on
 // lead_activities.kind / the channel and outcome checks inside

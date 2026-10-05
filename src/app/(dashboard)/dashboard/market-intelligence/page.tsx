@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDashboardLeads } from "@/lib/dashboard-data";
 import { BarChartCard } from "@/components/dashboard/BarChartCard";
 import { MapPin, TrendingUp, Info } from "lucide-react";
@@ -64,16 +65,32 @@ export default async function MarketIntelligencePage() {
 
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <MapPin className="h-4 w-4 text-primary-600" /> Hotspot &amp; Financial-Year-End Planning
+          <MapPin className="h-4 w-4 text-primary-600" /> Geographic Hotspots
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          The full platform adds a geographic hotspot dashboard (province, municipality, suburb - each gated by the
-          same minimum-volume threshold), an industry opportunity dashboard, and a financial-year-end campaign
-          planner with reminders and broker follow-up task lists. These are scoped in the Phase 2 backlog document
-          delivered alongside this prototype.
+          A dedicated hotspot dashboard breaks this down by province, municipality, and suburb, each with an
+          opportunity score, growth rate, and conversion rate - and each still gated by the same minimum-volume
+          threshold so a small, potentially identifiable area is never shown.
         </p>
-        <div className="mt-4 flex items-center gap-2 text-xs font-medium text-primary-700">
-          <TrendingUp className="h-3.5 w-3.5" /> Backlog: Hotspot Analysis, Industry Opportunity Dashboard, FYE Campaign Planner
+        <Link
+          href="/dashboard/market-intelligence/hotspots"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 hover:underline"
+        >
+          Open Geographic Hotspots
+        </Link>
+      </section>
+
+      <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+          <TrendingUp className="h-4 w-4 text-slate-400" /> Still to come
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          An industry opportunity dashboard (highest-volume, fastest-growing, best-converting industries) and a
+          financial-year-end campaign planner with reminders and broker follow-up task lists. These remain scoped in
+          the Phase 2 backlog document delivered alongside this prototype.
+        </p>
+        <div className="mt-4 text-xs font-medium text-slate-400">
+          Backlog: Industry Opportunity Dashboard, FYE Campaign Planner
         </div>
       </section>
     </div>

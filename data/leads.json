@@ -10,7 +10,7 @@
     "yearsInOperation": "4-10 years",
     "province": "Gauteng",
     "city": "Johannesburg",
-    "suburb": "",
+    "suburb": "Randburg",
     "postalCode": "",
     "website": "",
     "insuranceProducts": [
@@ -52,7 +52,7 @@
     "yearsInOperation": "4-10 years",
     "province": "Gauteng",
     "city": "Johannesburg",
-    "suburb": "",
+    "suburb": "Rosebank",
     "postalCode": "",
     "website": "",
     "insuranceProducts": [
@@ -116,7 +116,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-07-01T17:40:21.732Z"
+    "createdAt": "2026-07-01T17:40:21.732Z",
+    "suburb": "Ashburton"
   },
   {
     "id": "lead_0002",
@@ -151,7 +152,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-04-14T17:40:21.733Z"
+    "createdAt": "2026-04-14T17:40:21.733Z",
+    "suburb": "Sonheuwel"
   },
   {
     "id": "lead_0003",
@@ -186,7 +188,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-04-02T17:40:21.733Z"
+    "createdAt": "2026-04-02T17:40:21.733Z",
+    "suburb": "Denneoord"
   },
   {
     "id": "lead_0004",
@@ -222,7 +225,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-07-06T17:40:21.733Z"
+    "createdAt": "2026-07-06T17:40:21.733Z",
+    "suburb": "Die Boord"
   },
   {
     "id": "lead_0005",
@@ -257,7 +261,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-04-19T17:40:21.733Z"
+    "createdAt": "2026-04-19T17:40:21.733Z",
+    "suburb": "Paradyskloof"
   },
   {
     "id": "lead_0006",
@@ -293,7 +298,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-14T17:40:21.733Z"
+    "createdAt": "2026-04-14T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0007",
@@ -328,7 +334,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-06-20T17:40:21.733Z"
+    "createdAt": "2026-06-20T17:40:21.733Z",
+    "suburb": "Ashburton"
   },
   {
     "id": "lead_0008",
@@ -363,7 +370,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-04-09T17:40:21.733Z"
+    "createdAt": "2026-04-09T17:40:21.733Z",
+    "suburb": "Claremont"
   },
   {
     "id": "lead_0009",
@@ -398,7 +406,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-06-29T17:40:21.733Z"
+    "createdAt": "2026-06-29T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0010",
@@ -433,7 +442,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-04-15T17:40:21.733Z"
+    "createdAt": "2026-04-15T17:40:21.733Z",
+    "suburb": "Blanco"
   },
   {
     "id": "lead_0011",
@@ -468,7 +478,8 @@
     "doNotContact": true,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-05-22T17:40:21.733Z"
+    "createdAt": "2026-05-22T17:40:21.733Z",
+    "suburb": "Carlswald"
   },
   {
     "id": "lead_0012",
@@ -502,7 +513,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-25T17:40:21.733Z"
+    "createdAt": "2026-04-25T17:40:21.733Z",
+    "suburb": "Blanco"
   },
   {
     "id": "lead_0013",
@@ -537,7 +549,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-06-29T17:40:21.733Z"
+    "createdAt": "2026-06-29T17:40:21.733Z",
+    "suburb": "West Acres"
   },
   {
     "id": "lead_0014",
@@ -572,7 +585,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-23T17:40:21.733Z"
+    "createdAt": "2026-04-23T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0015",
@@ -607,7 +621,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-19T17:40:21.733Z"
+    "createdAt": "2026-04-19T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0016",
@@ -641,7 +656,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-04-09T17:40:21.733Z"
+    "createdAt": "2026-04-09T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0017",
@@ -676,7 +692,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-03-13T17:40:21.733Z"
+    "createdAt": "2026-03-13T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0018",
@@ -712,7 +729,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-05-05T17:40:21.733Z"
+    "createdAt": "2026-05-05T17:40:21.733Z",
+    "suburb": "Die Boord"
   },
   {
     "id": "lead_0019",
@@ -746,7 +764,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-04-01T17:40:21.733Z"
+    "createdAt": "2026-04-01T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0020",
@@ -780,7 +799,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-04-14T17:40:21.733Z"
+    "createdAt": "2026-04-14T17:40:21.733Z",
+    "suburb": "Morningside"
   },
   {
     "id": "lead_0021",
@@ -815,7 +835,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-01T17:40:21.733Z"
+    "createdAt": "2026-05-01T17:40:21.733Z",
+    "suburb": "Summerstrand"
   },
   {
     "id": "lead_0022",
@@ -849,7 +870,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-06-26T17:40:21.733Z"
+    "createdAt": "2026-06-26T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0023",
@@ -884,7 +906,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-08T17:40:21.733Z"
+    "createdAt": "2026-05-08T17:40:21.733Z",
+    "suburb": "Randburg"
   },
   {
     "id": "lead_0024",
@@ -918,7 +941,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-06-08T17:40:21.733Z"
+    "createdAt": "2026-06-08T17:40:21.733Z",
+    "suburb": "Hayfields"
   },
   {
     "id": "lead_0025",
@@ -953,7 +977,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-03-15T17:40:21.733Z"
+    "createdAt": "2026-03-15T17:40:21.733Z",
+    "suburb": "Umhlanga"
   },
   {
     "id": "lead_0026",
@@ -987,7 +1012,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-04-03T17:40:21.733Z"
+    "createdAt": "2026-04-03T17:40:21.733Z",
+    "suburb": "Walmer"
   },
   {
     "id": "lead_0027",
@@ -1022,7 +1048,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-05-05T17:40:21.733Z"
+    "createdAt": "2026-05-05T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0028",
@@ -1056,7 +1083,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-06-01T17:40:21.733Z"
+    "createdAt": "2026-06-01T17:40:21.733Z",
+    "suburb": "Claremont"
   },
   {
     "id": "lead_0029",
@@ -1090,7 +1118,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-03-10T17:40:21.733Z"
+    "createdAt": "2026-03-10T17:40:21.733Z",
+    "suburb": "Morningside"
   },
   {
     "id": "lead_0030",
@@ -1124,7 +1153,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-07-03T17:40:21.733Z"
+    "createdAt": "2026-07-03T17:40:21.733Z",
+    "suburb": "Walmer"
   },
   {
     "id": "lead_0031",
@@ -1159,7 +1189,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-06-09T17:40:21.733Z"
+    "createdAt": "2026-06-09T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0032",
@@ -1194,7 +1225,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-06-22T17:40:21.733Z"
+    "createdAt": "2026-06-22T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0033",
@@ -1229,7 +1261,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-06-09T17:40:21.733Z"
+    "createdAt": "2026-06-09T17:40:21.733Z",
+    "suburb": "Summerstrand"
   },
   {
     "id": "lead_0034",
@@ -1264,7 +1297,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-06-13T17:40:21.733Z"
+    "createdAt": "2026-06-13T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0035",
@@ -1299,7 +1333,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-06-30T17:40:21.733Z"
+    "createdAt": "2026-06-30T17:40:21.733Z",
+    "suburb": "Beacon Bay"
   },
   {
     "id": "lead_0036",
@@ -1335,7 +1370,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-04T17:40:21.733Z"
+    "createdAt": "2026-04-04T17:40:21.733Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0037",
@@ -1370,7 +1406,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-20T17:40:21.733Z"
+    "createdAt": "2026-04-20T17:40:21.733Z",
+    "suburb": "Woodstock"
   },
   {
     "id": "lead_0038",
@@ -1404,7 +1441,8 @@
     "doNotContact": true,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-03-17T17:40:21.733Z"
+    "createdAt": "2026-03-17T17:40:21.733Z",
+    "suburb": "Die Boord"
   },
   {
     "id": "lead_0039",
@@ -1438,7 +1476,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-05-07T17:40:21.733Z"
+    "createdAt": "2026-05-07T17:40:21.733Z",
+    "suburb": "West Acres"
   },
   {
     "id": "lead_0040",
@@ -1472,7 +1511,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-06-01T17:40:21.733Z"
+    "createdAt": "2026-06-01T17:40:21.733Z",
+    "suburb": "Sonheuwel"
   },
   {
     "id": "lead_0041",
@@ -1506,7 +1546,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-04-16T17:40:21.733Z"
+    "createdAt": "2026-04-16T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0042",
@@ -1541,7 +1582,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-03-10T17:40:21.733Z"
+    "createdAt": "2026-03-10T17:40:21.733Z",
+    "suburb": "Rosebank"
   },
   {
     "id": "lead_0043",
@@ -1576,7 +1618,8 @@
     "doNotContact": true,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-28T17:40:21.733Z"
+    "createdAt": "2026-05-28T17:40:21.733Z",
+    "suburb": "Universitas"
   },
   {
     "id": "lead_0044",
@@ -1612,7 +1655,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-06-12T17:40:21.733Z"
+    "createdAt": "2026-06-12T17:40:21.733Z",
+    "suburb": "Walmer"
   },
   {
     "id": "lead_0045",
@@ -1647,7 +1691,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-05-31T17:40:21.733Z"
+    "createdAt": "2026-05-31T17:40:21.733Z",
+    "suburb": "Woodstock"
   },
   {
     "id": "lead_0046",
@@ -1682,7 +1727,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-03-13T17:40:21.733Z"
+    "createdAt": "2026-03-13T17:40:21.733Z",
+    "suburb": "Walmer"
   },
   {
     "id": "lead_0047",
@@ -1717,7 +1763,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-30T17:40:21.733Z"
+    "createdAt": "2026-05-30T17:40:21.733Z",
+    "suburb": "Morningside"
   },
   {
     "id": "lead_0048",
@@ -1753,7 +1800,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-06-08T17:40:21.733Z"
+    "createdAt": "2026-06-08T17:40:21.733Z",
+    "suburb": "Noordwyk"
   },
   {
     "id": "lead_0049",
@@ -1789,7 +1837,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-03-24T17:40:21.739Z"
+    "createdAt": "2026-03-24T17:40:21.739Z",
+    "suburb": "Centurion"
   },
   {
     "id": "lead_0050",
@@ -1823,7 +1872,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-06-16T17:40:21.739Z"
+    "createdAt": "2026-06-16T17:40:21.739Z",
+    "suburb": "Westdene"
   },
   {
     "id": "lead_0051",
@@ -1857,7 +1907,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-03-13T17:40:21.739Z"
+    "createdAt": "2026-03-13T17:40:21.739Z",
+    "suburb": "West Acres"
   },
   {
     "id": "lead_0052",
@@ -1892,7 +1943,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-06-03T17:40:21.739Z"
+    "createdAt": "2026-06-03T17:40:21.739Z",
+    "suburb": "Bryanston"
   },
   {
     "id": "lead_0053",
@@ -1927,7 +1979,8 @@
     "doNotContact": false,
     "assignedBroker": "Sipho Dlamini",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-06-21T17:40:21.739Z"
+    "createdAt": "2026-06-21T17:40:21.739Z",
+    "suburb": "Morningside"
   },
   {
     "id": "lead_0054",
@@ -1963,7 +2016,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-06-23T17:40:21.739Z"
+    "createdAt": "2026-06-23T17:40:21.739Z",
+    "suburb": "Vincent"
   },
   {
     "id": "lead_0055",
@@ -1999,7 +2053,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-26T17:40:21.739Z"
+    "createdAt": "2026-05-26T17:40:21.739Z",
+    "suburb": "Morningside"
   },
   {
     "id": "lead_0056",
@@ -2033,7 +2088,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-04-21T17:40:21.739Z"
+    "createdAt": "2026-04-21T17:40:21.739Z",
+    "suburb": "Hayfields"
   },
   {
     "id": "lead_0057",
@@ -2067,7 +2123,8 @@
     "doNotContact": false,
     "assignedBroker": "Aisha Patel",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-14T17:40:21.739Z"
+    "createdAt": "2026-04-14T17:40:21.739Z",
+    "suburb": "Denneoord"
   },
   {
     "id": "lead_0058",
@@ -2102,7 +2159,8 @@
     "doNotContact": true,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "February",
-    "createdAt": "2026-07-07T17:40:21.739Z"
+    "createdAt": "2026-07-07T17:40:21.739Z",
+    "suburb": "Walmer"
   },
   {
     "id": "lead_0059",
@@ -2138,7 +2196,8 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "December",
-    "createdAt": "2026-04-13T17:40:21.740Z"
+    "createdAt": "2026-04-13T17:40:21.740Z",
+    "suburb": "West Acres"
   },
   {
     "id": "lead_0060",
@@ -2173,7 +2232,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-04-20T17:40:21.740Z"
+    "createdAt": "2026-04-20T17:40:21.740Z",
+    "suburb": "Blanco"
   },
   {
     "id": "lead_0061",
@@ -2207,7 +2267,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-31T17:40:21.740Z"
+    "createdAt": "2026-05-31T17:40:21.740Z",
+    "suburb": "Beacon Bay"
   },
   {
     "id": "lead_0062",
@@ -2242,7 +2303,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-05-13T17:40:21.740Z"
+    "createdAt": "2026-05-13T17:40:21.740Z",
+    "suburb": "Sonheuwel"
   },
   {
     "id": "lead_0063",
@@ -2276,7 +2338,8 @@
     "doNotContact": false,
     "assignedBroker": "Naledi Khumalo",
     "financialYearEndMonth": "June",
-    "createdAt": "2026-04-24T17:40:21.740Z"
+    "createdAt": "2026-04-24T17:40:21.740Z",
+    "suburb": "Paradyskloof"
   },
   {
     "id": "lead_0064",
@@ -2310,6 +2373,7 @@
     "doNotContact": false,
     "assignedBroker": "Johan van der Merwe",
     "financialYearEndMonth": "March",
-    "createdAt": "2026-05-30T17:40:21.740Z"
+    "createdAt": "2026-05-30T17:40:21.740Z",
+    "suburb": "Sonheuwel"
   }
 ]

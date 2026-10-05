@@ -107,3 +107,85 @@ export function scoreLead(input: ScoringInput): ScoringResult {
 
   return { score, band, explanation };
 }
+
+/**
+ * Transparent, configurable opportunity scoring for the geographic hotspot
+ * dashboard (Market Intelligence). Mirrors scoreLead() above: additive
+ * points from named, documented reasons, always paired with a
+ * human-readable explanation, and never fed a protected characteristic.
+ *
+ * growthRate/conversionRate are null when there is not enough history to
+ * measure them (a brand-new area, or one with no won/lost leads yet) -
+ * that case is scored as neutral, never as if growth or conversion were
+ * zero, so a new hotspot is not unfairly penalised for lacking history.
+ */
+
+export interface HotspotScoringInput {
+  leadVolume: number;
+  minLeadThreshold: number;
+  growthRate: number | null;
+  conversionRate: number | null;
+}
+
+export interface HotspotScoringResult {
+  score: number;
+  explanation: string;
+}
+
+export function scoreHotspot(input: HotspotScoringInput): HotspotScoringResult {
+  let score = 0;
+  const reasons: string[] = [];
+
+  // Volume (max 35): scaled against the area's own minimum-display
+  // threshold, so the scale adapts if an admin changes it.
+  if (input.leadVolume >= input.minLeadThreshold * 3) {
+    score += 35;
+    reasons.push(`generated a high volume of ${input.leadVolume} leads`);
+  } else if (input.leadVolume >= input.minLeadThreshold * 2) {
+    score += 25;
+    reasons.push(`generated a strong volume of ${input.leadVolume} leads`);
+  } else {
+    score += 15;
+    reasons.push(`met the minimum display threshold with ${input.leadVolume} leads`);
+  }
+
+  // Growth (max 35).
+  if (input.growthRate === null) {
+    score += 10;
+    reasons.push("does not yet have enough prior-period history to measure growth");
+  } else if (input.growthRate >= 0.25) {
+    score += 35;
+    reasons.push(`grew ${Math.round(input.growthRate * 100)}% over the prior period`);
+  } else if (input.growthRate >= 0.05) {
+    score += 22;
+    reasons.push(`grew ${Math.round(input.growthRate * 100)}% over the prior period`);
+  } else if (input.growthRate > -0.05) {
+    score += 10;
+    reasons.push("held a steady lead volume over the prior period");
+  } else {
+    reasons.push(`declined ${Math.round(Math.abs(input.growthRate) * 100)}% over the prior period`);
+  }
+
+  // Conversion (max 30).
+  if (input.conversionRate === null) {
+    score += 15;
+    reasons.push("has no won or lost leads yet to measure a conversion rate from");
+  } else if (input.conversionRate >= 0.4) {
+    score += 30;
+    reasons.push(`converted ${Math.round(input.conversionRate * 100)}% of its closed leads`);
+  } else if (input.conversionRate >= 0.2) {
+    score += 18;
+    reasons.push(`converted ${Math.round(input.conversionRate * 100)}% of its closed leads`);
+  } else if (input.conversionRate > 0) {
+    score += 8;
+    reasons.push(`converted ${Math.round(input.conversionRate * 100)}% of its closed leads`);
+  } else {
+    reasons.push("has not converted any closed leads yet");
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  const explanation = `Scored ${score}/100 because this area ${reasons.join(", ")}.`;
+
+  return { score, explanation };
+}

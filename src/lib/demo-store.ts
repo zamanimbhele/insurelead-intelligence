@@ -25,7 +25,7 @@ import type {
   LeadTaskStatus,
   OptOutRequest,
 } from "./types.ts";
-import { DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS } from "./constants.ts";
+import { DEFAULT_HOTSPOT_MIN_LEAD_THRESHOLD, DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS } from "./constants.ts";
 import { resolveDoNotContactForStatus } from "./lead-utils.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -180,7 +180,15 @@ export function getAuditLog(): AuditLogEntry[] {
 // fields belong here too once BACKLOG.md's "Configurable legal-text
 // fields" item is built.
 export function getApplicationSettings(): ApplicationSettings {
-  return readJson<ApplicationSettings>(APPLICATION_SETTINGS_FILE, { leadRetentionDays: DEFAULT_LEAD_RETENTION_DAYS });
+  // Merged with defaults (rather than only falling back when the file is
+  // entirely missing) so an existing settings file saved before a new
+  // field existed - such as hotspotMinLeadThreshold - still gets that
+  // field's default instead of undefined.
+  const defaults: ApplicationSettings = {
+    leadRetentionDays: DEFAULT_LEAD_RETENTION_DAYS,
+    hotspotMinLeadThreshold: DEFAULT_HOTSPOT_MIN_LEAD_THRESHOLD,
+  };
+  return { ...defaults, ...readJson<Partial<ApplicationSettings>>(APPLICATION_SETTINGS_FILE, {}) };
 }
 
 export function updateApplicationSettings(changes: Partial<ApplicationSettings>): ApplicationSettings {

@@ -20,6 +20,24 @@ const cities = {
   "Free State": ["Bloemfontein"],
   Mpumalanga: ["Nelspruit"],
 };
+// Synthetic suburb names only - used so the geographic hotspot dashboard's
+// suburb-level breakdown has something to show in demo mode. Not sourced
+// from any real business or resident data.
+const suburbs = {
+  Johannesburg: ["Rosebank", "Randburg"],
+  Pretoria: ["Hatfield", "Centurion"],
+  Sandton: ["Bryanston", "Morningside"],
+  Midrand: ["Noordwyk", "Carlswald"],
+  "Cape Town": ["Claremont", "Woodstock"],
+  Stellenbosch: ["Die Boord", "Paradyskloof"],
+  George: ["Blanco", "Denneoord"],
+  Durban: ["Morningside", "Umhlanga"],
+  Pietermaritzburg: ["Hayfields", "Ashburton"],
+  Gqeberha: ["Walmer", "Summerstrand"],
+  "East London": ["Vincent", "Beacon Bay"],
+  Bloemfontein: ["Westdene", "Universitas"],
+  Nelspruit: ["Sonheuwel", "West Acres"],
+};
 const industries = [
   "Retail and E-commerce", "Construction and Contracting", "Professional Services",
   "Manufacturing", "Hospitality and Tourism", "Transport and Logistics",
@@ -66,6 +84,7 @@ const total = 64;
 for (let i = 0; i < total; i++) {
   const province = rand(provinces);
   const city = rand(cities[province]);
+  const suburb = rand(suburbs[city] ?? [city]);
   const applicantType = Math.random() < 0.7 ? "business" : "individual";
   const industry = rand(industries);
   const status = rand(statuses);
@@ -94,6 +113,7 @@ for (let i = 0; i < total; i++) {
     } : {}),
     province,
     city,
+    suburb,
     insuranceProducts: chosenProducts,
     currentInsuranceStatus: rand(["currently_insured", "not_currently_insured", "reviewing_existing_cover", "starting_new_business", "unsure"]),
     preferredContactChannel: rand(["phone", "email", "whatsapp"]),

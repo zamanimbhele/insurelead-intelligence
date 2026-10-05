@@ -170,6 +170,10 @@ export interface ApplicationSettings {
   // BACKLOG.md "Configurable legal-text fields" for the broader retention
   // *policy text* this number will eventually be configured alongside.
   leadRetentionDays: number;
+  // The geographic hotspot dashboard (src/lib/hotspot-scoring.ts) will not
+  // display a province/municipality/suburb breakdown with fewer leads than
+  // this, so a small, potentially identifiable area is never surfaced.
+  hotspotMinLeadThreshold: number;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -508,4 +512,31 @@ export interface DataSourceApprovalRecord {
   notes?: string;
   decidedBy: string;
   decidedAt: string;
+}
+
+// Geographic hotspot dashboard (Market Intelligence). Computed live from
+// leads at request time rather than from a stored snapshot table - see
+// BACKLOG.md for the scoping note on why this is not yet backed by the
+// project brief's `hotspot_snapshots` table.
+export type HotspotLevel = "province" | "municipality" | "suburb";
+
+export interface GeoHotspot {
+  level: HotspotLevel;
+  // e.g. "Gauteng", "Gauteng - Sandton", "Gauteng - Sandton - Bryanston".
+  label: string;
+  province: string;
+  city?: string;
+  suburb?: string;
+  leadVolume: number;
+  // Null when there is not enough prior-period history for this area to
+  // measure a growth rate (never shown as a fabricated 0% or 100%).
+  growthRate: number | null;
+  // Null when the area has no won/lost leads yet to compute a rate from.
+  conversionRate: number | null;
+  topIndustry?: string;
+  topInsuranceNeed?: string;
+  topCampaignSource?: string;
+  opportunityScore: number;
+  opportunityExplanation: string;
+  computedAt: string;
 }

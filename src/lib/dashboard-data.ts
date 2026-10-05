@@ -5,6 +5,7 @@ import {
   getLeads,
 } from "./demo-store";
 import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
+import { computeGeoHotspots } from "./hotspots";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
@@ -213,14 +214,26 @@ export async function getApplicationSettings(): Promise<ApplicationSettings> {
 }
 
 export async function updateApplicationSettings(
-  changes: { leadRetentionDays: number },
+  changes: Partial<Pick<ApplicationSettings, "leadRetentionDays" | "hotspotMinLeadThreshold">>,
   updatedBy?: string,
 ): Promise<ApplicationSettings> {
   if (getDataMode() === "demo") {
     const { updateApplicationSettings: updateDemoApplicationSettings } = await import("./demo-store");
     return updateDemoApplicationSettings(changes);
   }
-  return updateSupabaseApplicationSettings(await requireServerClient(), { leadRetentionDays: changes.leadRetentionDays, updatedBy });
+  return updateSupabaseApplicationSettings(await requireServerClient(), {
+    leadRetentionDays: changes.leadRetentionDays,
+    hotspotMinLeadThreshold: changes.hotspotMinLeadThreshold,
+    updatedBy,
+  });
+}
+
+// Geographic hotspot dashboard: one computation per level, gated by the
+// admin-configurable application_settings.hotspot_min_lead_threshold - see
+// src/lib/hotspots.ts for the aggregation and scoring itself.
+export async function getGeoHotspots(level: "province" | "municipality" | "suburb") {
+  const [leads, settings] = await Promise.all([getDashboardLeads(), getApplicationSettings()]);
+  return computeGeoHotspots(leads, level, settings.hotspotMinLeadThreshold);
 }
 
 export type ComplianceLeadSummary = {
