@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDashboardLeads } from "@/lib/dashboard-data";
 import { BarChartCard } from "@/components/dashboard/BarChartCard";
-import { MapPin, TrendingUp, Info } from "lucide-react";
+import { Building2, MapPin, TrendingUp, Info } from "lucide-react";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
 
 export const metadata = { title: "Market Intelligence | InsureLead Intelligence" };
@@ -80,17 +80,33 @@ export default async function MarketIntelligencePage() {
         </Link>
       </section>
 
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <Building2 className="h-4 w-4 text-primary-600" /> Industry Opportunity
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Highest-volume, fastest-growing, and best-converting industries, each with a renewal-urgency count, its
+          most-requested cover need, and a transparent opportunity score - industries converting poorly or
+          declining are flagged for marketing attention rather than left to blend in.
+        </p>
+        <Link
+          href="/dashboard/market-intelligence/industries"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 hover:underline"
+        >
+          Open Industry Opportunity
+        </Link>
+      </section>
+
       <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-600">
           <TrendingUp className="h-4 w-4 text-slate-400" /> Still to come
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-500">
-          An industry opportunity dashboard (highest-volume, fastest-growing, best-converting industries) and a
-          financial-year-end campaign planner with reminders and broker follow-up task lists. These remain scoped in
-          the Phase 2 backlog document delivered alongside this prototype.
+          A financial-year-end campaign planner with reminders and broker follow-up task lists. This remains scoped
+          in the Phase 2 backlog document delivered alongside this prototype.
         </p>
         <div className="mt-4 text-xs font-medium text-slate-400">
-          Backlog: Industry Opportunity Dashboard, FYE Campaign Planner
+          Backlog: FYE Campaign Planner
         </div>
       </section>
     </div>

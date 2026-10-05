@@ -171,6 +171,16 @@ export const MAX_HOTSPOT_THRESHOLD = 500;
 export const HOTSPOT_RECENT_WINDOW_DAYS = 60;
 export const HOTSPOT_PRIOR_WINDOW_DAYS = 60;
 
+// Industry opportunity dashboard: a lead counts as "renewing soon" when its
+// renewalMonth (a bare month name - see src/lib/aggregation-utils.ts's
+// daysUntilNextOccurrenceOfMonth) falls within this many days. Matches the
+// lead scoring engine's own "renewal date within 45 days" threshold
+// (src/lib/scoring.ts's scoreLead()) so the two stay consistent, even
+// though that threshold is never actually reached today - the lead-
+// creation route (src/app/api/leads/route.ts) still hardcodes
+// renewalWithinDays to null; see BACKLOG.md.
+export const RENEWAL_URGENCY_WINDOW_DAYS = 45;
+
 // Broker workflow: call/email/meeting logging and the follow-up-task form
 // on the lead profile page. Mirrors the check constraints on
 // lead_activities.kind / the channel and outcome checks inside

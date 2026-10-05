@@ -540,3 +540,24 @@ export interface GeoHotspot {
   opportunityExplanation: string;
   computedAt: string;
 }
+
+// Industry opportunity dashboard (Market Intelligence). Computed live,
+// same as GeoHotspot - see src/lib/industries.ts.
+export interface IndustryOpportunity {
+  industry: string;
+  leadVolume: number;
+  growthRate: number | null;
+  conversionRate: number | null;
+  // How many leads in this industry gave a renewal month at all, vs. how
+  // many of those fall within RENEWAL_URGENCY_WINDOW_DAYS of recurring.
+  // renewalDataCount lets the UI tell "no renewal dates captured yet"
+  // apart from "none of them are renewing soon".
+  renewalDataCount: number;
+  renewingSoonCount: number;
+  topCoverNeed?: string;
+  needsMarketingAttention: boolean;
+  attentionReason?: string;
+  opportunityScore: number;
+  opportunityExplanation: string;
+  computedAt: string;
+}

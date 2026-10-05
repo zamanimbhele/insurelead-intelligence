@@ -67,16 +67,45 @@ Priced in the accompanying quotation.
   not a fake 0%, when there isn't enough prior-period history yet), a conversion rate (won ÷
   (won + lost), null when nothing has closed yet), a top industry/insurance need/campaign source,
   and a transparent 0-100 opportunity score with a hover explanation, scored by the same
-  additive-points-plus-explanation convention as the lead scoring engine (`scoreHotspot()` in
-  `src/lib/scoring.ts`, next to `scoreLead()`). Computed live from already-captured, consented
+  additive-points-plus-explanation convention as the lead scoring engine (`scoreOpportunity()`
+  in `src/lib/scoring.ts`, next to `scoreLead()` - renamed from the original `scoreHotspot()`
+  once the industry opportunity dashboard below needed the same scoring, just over a different
+  subject). Computed live from already-captured, consented
   leads on every page load - there is no `hotspot_snapshots` table or background refresh job yet,
   so "computed as of" means "as of this page load," not "last refreshed by a job." The synthetic
   seed script now also generates a `suburb` per lead for any future reseed, and the already-
   committed demo dataset was deterministically backfilled with one (derived from each lead's id,
   not randomised, so it is a stable one-time patch rather than a full reseed) so the suburb-level
   breakdown has real demo data to gate once the threshold is lowered.
-- Industry opportunity dashboard (highest-volume, fastest-growing, best-converting, renewal
-  urgency).
+- Industry opportunity dashboard completed: a `/dashboard/market-intelligence/industries` page
+  grouping already-captured leads by industry, gated by the exact same admin-configurable
+  minimum lead volume as the hotspot dashboard above (`application_settings.hotspot_min_lead_
+  threshold`) - a deliberate reuse of one setting rather than inventing a second "industry
+  minimum," since both are the same compliance control (don't show a breakdown thin enough to
+  be identifiable), documented inline in `src/lib/industries.ts`. Each visible industry carries
+  a lead volume, a growth rate and a conversion rate computed the same way as the hotspot
+  dashboard's (both now shared from `src/lib/aggregation-utils.ts`, extracted out of
+  `src/lib/hotspots.ts` so the two dashboards can't quietly drift apart), a renewal-urgency
+  count ("N of M" leads with a captured renewal month whose next occurrence falls within 45
+  days - `RENEWAL_URGENCY_WINDOW_DAYS` in `src/lib/constants.ts`, matching `scoreLead()`'s own
+  45-day renewal-urgency threshold; shown as "no renewal dates captured yet" rather than a
+  fake 0 of 0 when nobody in that industry has given one), its most-requested cover need, and
+  the same transparent 0-100 `scoreOpportunity()` score with a hover explanation. An industry
+  converting under 15% of its closed leads or declining more than 10% is flagged "Needs
+  attention" with a plain-language reason, rather than left to blend into the table - the one
+  piece of this dashboard that goes beyond pure reporting, and it is still just a flag for a
+  human to review, never an automatic action. Three callout cards surface the highest-volume,
+  fastest-growing, and best-converting industry at a glance, each honestly reading "Not enough
+  data yet" instead of guessing when nothing qualifies. The Market Intelligence overview page
+  links through to it the same way it links to Geographic Hotspots. Known limitation shared
+  with the hotspot dashboard: growth rate compares the trailing 60 days to the 60 days before
+  that relative to *now*, so as the committed synthetic seed data ages past that window without
+  new leads, every industry's growth eventually reads as a decline and then settles at "no
+  prior-period data" (null) - this is a property of static demo data outliving its own 120-day
+  generation window, not a bug, and resolves itself automatically once real leads are flowing
+  in continuously; `data/leads.json` was also deterministically backfilled with a `renewalMonth`
+  per lead (same id-derived, non-randomised technique as the earlier `suburb` backfill) so the
+  renewal-urgency column has real demo data to show.
 - Financial-year-end campaign planner: filter by FYE month, campaign calendar, broker follow-up
   task lists, results tracking by month/sector/location/need.
 - Data Source Registry completed: a dedicated `/dashboard/data-sources` page where a platform or
