@@ -109,10 +109,11 @@ export function scoreLead(input: ScoringInput): ScoringResult {
 }
 
 /**
- * Transparent, configurable opportunity scoring for the geographic hotspot
- * dashboard (Market Intelligence). Mirrors scoreLead() above: additive
- * points from named, documented reasons, always paired with a
- * human-readable explanation, and never fed a protected characteristic.
+ * Transparent, configurable opportunity scoring shared by the Market
+ * Intelligence aggregate dashboards (geographic hotspots and industry
+ * opportunity). Mirrors scoreLead() above: additive points from named,
+ * documented reasons, always paired with a human-readable explanation,
+ * and never fed a protected characteristic.
  *
  * growthRate/conversionRate are null when there is not enough history to
  * measure them (a brand-new area, or one with no won/lost leads yet) -
@@ -120,19 +121,24 @@ export function scoreLead(input: ScoringInput): ScoringResult {
  * zero, so a new hotspot is not unfairly penalised for lacking history.
  */
 
-export interface HotspotScoringInput {
+export interface OpportunityScoringInput {
   leadVolume: number;
   minLeadThreshold: number;
   growthRate: number | null;
   conversionRate: number | null;
+  // What the explanation calls the thing being scored - "area" for a
+  // geographic hotspot, "industry" for the industry opportunity
+  // dashboard. Defaults to "area" for backward compatibility with the
+  // hotspot dashboard's original wording.
+  subjectLabel?: string;
 }
 
-export interface HotspotScoringResult {
+export interface OpportunityScoringResult {
   score: number;
   explanation: string;
 }
 
-export function scoreHotspot(input: HotspotScoringInput): HotspotScoringResult {
+export function scoreOpportunity(input: OpportunityScoringInput): OpportunityScoringResult {
   let score = 0;
   const reasons: string[] = [];
 
@@ -185,7 +191,8 @@ export function scoreHotspot(input: HotspotScoringInput): HotspotScoringResult {
 
   score = Math.max(0, Math.min(100, score));
 
-  const explanation = `Scored ${score}/100 because this area ${reasons.join(", ")}.`;
+  const subject = input.subjectLabel ?? "area";
+  const explanation = `Scored ${score}/100 because this ${subject} ${reasons.join(", ")}.`;
 
   return { score, explanation };
 }

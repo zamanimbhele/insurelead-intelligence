@@ -65,6 +65,16 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   insurance need/campaign source, and a transparent 0-100 opportunity score with a hover
   explanation, scored the same additive-points-plus-explanation way as the lead scoring engine.
   Computed live from already-captured leads on every page load, not from a stored snapshot.
+- An Industry Opportunity dashboard (`/dashboard/market-intelligence/industries`): the same
+  idea as the hotspot dashboard above, grouped by industry instead of geography, reusing the
+  same admin-configurable minimum lead volume so the two dashboards can't drift to different
+  thresholds. Each visible industry gets a lead volume, a growth rate, a conversion rate, a
+  renewal-urgency count ("N of M" leads due for renewal within 45 days, or an honest "no
+  renewal dates captured yet"), its most-requested cover need, and the same transparent 0-100
+  opportunity score. An industry converting under 15% of closed leads or declining more than
+  10% is flagged "Needs attention" with a plain-language reason - a flag for a human to
+  review, never an automatic action - and three callout cards surface the highest-volume,
+  fastest-growing, and best-converting industry.
 - An opt-out and data subject request workflow on the Compliance dashboard: a log of opt-out
   requests received outside a form submission (processing one sets the linked lead to Do Not
   Contact), and a POPIA access/correction/deletion request log with a 30-day due date and status

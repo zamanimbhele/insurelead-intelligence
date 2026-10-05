@@ -6,6 +6,7 @@ import {
 } from "./demo-store";
 import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { computeGeoHotspots } from "./hotspots";
+import { computeIndustryOpportunities } from "./industries";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
@@ -234,6 +235,15 @@ export async function updateApplicationSettings(
 export async function getGeoHotspots(level: "province" | "municipality" | "suburb") {
   const [leads, settings] = await Promise.all([getDashboardLeads(), getApplicationSettings()]);
   return computeGeoHotspots(leads, level, settings.hotspotMinLeadThreshold);
+}
+
+// Reuses the same application_settings.hotspot_min_lead_threshold as the
+// geographic hotspot dashboard - one admin-configurable "minimum leads to
+// show an aggregate breakdown" setting for both, rather than a second,
+// industry-specific one.
+export async function getIndustryOpportunities() {
+  const [leads, settings] = await Promise.all([getDashboardLeads(), getApplicationSettings()]);
+  return computeIndustryOpportunities(leads, settings.hotspotMinLeadThreshold);
 }
 
 export type ComplianceLeadSummary = {
