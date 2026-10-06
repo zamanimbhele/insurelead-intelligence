@@ -60,7 +60,7 @@ export function computeConversionRate(leads: Lead[]): number | null {
   return wonCount / closedCount;
 }
 
-const MONTH_NAMES = [
+export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];

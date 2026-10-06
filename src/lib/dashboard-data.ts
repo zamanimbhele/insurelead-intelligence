@@ -2,16 +2,21 @@ import {
   getApplicationSettings as getDemoApplicationSettings,
   getConsents as getDemoConsents,
   getDataSources as getDemoDataSources,
+  getFyeCampaignPlans as getDemoFyeCampaignPlans,
   getLeads,
 } from "./demo-store";
 import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { computeGeoHotspots } from "./hotspots";
 import { computeIndustryOpportunities } from "./industries";
+import { computeFyeCalendar, computeFyeMonthBreakdown, leadsForFyeFollowUp } from "./fye-planner";
+import { MONTH_NAMES } from "./aggregation-utils";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
   createSupabaseDataSource,
   createSupabaseDataSubjectRequest,
+  createSupabaseFyeCampaignPlan,
+  createSupabaseLeadTask,
   createSupabaseOptOutRequest,
   decideSupabaseDataSourceApproval,
   fetchSupabaseAllocations,
@@ -21,6 +26,7 @@ import {
   fetchSupabaseConsents,
   fetchSupabaseDataSources,
   fetchSupabaseDataSubjectRequests,
+  fetchSupabaseFyeCampaignPlans,
   fetchSupabaseLead,
   fetchSupabaseLeadActivities,
   fetchSupabaseLeadNotes,
@@ -32,6 +38,7 @@ import {
   updateSupabaseApplicationSettings,
   updateSupabaseDataSource,
   updateSupabaseDataSubjectRequestStatus,
+  updateSupabaseFyeCampaignPlanStatus,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
 import type {
@@ -46,6 +53,8 @@ import type {
   DataSubjectRequest,
   DataSubjectRequestStatus,
   DataSubjectRequestType,
+  FinancialYearCampaignPlan,
+  FyeCampaignPlanStatus,
   Lead,
   LeadActivity,
   LeadNote,
@@ -244,6 +253,98 @@ export async function getGeoHotspots(level: "province" | "municipality" | "subur
 export async function getIndustryOpportunities() {
   const [leads, settings] = await Promise.all([getDashboardLeads(), getApplicationSettings()]);
   return computeIndustryOpportunities(leads, settings.hotspotMinLeadThreshold);
+}
+
+// --- Financial-Year-End Campaign Planner (project brief section 8).
+
+export async function getDashboardFyeCampaignPlans(): Promise<FinancialYearCampaignPlan[]> {
+  if (getDataMode() === "demo") return getDemoFyeCampaignPlans();
+  return fetchSupabaseFyeCampaignPlans(await requireServerClient());
+}
+
+export async function createDashboardFyeCampaignPlan(
+  input: { title: string; fyeMonth: string; plannedContactMonth: string; notes?: string },
+  actorLabel: string,
+): Promise<{ id: string }> {
+  if (getDataMode() === "demo") {
+    const { createFyeCampaignPlan } = await import("./demo-store");
+    return { id: createFyeCampaignPlan(input, actorLabel).id };
+  }
+  const id = await createSupabaseFyeCampaignPlan(await requireServerClient(), input);
+  return { id };
+}
+
+export async function updateDashboardFyeCampaignPlanStatus(
+  planId: string,
+  status: FyeCampaignPlanStatus,
+  actorLabel: string,
+): Promise<{ id: string } | undefined> {
+  if (getDataMode() === "demo") {
+    const { updateFyeCampaignPlanStatus } = await import("./demo-store");
+    const updated = updateFyeCampaignPlanStatus(planId, status, actorLabel);
+    return updated ? { id: updated.id } : undefined;
+  }
+  const id = await updateSupabaseFyeCampaignPlanStatus(await requireServerClient(), { planId, status });
+  return { id };
+}
+
+// One leads fetch powers the whole planner page: the 12-month calendar
+// grid, and a per-month breakdown (sector/location/top need/conversion -
+// brief section 8's "track campaign results by month, sector, location,
+// and insurance need") for every month at once, rather than the page
+// re-fetching all leads per month selected.
+export async function getFyePlannerData() {
+  const [leads, plans] = await Promise.all([getDashboardLeads(), getDashboardFyeCampaignPlans()]);
+  return {
+    calendar: computeFyeCalendar(leads, plans),
+    plans,
+    breakdowns: Object.fromEntries(MONTH_NAMES.map((month) => [month, computeFyeMonthBreakdown(leads, month)])),
+  };
+}
+
+// Bulk-creates one LeadTask per eligible lead whose financialYearEndMonth
+// is `month`, reusing the exact same per-lead creation path (and, in
+// Supabase mode, the exact same create_lead_task RPC with its own
+// org-allocation check) a single follow-up task already goes through - a
+// bulk batch can never create a task somewhere a broker couldn't already
+// create one by hand. Returns how many were created vs. skipped (the
+// per-lead path rejected it - e.g. not allocated to this broker's
+// organisation) rather than failing the whole batch over one lead.
+export async function createDashboardFyeFollowUpTasks(
+  month: string,
+  taskTitle: string,
+  actorLabel: string,
+): Promise<{ created: number; skipped: number; totalEligible: number }> {
+  const leads = await getDashboardLeads();
+  const eligible = leadsForFyeFollowUp(leads, month);
+
+  let created = 0;
+  let skipped = 0;
+
+  if (getDataMode() === "demo") {
+    const { createLeadTask } = await import("./demo-store");
+    for (const lead of eligible) {
+      try {
+        const task = createLeadTask(lead.id, { title: taskTitle, assigneeLabel: lead.assignedBroker }, actorLabel);
+        if (task) created += 1;
+        else skipped += 1;
+      } catch {
+        skipped += 1;
+      }
+    }
+  } else {
+    const client = await requireServerClient();
+    for (const lead of eligible) {
+      try {
+        await createSupabaseLeadTask(client, { leadId: lead.id, title: taskTitle, assigneeLabel: lead.assignedBroker });
+        created += 1;
+      } catch {
+        skipped += 1;
+      }
+    }
+  }
+
+  return { created, skipped, totalEligible: eligible.length };
 }
 
 export type ComplianceLeadSummary = {

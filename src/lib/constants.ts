@@ -181,6 +181,12 @@ export const HOTSPOT_PRIOR_WINDOW_DAYS = 60;
 // renewalWithinDays to null; see BACKLOG.md.
 export const RENEWAL_URGENCY_WINDOW_DAYS = 45;
 
+// Financial-Year-End Campaign Planner: a business's upcoming FYE counts
+// as within the planning window when it falls within this many days -
+// wider than RENEWAL_URGENCY_WINDOW_DAYS above because a year-end review
+// is planned for well ahead of time, not reacted to at the last moment.
+export const FYE_PLANNING_WINDOW_DAYS = 90;
+
 // Broker workflow: call/email/meeting logging and the follow-up-task form
 // on the lead profile page. Mirrors the check constraints on
 // lead_activities.kind / the channel and outcome checks inside

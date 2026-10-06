@@ -15,6 +15,8 @@ import type {
   DataSourceApprovalRecord,
   DataSubjectRequest,
   DataSubjectRequestStatus,
+  FinancialYearCampaignPlan,
+  FyeCampaignPlanStatus,
   Lead,
   LeadActivity,
   LeadActivityKind,
@@ -40,6 +42,7 @@ const OPT_OUT_REQUESTS_FILE = path.join(DATA_DIR, "opt-out-requests.json");
 const DATA_SUBJECT_REQUESTS_FILE = path.join(DATA_DIR, "data-subject-requests.json");
 const DATA_SOURCES_FILE = path.join(DATA_DIR, "data-sources.json");
 const DATA_SOURCE_APPROVALS_FILE = path.join(DATA_DIR, "data-source-approvals.json");
+const FYE_CAMPAIGN_PLANS_FILE = path.join(DATA_DIR, "fye-campaign-plans.json");
 
 function readJson<T>(file: string, fallback: T): T {
   try {
@@ -698,6 +701,74 @@ export function decideDataSourceApproval(
     action: "data_source_approval_decided",
     actor: actorLabel,
     details: `decision=${decision} from=${previousStatus} to=${nextStatus}`,
+  });
+  return updated;
+}
+
+// --- Financial-Year-End Campaign Planner (project brief section 8). See
+// supabase/migrations/202610060001_fye_campaign_planner.sql for why this
+// is a lightweight plan/reminder record, never an outbound send itself.
+
+export function getFyeCampaignPlans(): FinancialYearCampaignPlan[] {
+  return readJson<FinancialYearCampaignPlan[]>(FYE_CAMPAIGN_PLANS_FILE, []);
+}
+
+export function createFyeCampaignPlan(
+  input: { title: string; fyeMonth: string; plannedContactMonth: string; notes?: string },
+  actorLabel: string,
+): FinancialYearCampaignPlan {
+  if (!input.title.trim()) throw new Error("Plan title must not be empty");
+
+  const plans = getFyeCampaignPlans();
+  const now = new Date().toISOString();
+  const plan: FinancialYearCampaignPlan = {
+    id: generateId("fyeplan"),
+    title: input.title.trim(),
+    fyeMonth: input.fyeMonth,
+    plannedContactMonth: input.plannedContactMonth,
+    notes: input.notes?.trim() || undefined,
+    status: "planned",
+    createdBy: actorLabel,
+    createdAt: now,
+    updatedAt: now,
+  };
+  plans.unshift(plan);
+  writeJson(FYE_CAMPAIGN_PLANS_FILE, plans);
+
+  appendAuditLog({
+    entity: "fye_campaign_plan",
+    entityId: plan.id,
+    action: "fye_campaign_plan_created",
+    actor: actorLabel,
+    details: `title=${plan.title} fyeMonth=${plan.fyeMonth}`,
+  });
+  return plan;
+}
+
+export function updateFyeCampaignPlanStatus(
+  planId: string,
+  status: FyeCampaignPlanStatus,
+  actorLabel: string,
+): FinancialYearCampaignPlan | undefined {
+  const plans = getFyeCampaignPlans();
+  const index = plans.findIndex((plan) => plan.id === planId);
+  if (index === -1) return undefined;
+  const previousStatus = plans[index].status;
+
+  const updated: FinancialYearCampaignPlan = {
+    ...plans[index],
+    status,
+    updatedAt: new Date().toISOString(),
+  };
+  plans[index] = updated;
+  writeJson(FYE_CAMPAIGN_PLANS_FILE, plans);
+
+  appendAuditLog({
+    entity: "fye_campaign_plan",
+    entityId: planId,
+    action: "fye_campaign_plan_status_changed",
+    actor: actorLabel,
+    details: `from=${previousStatus} to=${status}`,
   });
   return updated;
 }

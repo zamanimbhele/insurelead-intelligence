@@ -5,6 +5,13 @@ export const ADMIN_ROLES = ["platform_admin", "compliance_admin"] as const;
 export const AUDIT_ROLES = ["compliance_auditor"] as const;
 export const BROKER_ROLES = ["broker_admin", "campaign_manager", "broker_agent"] as const;
 export const BROKER_OPERATOR_ROLES = ["broker_admin", "broker_agent"] as const;
+// Who may create/manage a Financial-Year-End Campaign Planner entry -
+// mirrors the role set src/mcp/campaign-tools.ts already uses for its
+// own assertCanCreate() (platform_admin, broker_admin, campaign_manager),
+// matching the project brief's "Broker Manager: create campaigns" /
+// "Marketing Analyst: create campaign records". Deliberately excludes
+// broker_agent (an ordinary Broker only ever works assigned leads).
+export const CAMPAIGN_PLANNING_ROLES = ["broker_admin", "campaign_manager"] as const;
 
 export type DashboardRole =
   | (typeof ADMIN_ROLES)[number]
@@ -182,4 +189,12 @@ export function canViewCompliance(identity: DashboardIdentity) {
 
 export function canManageCompliance(identity: DashboardIdentity) {
   return isPlatformAdmin(identity);
+}
+
+// FYE Campaign Planner plan/reminder records. Viewing the planner itself
+// is open to anyone who reaches Market Intelligence (same as the hotspot
+// and industry dashboards - no page-level gate), this only guards the
+// mutating actions: creating or re-statusing a plan.
+export function canManageCampaignPlanning(identity: DashboardIdentity) {
+  return isPlatformAdmin(identity) || CAMPAIGN_PLANNING_ROLES.includes(identity.role as (typeof CAMPAIGN_PLANNING_ROLES)[number]);
 }
