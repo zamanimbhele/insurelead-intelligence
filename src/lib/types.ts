@@ -387,7 +387,8 @@ export interface AuditLogEntry {
     | "opt_out"
     | "data_subject_request"
     | "data_source"
-    | "fye_campaign_plan";
+    | "fye_campaign_plan"
+    | "export";
   entityId: string;
   action: string;
   actor: string;

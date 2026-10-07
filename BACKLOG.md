@@ -162,9 +162,10 @@ Priced in the accompanying quotation.
   to platform admins, compliance admins, and read-only for compliance auditors (reusing the
   existing is_platform_admin()/is_compliance_auditor() RLS helpers, so no new policies were needed
   beyond the settings table itself). Its "Data source approvals" widget is now a real summary
-  (see the Data Source Registry item under Market Intelligence); the export-activity widget
-  remains an explicit "not yet available" placeholder - it needs the audited-exports backlog item
-  below built first.
+  (see the Data Source Registry item under Market Intelligence); its "Export activity" widget is
+  now a real summary too, reading the audit log's own `export`-entity entries (see the Audit Log
+  Viewer item below) and linking through to the full Audit Log page - no placeholder remains on
+  this dashboard.
 - Opt-out and data subject request workflows completed: a compliance-admin-only log of opt-out
   requests received outside a form submission (phone, email, WhatsApp, letter), where processing
   one sets the linked lead to Do Not Contact through the same update_lead_status() path the
@@ -188,7 +189,29 @@ Priced in the accompanying quotation.
   as-is in the leads table and lead profile page as a display label, not a source of truth. A new
   "Assigned to a Broker" stat card was added alongside it for the same reason the request asked to
   "separate" the two: one real count for leads with no active allocation, one for leads with one.
-- Role-restricted, audited CSV/report exports with time-limited links.
+- Audit Log Viewer completed: a `/dashboard/audit-log` page listing the platform's existing
+  `audit_logs` table (nearly every mutation across the app already wrote to it - lead creation/
+  edits, assignment, consent, marketing-permission, status, Do Not Contact, data source imports,
+  and more) with filters by entity, action/actor text, and date range, gated to platform admins,
+  compliance admins, and read-only for compliance auditors (`canViewCompliance()` - the Compliance
+  dashboard's own gate), the same roles the brief's Phase 5 names for this deliverable. No new
+  migration was needed: the base `audit_logs` table and its RLS (broad `select` for authenticated,
+  plus the platform-admin/compliance-auditor/organisation-scoped policies already added for multi-
+  broker tenancy) already covered the read path, so this is purely additive application code. A
+  stricter `canManageCompliance()` check (platform admin/compliance admin only, not auditors) gates
+  a "Export filtered CSV" button - the brief's own distinction between viewing compliance data and
+  exporting it. The export re-derives and re-filters the entries server-side with the same filter
+  criteria the client sent, rather than trusting whatever rows happen to be in the browser, so the
+  CSV's own embedded metadata header (exported by, export date, filters applied, number of records,
+  and a genuine audit-log reference - the id of the `export`-entity row the export itself just
+  wrote) is trustworthy per brief section 12's export-reporting requirement, and the export action
+  is itself an audited, timestamped `audit_logs` row like every other mutation. `src/lib/audit-
+  log.ts` holds the filter and CSV logic as framework-free pure functions shared by the client's
+  live in-browser filtering and the server's authoritative re-filtering, following the same pure-
+  computation-module convention as `aggregation-utils.ts`/`hotspots.ts`/`industries.ts`/`fye-
+  planner.ts`. Role-restricted, audited exports for the broader reporting suite below (leads by
+  source/broker/industry/etc., with time-limited links) remain open - this item covers the audit
+  log itself.
 - Automated test suite: Vitest (unit) and Playwright (end-to-end).
 - Accessibility review and security review checklist.
 - Demo data reset process and seeded demo accounts per role.
