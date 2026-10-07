@@ -31,8 +31,50 @@ Priced in the accompanying quotation.
   Supabase rate limiter using HMAC-keyed counters, PII-minimised lead-queue webhooks, notification
   audit events, and `/api/health` readiness reporting. Deployment configuration and monitoring
   remain operational tasks.
-- Configurable legal-text fields editable by Compliance Admin (privacy notice, consent wording,
-  marketing wording, FSP disclosures, terms, retention policy) with version history.
+- Configurable legal-text fields completed: all 7 documents the brief's section 2 names (privacy
+  notice, consent wording, contact-permission wording, marketing wording, FSP disclosures, terms
+  of use, data retention policy text) now live in `legal_text_documents` (current published text)
+  plus an append-only `legal_text_document_versions` history - the same current-state-plus-history
+  split as the Data Source Registry - edited at `/dashboard/legal-content`, gated the same way as
+  the registry (`canViewCompliance()` to view and its own version history, `canManageCompliance()`
+  to edit: platform/compliance admins only, not auditors). Every save goes through the
+  `update_legal_text_document()` SECURITY DEFINER RPC, never a direct table update: it re-checks
+  the caller's role itself, bumps the version, appends the prior text to history (so nothing is
+  ever silently overwritten), and writes its own `audit_logs` entry - mirroring every other
+  compliance-table write in this codebase. These documents are no longer hardcoded JSX: the public
+  Privacy Notice and Terms of Use pages, and the consultation form's three consent-step checkboxes
+  (contact permission, partner-sharing consent, optional marketing consent), now read the live
+  content through `getRuntimeLegalTextDocument()` (the service-role admin-client path the public
+  lead-capture route already used, since these pages render before anyone signs in - see
+  `runtime-data.ts`), and a lead's own `consentWordingVersion` is derived from the live
+  `consent_wording` document's current version rather than a static constant, with that constant
+  kept only as a defensive fallback if the fetch itself fails. `renderLegalTextParagraphs()` in
+  `lead-utils.ts` is the one place a document's blank-line-separated paragraphs are split for
+  rendering, shared by both public pages and the admin editor's read-only preview.
+  Also fixed in service of this item, and worth calling out on its own: `audit_logs.entity_id` is
+  `uuid not null`, but three existing call sites to `appendSupabaseAuditLog()` were passing
+  natural-language strings (`"audit_log"`, `"application_settings"`) as `entityId` - one from this
+  session's own Audit Log Viewer PR, two pre-existing. In real Supabase mode this was a silent
+  false-failure bug: the actual update would succeed, then the audit-log insert would throw
+  `invalid input syntax for type uuid`, and the route's catch block would report the save as
+  failed even though it had worked. Demo mode never caught this (its JSON audit log has no type
+  constraint), and neither does `tsc`/`eslint` - only manually tracing the migration SQL found it.
+  Fixed once, centrally, in `appendSupabaseAuditLog()` itself: a non-UUID `entityId` now gets a
+  fresh `randomUUID()` for the column and the original label is folded into `details.message` as
+  plain text, so the Audit Log Viewer's Details column still renders one readable sentence. The
+  new `update_legal_text_document()` RPC was written to avoid the same mistake from the start.
+  Known gap: this item's Playwright e2e coverage (`e2e/legal-content.spec.ts`) was written and
+  type/lint-checked but could not be executed end-to-end in this development environment - the
+  remote device-bridge shell used for this session's work is backed by a notably slow filesystem
+  (Next.js's own dev server prints its own "Slow filesystem detected" warning there), and each
+  individual command invocation in that environment is capped well under the time a `next build`
+  or even first-request `next dev` compile actually takes, so the Playwright-managed web server
+  could not reliably come up within a single invocation. A plain `next dev` run in that same
+  environment did start and serve the app correctly end to end in demo mode (confirming no runtime
+  regression), so this is a tooling/environment limitation rather than a known defect - but the
+  new spec file has not had a real Playwright pass recorded against it the way every other e2e
+  spec in this repo has, and should be run for real in CI or a normal local setup before being
+  trusted the same way.
 
 ## Broker Workflow
 - Add visual campaign authoring and approval forms on top of the completed MCP campaign workflow.

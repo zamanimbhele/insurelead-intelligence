@@ -1,26 +1,35 @@
+import { format } from "date-fns";
 import { Section, SectionHeading } from "@/components/ui/Section";
+import { getRuntimeLegalTextDocument } from "@/lib/runtime-data";
+import { renderLegalTextParagraphs } from "@/lib/lead-utils";
 
 export const metadata = { title: "Terms of Use | InsureLead Intelligence" };
+export const dynamic = "force-dynamic";
 
-export default function TermsPage() {
+// Renders the "terms_of_use" and "fsp_disclosures" legal text documents
+// (project brief section 2) - see the Privacy Notice page for the same
+// pattern and supabase/migrations/202610080001_legal_text_documents.sql
+// for where these are configured and version-tracked.
+export default async function TermsPage() {
+  const [termsOfUse, fspDisclosures] = await Promise.all([
+    getRuntimeLegalTextDocument("terms_of_use"),
+    getRuntimeLegalTextDocument("fsp_disclosures"),
+  ]);
+
   return (
     <Section>
       <SectionHeading eyebrow="Legal" title="Terms of Use" />
       <div className="prose mt-8 max-w-3xl space-y-4 text-sm text-slate-600">
-        <p>Version: v1.0 - Last updated 7 July 2026 (placeholder - to be reviewed by Compliance Admin).</p>
-        <p>
-          By submitting the enquiry form, you confirm that the information provided is accurate to the best of your
-          knowledge and, for a business enquiry, that you are authorised to submit it for the business named.
+        <p className="text-xs text-slate-400">
+          Version v{termsOfUse.version} - last updated {format(new Date(termsOfUse.updatedAt), "d MMMM yyyy")}.
         </p>
-        <p>
-          Submitting an enquiry through this Platform does not create insurance cover, a binding quote, financial
-          advice, or any contractual relationship. Any recommendations, quotes, or advice will only be provided
-          directly by a licensed broker following review of your enquiry.
-        </p>
-        <p>
-          Financial services provider details and relevant product permissions will be displayed for each
-          participating broker once configured by an authorised administrator.
-        </p>
+        {renderLegalTextParagraphs(termsOfUse.content).map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
+        <h3 className="font-semibold text-slate-900">Financial Services Provider Disclosures</h3>
+        {renderLegalTextParagraphs(fspDisclosures.content).map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
       </div>
     </Section>
   );

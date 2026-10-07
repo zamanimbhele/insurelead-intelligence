@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AuditLogPage() {
   const identity = await getDashboardIdentity();
-  if (!canViewCompliance(identity)) redirect("/dashboard");
+  if (!canViewCompliance(identity)) redirect("/access-denied");
 
   const entries = await getDashboardAuditLog();
 

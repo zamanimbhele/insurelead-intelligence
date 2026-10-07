@@ -52,3 +52,17 @@ export function isConsentValid(consent: ConsentRecord | undefined | null): boole
       consent.nonBindingAcknowledged,
   );
 }
+
+// Legal-text documents (project brief section 2) store multi-paragraph
+// content as plain text with a blank line between paragraphs - see
+// LEGAL_TEXT_DOCUMENT_DEFINITIONS in constants.ts and the matching seed
+// data in supabase/migrations/202610080001_legal_text_documents.sql.
+// Splitting here, once, keeps every renderer (Privacy Notice, Terms of
+// Use, the admin Legal Content page's read-only preview) agreeing on what
+// counts as a paragraph break, rather than each page reimplementing it.
+export function renderLegalTextParagraphs(content: string): string[] {
+  return content
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+}

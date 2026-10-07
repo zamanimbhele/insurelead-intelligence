@@ -5,6 +5,8 @@ import {
   getConsentByLeadId,
   getLeadById,
   getLeads,
+  getLegalTextDocument,
+  getLegalTextDocuments,
   saveConsent,
   saveLead,
   updateLead,
@@ -23,12 +25,13 @@ import {
   fetchSupabaseConsent,
   fetchSupabaseLead,
   fetchSupabaseLeads,
+  fetchSupabaseLegalTextDocuments,
   fetchSupabaseSendingIdentities,
   hasRecentSupabaseDuplicate,
   reserveSupabaseLead,
   updateSupabaseLead,
 } from "./supabase/data.ts";
-import type { ConsentRecord, Lead } from "./types.ts";
+import type { ConsentRecord, Lead, LegalTextDocumentKey } from "./types.ts";
 
 function requireAdminClient() {
   const client = createSupabaseAdminClient();
@@ -149,4 +152,26 @@ export async function reserveRuntimeLead(input: {
   });
   if (!decision.matched) throw new Error(decision.reasons[0] ?? "Lead does not match the buyer appetite");
   return reserveSupabaseLead(client, input);
+}
+
+// Public-site reads of the 7 configurable legal-text documents (privacy
+// notice, consent wording, etc. - project brief section 2). These are
+// read by the public Privacy Notice and Terms of Use pages, and by the
+// consultation form's consent step, before anyone has signed in - so,
+// like every other public/anonymous operation in this module, they go
+// through the service-role admin client rather than requiring an anon
+// RLS read policy on legal_text_documents (there is none - see
+// supabase/migrations/202610080001_legal_text_documents.sql). Writes to
+// these documents are an authenticated, compliance-admin-only action and
+// live in dashboard-data.ts instead, never here.
+export async function getRuntimeLegalTextDocuments() {
+  return getDataMode() === "demo" ? getLegalTextDocuments() : fetchSupabaseLegalTextDocuments(requireAdminClient());
+}
+
+export async function getRuntimeLegalTextDocument(key: LegalTextDocumentKey) {
+  if (getDataMode() === "demo") return getLegalTextDocument(key);
+  const documents = await fetchSupabaseLegalTextDocuments(requireAdminClient());
+  const document = documents.find((entry) => entry.documentKey === key);
+  if (!document) throw new Error(`Legal text document not found: ${key}`);
+  return document;
 }

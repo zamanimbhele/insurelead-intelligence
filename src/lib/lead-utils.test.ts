@@ -4,6 +4,7 @@ import {
   getInsuranceProductLabels,
   getLeadDisplayName,
   isConsentValid,
+  renderLegalTextParagraphs,
   resolveDoNotContactForStatus,
 } from "./lead-utils";
 import type { ConsentRecord, Lead } from "./types";
@@ -120,5 +121,26 @@ describe("isConsentValid", () => {
 
   it("does not require marketingConsent - that one is optional/separate from validity", () => {
     expect(isConsentValid(makeConsent({ marketingConsent: false }))).toBe(true);
+  });
+});
+
+describe("renderLegalTextParagraphs", () => {
+  it("splits on a blank line between paragraphs", () => {
+    expect(renderLegalTextParagraphs("First paragraph.\n\nSecond paragraph.")).toEqual([
+      "First paragraph.",
+      "Second paragraph.",
+    ]);
+  });
+
+  it("returns the whole string as one paragraph when there is no blank line", () => {
+    expect(renderLegalTextParagraphs("Just one paragraph, no breaks.")).toEqual(["Just one paragraph, no breaks."]);
+  });
+
+  it("trims each paragraph and drops empty ones from extra blank lines", () => {
+    expect(renderLegalTextParagraphs("  First.  \n\n\n\n  Second.  \n\n")).toEqual(["First.", "Second."]);
+  });
+
+  it("returns an empty array for blank content", () => {
+    expect(renderLegalTextParagraphs("   \n\n  ")).toEqual([]);
   });
 });

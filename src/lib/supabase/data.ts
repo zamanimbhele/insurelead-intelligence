@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ApplicationSettings,
@@ -29,6 +30,9 @@ import type {
   LeadNote,
   LeadTask,
   LeadTaskStatus,
+  LegalTextDocument,
+  LegalTextDocumentKey,
+  LegalTextDocumentVersion,
   OptOutChannel,
   OptOutRequest,
   OptOutRequestStatus,
@@ -602,18 +606,36 @@ export async function updateSupabaseLead(
   return data ? mapLead(data as LeadRow) : undefined;
 }
 
+// audit_logs.entity_id is a uuid NOT NULL column, but a few callers (the
+// retention-threshold and hotspot-threshold settings routes, and the
+// audit log's own CSV export) pass a natural-language key like
+// "application_settings" or "audit_log" for an action with no real row id
+// of its own - inserting that string as-is fails at the database with
+// "invalid input syntax for type uuid". Rather than require every caller
+// to know this, mint a fresh id for the entry's own identity when
+// entityId is not already uuid-shaped, and fold the original label into
+// details (as plain text, not a second jsonb key, so the Audit Log
+// Viewer's Details column still renders it as one readable sentence
+// rather than raw JSON - see mapAuditLogEntry below).
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function appendSupabaseAuditLog(
   client: SupabaseClient,
   entry: { entity: string; entityId: string; action: string; actor: string; details?: string },
 ): Promise<string | undefined> {
+  const isRealUuid = UUID_PATTERN.test(entry.entityId);
+  const message = isRealUuid
+    ? entry.details
+    : [entry.details, `entityKey=${entry.entityId}`].filter(Boolean).join(" ");
+
   const { data, error } = await client
     .from("audit_logs")
     .insert({
       entity_type: entry.entity,
-      entity_id: entry.entityId,
+      entity_id: isRealUuid ? entry.entityId : randomUUID(),
       action: entry.action,
       actor_label: entry.actor,
-      details: entry.details ? { message: entry.details } : {},
+      details: message ? { message } : {},
     })
     .select("id")
     .single();
@@ -1244,4 +1266,90 @@ export async function updateSupabaseFyeCampaignPlanStatus(
   const result = data as { id?: string } | null;
   if (!result?.id) throw new Error("Unable to update campaign plan status: database did not return an ID");
   return result.id;
+}
+
+// --- Configurable legal-text fields (project brief section 2). Reads are
+// plain selects (RLS: authenticated may select both tables - see
+// supabase/migrations/202610080001_legal_text_documents.sql); the only
+// write path is the update_legal_text_document() SECURITY DEFINER RPC,
+// which re-checks the caller's role itself, bumps the version, appends to
+// legal_text_document_versions, and writes its own audit_logs entry -
+// never a direct table update from here.
+
+type LegalTextDocumentRow = {
+  document_key: LegalTextDocumentKey;
+  title: string;
+  content: string;
+  version: number;
+  updated_by: string;
+  updated_at: string;
+};
+
+type LegalTextDocumentVersionRow = {
+  document_key: LegalTextDocumentKey;
+  version: number;
+  content: string;
+  updated_by: string;
+  created_at: string;
+};
+
+function mapLegalTextDocument(row: LegalTextDocumentRow): LegalTextDocument {
+  return {
+    documentKey: row.document_key,
+    title: row.title,
+    content: row.content,
+    version: row.version,
+    updatedBy: row.updated_by,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapLegalTextDocumentVersion(row: LegalTextDocumentVersionRow): LegalTextDocumentVersion {
+  return {
+    documentKey: row.document_key,
+    version: row.version,
+    content: row.content,
+    updatedBy: row.updated_by,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchSupabaseLegalTextDocuments(client: SupabaseClient): Promise<LegalTextDocument[]> {
+  const { data, error } = await client.from("legal_text_documents").select("*").order("document_key", { ascending: true });
+  fail("Unable to load legal text documents", error);
+  return ((data ?? []) as LegalTextDocumentRow[]).map(mapLegalTextDocument);
+}
+
+export async function fetchSupabaseLegalTextDocumentVersions(
+  client: SupabaseClient,
+  documentKey: LegalTextDocumentKey,
+): Promise<LegalTextDocumentVersion[]> {
+  const { data, error } = await client
+    .from("legal_text_document_versions")
+    .select("*")
+    .eq("document_key", documentKey)
+    .order("version", { ascending: false });
+  fail("Unable to load legal text document history", error);
+  return ((data ?? []) as LegalTextDocumentVersionRow[]).map(mapLegalTextDocumentVersion);
+}
+
+export async function updateSupabaseLegalTextDocument(
+  client: SupabaseClient,
+  input: { documentKey: LegalTextDocumentKey; content: string },
+): Promise<LegalTextDocument> {
+  const { data, error } = await client.rpc("update_legal_text_document", {
+    p_document_key: input.documentKey,
+    p_content: input.content,
+  });
+  fail("Unable to update legal text document", error);
+  const result = data as { documentKey?: string; title?: string; content?: string; version?: number; updatedBy?: string; updatedAt?: string } | null;
+  if (!result?.documentKey) throw new Error("Unable to update legal text document: database did not return the saved document");
+  return {
+    documentKey: result.documentKey as LegalTextDocumentKey,
+    title: result.title ?? "",
+    content: result.content ?? "",
+    version: result.version ?? 1,
+    updatedBy: result.updatedBy ?? "",
+    updatedAt: result.updatedAt ?? new Date().toISOString(),
+  };
 }

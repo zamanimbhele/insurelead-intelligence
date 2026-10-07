@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { consultationFormSchema } from "@/lib/validation/consultationSchema";
-import { appendRuntimeAuditLog, captureRuntimeLead, hasRuntimeDuplicate } from "@/lib/runtime-data";
+import { appendRuntimeAuditLog, captureRuntimeLead, getRuntimeLegalTextDocument, hasRuntimeDuplicate } from "@/lib/runtime-data";
 import { scoreLead } from "@/lib/scoring";
 import { CONSENT_WORDING_VERSION } from "@/lib/constants";
 import type { ConsentRecord, Lead } from "@/lib/types";
@@ -17,6 +17,23 @@ const HIGH_PRIORITY_INDUSTRIES = new Set([
   "Technology and IT Services",
 ]);
 const HIGH_INTENT_CAMPAIGNS = new Set(["google-ads-fye-review", "webinar-cyber-risk", "referral-partner-network"]);
+
+// The live, currently-published version of the "consent_wording" legal
+// text document (project brief section 2 / BACKLOG.md "Configurable
+// legal-text fields") - a compliance admin bumps this just by editing the
+// wording at /dashboard/legal-content, so every lead's consent record
+// stays traceable to the exact text the applicant actually saw. Falls
+// back to the static CONSENT_WORDING_VERSION constant only if that fetch
+// itself fails, so a transient data-layer issue never blocks a lead
+// submission outright.
+async function resolveConsentWordingVersion(): Promise<string> {
+  try {
+    const document = await getRuntimeLegalTextDocument("consent_wording");
+    return `v${document.version}`;
+  } catch {
+    return CONSENT_WORDING_VERSION;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -118,7 +135,7 @@ export async function POST(req: NextRequest) {
       maxPartnerRecipients: Number(data.maxPartnerRecipients) as 1 | 3,
       accuracyConfirmed: data.accuracyConfirmed,
       nonBindingAcknowledged: data.nonBindingAcknowledged,
-      consentWordingVersion: CONSENT_WORDING_VERSION,
+      consentWordingVersion: await resolveConsentWordingVersion(),
       sourceUrl: body?.sourceUrl ?? "",
     };
 

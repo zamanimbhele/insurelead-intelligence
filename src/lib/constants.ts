@@ -13,6 +13,7 @@ import type {
   LeadInteractionChannel,
   LeadInteractionOutcome,
   LeadStatus,
+  LegalTextDocumentKey,
   OptOutChannel,
   OptOutSource,
 } from "./types";
@@ -309,4 +310,77 @@ export const DATA_SOURCE_REFRESH_FREQUENCIES: { value: DataSourceRefreshFrequenc
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
   { value: "continuous", label: "Continuous" },
+];
+
+// Configurable legal-text fields (project brief section 2) - the 7
+// document keys that exist in legal_text_documents, their display
+// titles, where each is shown on the platform, and the default content a
+// fresh demo dataset or a fresh Supabase database seeds with (see
+// supabase/migrations/202610080001_legal_text_documents.sql - the two
+// must say the same thing so demo and Supabase mode start identical).
+// Paragraphs in a multi-paragraph document are separated by a blank
+// line and rendered as one <p> each - see renderLegalTextParagraphs()
+// in src/lib/lead-utils.ts.
+export const LEGAL_TEXT_DOCUMENT_DEFINITIONS: {
+  key: LegalTextDocumentKey;
+  title: string;
+  shownOn: string;
+  defaultContent: string;
+}[] = [
+  {
+    key: "privacy_notice",
+    title: "Privacy Notice",
+    shownOn: "Privacy Notice page (/privacy)",
+    defaultContent: [
+      'This Privacy Notice explains how InsureLead Intelligence (the "Platform") collects, uses, and protects information you submit when making a personal or business insurance enquiry.',
+      "What we collect: We collect applicant type, location, selected insurance products, contact details, and, for business enquiries, relevant business details. We do not collect ID numbers, banking details, payment card details, or medical information through this form.",
+      "How we use your information: Your information is used to respond to your enquiry and, when you give partner-sharing consent, match it to no more than the number of approved insurance partners you selected. Optional marketing consent is separate and is not required. We record your campaign source, recipient limit and consent wording.",
+      "Your rights: You may request access to, correction of, or deletion of your information, or ask to be marked Do Not Contact, at any time via our Contact Us page. We will action opt-out and deletion requests in line with our data retention policy.",
+      "Contact: For privacy queries, contact compliance@[configure-domain].co.za.",
+    ].join("\n\n"),
+  },
+  {
+    key: "consent_wording",
+    title: "Consent Wording (Partner Sharing)",
+    shownOn: "Consultation form, Step 4 (Consent) - the partner-sharing consent checkbox",
+    defaultContent:
+      "I consent to InsureLead sharing this enquiry and my contact details with the approved insurance partner limit I select below, so they may contact me about the selected insurance products.",
+  },
+  {
+    key: "contact_permission_wording",
+    title: "Contact Permission Wording",
+    shownOn: "Consultation form, Step 4 (Consent) - the contact-consent checkbox",
+    defaultContent:
+      "I am requesting contact about the insurance products selected and consent to be contacted about this enquiry via my selected contact channel (phone, email, or WhatsApp).",
+  },
+  {
+    key: "marketing_wording",
+    title: "Marketing Communication Wording",
+    shownOn: "Consultation form, Step 4 (Consent) - the optional marketing-consent checkbox",
+    defaultContent:
+      "Optional: I would also like to receive future insurance marketing communications relevant to the interests I selected. I understand I can unsubscribe at any time.",
+  },
+  {
+    key: "fsp_disclosures",
+    title: "Financial Services Provider Disclosures",
+    shownOn: "Terms of Use page (/terms) - FSP Disclosures section",
+    defaultContent:
+      "Financial services provider details and relevant product permissions will be displayed here for each participating broker once configured by an authorised administrator. [Configure FSP name, licence number, and permitted product categories before go-live.]",
+  },
+  {
+    key: "terms_of_use",
+    title: "Terms of Use",
+    shownOn: "Terms of Use page (/terms)",
+    defaultContent: [
+      "By submitting the enquiry form, you confirm that the information provided is accurate to the best of your knowledge and, for a business enquiry, that you are authorised to submit it for the business named.",
+      "Submitting an enquiry through this Platform does not create insurance cover, a binding quote, financial advice, or any contractual relationship. Any recommendations, quotes, or advice will only be provided directly by a licensed broker following review of your enquiry.",
+    ].join("\n\n"),
+  },
+  {
+    key: "data_retention_policy",
+    title: "Data Retention Policy",
+    shownOn: "Privacy Notice page (/privacy) - Data Retention section",
+    defaultContent:
+      "[Configure retention periods per data category - to be set by Compliance Admin before go-live.] The platform-wide lead retention threshold itself is configured separately under Compliance > Retention threshold.",
+  },
 ];

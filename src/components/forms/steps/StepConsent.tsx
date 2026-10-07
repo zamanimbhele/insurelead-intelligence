@@ -1,7 +1,17 @@
 import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import Link from "next/link";
 
-export function StepConsent({ form }: { form: ConsultationFormHandle }) {
+export function StepConsent({
+  form,
+  contactConsentWording,
+  partnerSharingConsentWording,
+  marketingConsentWording,
+}: {
+  form: ConsultationFormHandle;
+  contactConsentWording: string;
+  partnerSharingConsentWording: string;
+  marketingConsentWording: string;
+}) {
   const { register, formState: { errors } } = form;
   return (
     <div className="flex flex-col gap-5">
@@ -23,19 +33,13 @@ export function StepConsent({ form }: { form: ConsultationFormHandle }) {
 
       <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("contactConsent")} />
-        <span>
-          I am requesting contact about the insurance products selected and consent to be contacted about this
-          enquiry via my selected contact channel (phone, email, or WhatsApp).
-        </span>
+        <span>{contactConsentWording}</span>
       </label>
       {errors.contactConsent && <p className="text-xs text-red-600">{errors.contactConsent.message}</p>}
 
       <label className="flex items-start gap-3 rounded-md border border-primary-200 bg-primary-50 p-4 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("partnerSharingConsent")} />
-        <span>
-          I consent to InsureLead sharing this enquiry and my contact details with the approved insurance
-          partner limit I select below, so they may contact me about the selected insurance products.
-        </span>
+        <span>{partnerSharingConsentWording}</span>
       </label>
       {errors.partnerSharingConsent && <p className="text-xs text-red-600">{errors.partnerSharingConsent.message}</p>}
 
@@ -49,11 +53,7 @@ export function StepConsent({ form }: { form: ConsultationFormHandle }) {
 
       <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">
         <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600" {...register("marketingConsent")} />
-        <span>
-          <strong>Optional:</strong> I would also like to receive future insurance marketing communications relevant
-          to the interests I selected.
-          I understand I can unsubscribe at any time.
-        </span>
+        <span>{marketingConsentWording}</span>
       </label>
 
       <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">

@@ -1,45 +1,37 @@
+import { format } from "date-fns";
 import { Section, SectionHeading } from "@/components/ui/Section";
+import { getRuntimeLegalTextDocument } from "@/lib/runtime-data";
+import { renderLegalTextParagraphs } from "@/lib/lead-utils";
 
 export const metadata = { title: "Privacy Notice | InsureLead Intelligence" };
+export const dynamic = "force-dynamic";
 
-// PRODUCTION NOTE: This text is a configurable placeholder. In production it
-// is edited by the Compliance Admin role via application_settings and
-// versioned, with each lead recording the consent wording version shown to
-// them at submission time (see lib/constants.ts CONSENT_WORDING_VERSION).
-export default function PrivacyPage() {
+// This page renders the "privacy_notice" and "data_retention_policy" legal
+// text documents (project brief section 2), editable with version history
+// by a platform or compliance admin at /dashboard/legal-content - see
+// supabase/migrations/202610080001_legal_text_documents.sql. Nothing on
+// this page is hardcoded any more: a published edit there appears here on
+// the next request.
+export default async function PrivacyPage() {
+  const [privacyNotice, dataRetentionPolicy] = await Promise.all([
+    getRuntimeLegalTextDocument("privacy_notice"),
+    getRuntimeLegalTextDocument("data_retention_policy"),
+  ]);
+
   return (
     <Section>
       <SectionHeading eyebrow="Legal" title="Privacy Notice" />
       <div className="prose mt-8 max-w-3xl space-y-4 text-sm text-slate-600">
-        <p>Version: v3.0 - Last updated 9 September 2026 (placeholder - to be reviewed by Compliance Admin).</p>
-        <p>
-          This Privacy Notice explains how InsureLead Intelligence (the &quot;Platform&quot;) collects, uses, and protects
-          information you submit when making a personal or business insurance enquiry.
+        <p className="text-xs text-slate-400">
+          Version v{privacyNotice.version} - last updated {format(new Date(privacyNotice.updatedAt), "d MMMM yyyy")}.
         </p>
-        <h3 className="font-semibold text-slate-900">What we collect</h3>
-        <p>
-          We collect applicant type, location, selected insurance products, contact details, and, for business
-          enquiries, relevant business details. We do not collect ID numbers, banking details, payment card details,
-          or medical information through this form.
-        </p>
-        <h3 className="font-semibold text-slate-900">How we use your information</h3>
-        <p>
-          Your information is used to respond to your enquiry and, when you give partner-sharing consent, match it
-          to no more than the number of approved insurance partners you selected. Optional marketing consent is
-          separate and is not required. We record your campaign source, recipient limit and consent wording.
-        </p>
-        <h3 className="font-semibold text-slate-900">Your rights</h3>
-        <p>
-          You may request access to, correction of, or deletion of your information, or ask to be marked Do Not
-          Contact, at any time via our Contact Us page. We will action opt-out and deletion requests in line with
-          our data retention policy.
-        </p>
+        {renderLegalTextParagraphs(privacyNotice.content).map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
         <h3 className="font-semibold text-slate-900">Data retention</h3>
-        <p>
-          [Configure retention periods per data category - to be set by Compliance Admin before go-live.]
-        </p>
-        <h3 className="font-semibold text-slate-900">Contact</h3>
-        <p>For privacy queries, contact compliance@[configure-domain].co.za.</p>
+        {renderLegalTextParagraphs(dataRetentionPolicy.content).map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
       </div>
     </Section>
   );
