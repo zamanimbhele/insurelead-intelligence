@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDashboardLeads } from "@/lib/dashboard-data";
 import { BarChartCard } from "@/components/dashboard/BarChartCard";
-import { Building2, MapPin, TrendingUp, Info } from "lucide-react";
+import { Building2, CalendarClock, MapPin, Info } from "lucide-react";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
 
 export const metadata = { title: "Market Intelligence | InsureLead Intelligence" };
@@ -97,17 +97,21 @@ export default async function MarketIntelligencePage() {
         </Link>
       </section>
 
-      <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-          <TrendingUp className="h-4 w-4 text-slate-400" /> Still to come
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <CalendarClock className="h-4 w-4 text-primary-600" /> Financial Year-End Campaign Planner
         </h2>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">
-          A financial-year-end campaign planner with reminders and broker follow-up task lists. This remains scoped
-          in the Phase 2 backlog document delivered alongside this prototype.
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Not every business shares the same financial year-end - a 12-month calendar of already-captured leads by
+          their own financial-year-end month, a results breakdown by sector and location, campaign reminders, and
+          bulk broker follow-up task lists, all without assuming a single national cycle.
         </p>
-        <div className="mt-4 text-xs font-medium text-slate-400">
-          Backlog: FYE Campaign Planner
-        </div>
+        <Link
+          href="/dashboard/market-intelligence/fye-planner"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 hover:underline"
+        >
+          Open FYE Campaign Planner
+        </Link>
       </section>
     </div>
   );

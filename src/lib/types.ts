@@ -386,7 +386,8 @@ export interface AuditLogEntry {
     | "task"
     | "opt_out"
     | "data_subject_request"
-    | "data_source";
+    | "data_source"
+    | "fye_campaign_plan";
   entityId: string;
   action: string;
   actor: string;
@@ -560,4 +561,30 @@ export interface IndustryOpportunity {
   opportunityScore: number;
   opportunityExplanation: string;
   computedAt: string;
+}
+
+// Financial-Year-End Campaign Planner (project brief section 8). A plan is
+// a lightweight reminder/calendar entry - "reach out to businesses whose
+// financial year-end is March, starting in January" - not a full outbound
+// email campaign. That heavier system (audience rules, content versions,
+// Resend delivery, tenant scoping) already exists for broker-run
+// campaigns - see Campaign/CampaignContentVersion above and
+// src/mcp/campaign-tools.ts - and is out of scope here; this planner only
+// ever creates broker follow-up tasks (LeadTask, already-shipped) and
+// plan/reminder records, never sends anything itself.
+export type FyeCampaignPlanStatus = "planned" | "active" | "completed" | "cancelled";
+
+export interface FinancialYearCampaignPlan {
+  id: string;
+  title: string;
+  // The FYE month this plan targets (businesses whose financialYearEndMonth
+  // matches) - distinct from plannedContactMonth, which is when brokers
+  // should actually start reaching out (typically earlier in the year).
+  fyeMonth: string;
+  plannedContactMonth: string;
+  notes?: string;
+  status: FyeCampaignPlanStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }

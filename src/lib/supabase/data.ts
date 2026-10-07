@@ -17,6 +17,8 @@ import type {
   DataSubjectRequest,
   DataSubjectRequestStatus,
   DataSubjectRequestType,
+  FinancialYearCampaignPlan,
+  FyeCampaignPlanStatus,
   Lead,
   LeadActivity,
   LeadActivityKind,
@@ -1118,5 +1120,75 @@ export async function decideSupabaseDataSourceApproval(
   fail("Unable to record the data source approval decision", error);
   const result = data as { id?: string } | null;
   if (!result?.id) throw new Error("Unable to record the data source approval decision: database did not return an ID");
+  return result.id;
+}
+
+// --- Financial-Year-End Campaign Planner. Every write goes through a
+// SECURITY DEFINER RPC in
+// supabase/migrations/202610060001_fye_campaign_planner.sql, not a direct
+// table insert/update - the authenticated role has select-only access.
+
+type FinancialYearCampaignPlanRow = {
+  id: string;
+  title: string;
+  fye_month: string;
+  planned_contact_month: string;
+  notes: string | null;
+  status: FyeCampaignPlanStatus;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapFinancialYearCampaignPlan(row: FinancialYearCampaignPlanRow): FinancialYearCampaignPlan {
+  return {
+    id: row.id,
+    title: row.title,
+    fyeMonth: row.fye_month,
+    plannedContactMonth: row.planned_contact_month,
+    notes: optional(row.notes),
+    status: row.status,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function fetchSupabaseFyeCampaignPlans(client: SupabaseClient): Promise<FinancialYearCampaignPlan[]> {
+  const { data, error } = await client
+    .from("financial_year_calendars")
+    .select("*")
+    .order("created_at", { ascending: false });
+  fail("Unable to load FYE campaign plans", error);
+  return ((data ?? []) as FinancialYearCampaignPlanRow[]).map(mapFinancialYearCampaignPlan);
+}
+
+export async function createSupabaseFyeCampaignPlan(
+  client: SupabaseClient,
+  input: { title: string; fyeMonth: string; plannedContactMonth: string; notes?: string },
+) {
+  const { data, error } = await client.rpc("create_fye_campaign_plan", {
+    p_title: input.title,
+    p_fye_month: input.fyeMonth,
+    p_planned_contact_month: input.plannedContactMonth,
+    p_notes: input.notes ?? null,
+  });
+  fail("Unable to create campaign plan", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to create campaign plan: database did not return an ID");
+  return result.id;
+}
+
+export async function updateSupabaseFyeCampaignPlanStatus(
+  client: SupabaseClient,
+  input: { planId: string; status: FyeCampaignPlanStatus },
+) {
+  const { data, error } = await client.rpc("update_fye_campaign_plan_status", {
+    p_plan_id: input.planId,
+    p_status: input.status,
+  });
+  fail("Unable to update campaign plan status", error);
+  const result = data as { id?: string } | null;
+  if (!result?.id) throw new Error("Unable to update campaign plan status: database did not return an ID");
   return result.id;
 }

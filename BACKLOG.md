@@ -106,8 +106,32 @@ Priced in the accompanying quotation.
   in continuously; `data/leads.json` was also deterministically backfilled with a `renewalMonth`
   per lead (same id-derived, non-randomised technique as the earlier `suburb` backfill) so the
   renewal-urgency column has real demo data to show.
-- Financial-year-end campaign planner: filter by FYE month, campaign calendar, broker follow-up
-  task lists, results tracking by month/sector/location/need.
+- Financial-Year-End Campaign Planner completed: a `/dashboard/market-intelligence/fye-planner`
+  page that groups already-captured leads by each business's own `financialYearEndMonth` -
+  the brief is explicit not every business has a March year-end, so nothing here assumes a
+  single national cycle. A 12-month calendar grid shows lead volume per month and highlights
+  any month whose next occurrence falls within `FYE_PLANNING_WINDOW_DAYS` (90 days -
+  intentionally wider than the industry dashboard's 45-day renewal-urgency window, since a
+  year-end review is planned well ahead of time rather than reacted to). Selecting a month
+  shows a results breakdown by sector and location plus its top insurance need and conversion
+  rate ("track campaign results by month, sector, location, and insurance need" - brief
+  section 8), computed from one shared leads fetch (`getFyePlannerData()` in
+  `src/lib/dashboard-data.ts`) rather than one query per month. A platform admin, broker
+  manager, or marketing analyst (`canManageCampaignPlanning()` in `src/lib/auth.ts` - the same
+  three roles `src/mcp/campaign-tools.ts` already grants campaign-creation to) can create a
+  lightweight campaign "plan" - a reminder/calendar entry only, never an outbound send itself
+  (that heavier system - audience rules, content versions, Resend delivery - already exists
+  separately for tenant-scoped broker campaigns) - and move it through planned/active/
+  completed/cancelled, backed by a new `financial_year_calendars` table and two SECURITY
+  DEFINER RPCs following the same lockdown pattern as the Data Source Registry (select-only for
+  the authenticated role, every write re-checks the caller's role server-side). A platform
+  admin or broker operator (`canUpdateLeadStatus()`, already used for the single-task form on a
+  lead's profile) can bulk-create one ordinary broker follow-up task per eligible lead in the
+  selected month - never do-not-contact, never already redacted - by re-running the exact same
+  per-lead task-creation path (and, in Supabase mode, the exact same `create_lead_task` RPC
+  with its own org-allocation check) once per lead, so a bulk batch can never create a task
+  anywhere a broker couldn't already create one by hand. The Market Intelligence overview page
+  links through to it the same way it links to Geographic Hotspots and Industry Opportunity.
 - Data Source Registry completed: a dedicated `/dashboard/data-sources` page where a platform or
   compliance admin registers every source of business or contact information the platform uses -
   category restricted to the brief's allowed list (website forms, referral partners, approved

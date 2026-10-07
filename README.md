@@ -75,6 +75,16 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   10% is flagged "Needs attention" with a plain-language reason - a flag for a human to
   review, never an automatic action - and three callout cards surface the highest-volume,
   fastest-growing, and best-converting industry.
+- A Financial-Year-End Campaign Planner (`/dashboard/market-intelligence/fye-planner`): groups
+  already-captured leads by each business's own financial-year-end month - never assumes a
+  single national (e.g. March) cycle. A 12-month calendar highlights months inside the
+  90-day planning window; selecting a month shows a results breakdown by sector and location,
+  its top insurance need, and its conversion rate. A platform admin, broker manager, or
+  marketing analyst can create a lightweight campaign plan (a reminder/calendar entry only,
+  never an outbound send) and move it through planned/active/completed/cancelled. A platform
+  admin or broker operator can bulk-create ordinary broker follow-up tasks for every eligible
+  lead in a selected month, reusing the exact same per-lead task-creation path (and its
+  org-allocation check) a single task already goes through.
 - An opt-out and data subject request workflow on the Compliance dashboard: a log of opt-out
   requests received outside a form submission (processing one sets the linked lead to Do Not
   Contact), and a POPIA access/correction/deletion request log with a 30-day due date and status
