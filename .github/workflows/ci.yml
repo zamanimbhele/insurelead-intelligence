@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Lint, build, and E2E tests
+    name: Lint, unit tests, build, and E2E tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -31,6 +31,9 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm run test:unit
 
       - name: Verify broker tenancy matching
         run: npm run test:tenancy

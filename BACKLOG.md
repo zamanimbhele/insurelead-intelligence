@@ -212,7 +212,26 @@ Priced in the accompanying quotation.
   planner.ts`. Role-restricted, audited exports for the broader reporting suite below (leads by
   source/broker/industry/etc., with time-limited links) remain open - this item covers the audit
   log itself.
-- Automated test suite: Vitest (unit) and Playwright (end-to-end).
+- Automated test suite completed: Vitest unit tests (`vitest.config.ts`, scoped to
+  `src/**/*.test.ts` with a Node environment - no DOM or Next.js runtime, since route/page/
+  component behaviour already belongs to the Playwright suite below, not here) against every
+  pure computation module the platform's scoring, Market Intelligence, audit log, and
+  compliance features are built on - `scoring.ts`, `aggregation-utils.ts`, `hotspots.ts`,
+  `industries.ts`, `fye-planner.ts`, `lead-utils.ts`, `audit-log.ts` - plus the consultation
+  form's Zod validation schema (every required-consent literal, the honeypot field, the
+  business-vs-individual product/cover consistency rules). 106 tests across 8 files, wired into
+  `.github/workflows/ci.yml` as its own step (`npm run test:unit`) between type-checking and the
+  existing tenancy/campaign verification scripts, ahead of the production build and the
+  Playwright end-to-end suite that was already in place. Known trade-off: vitest@5 (and its
+  fixed `@vitest/mocker` advisory) requires Node >=22.12 at runtime, but CI and the documented
+  local dev setup are pinned to Node 20.19 (a Next.js 16/React 19 compatibility decision outside
+  this item's scope) - so this uses vitest@3.2.7 instead, a dev-only test-runner dependency never
+  shipped to the production bundle, with one known moderate/critical advisory in its own mocking
+  internals that would require a wider Node-version bump to clear. Separately and pre-existing,
+  unrelated to this item: `npm audit` also flags a critical Next.js advisory (GHSA-vcvr-r3jv-pc5j,
+  `next/og` ImageResponse) and a critical `sharp` advisory already present in the dependency tree
+  before this change - both are production dependencies and worth their own deliberate upgrade
+  decision, not bundled into this test-infrastructure item.
 - Accessibility review and security review checklist.
 - Demo data reset process and seeded demo accounts per role.
 

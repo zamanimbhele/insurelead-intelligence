@@ -122,8 +122,8 @@ the project's build specification and priced in the accompanying quotation.
 ## Tech stack
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Supabase · React Hook Form · Zod ·
-Recharts · Lucide icons · Playwright (E2E) · GitHub Actions (CI). No database is required in demo
-mode — see "Moving to Production" below.
+Recharts · Lucide icons · Vitest (unit) · Playwright (E2E) · GitHub Actions (CI). No database is
+required in demo mode — see "Moving to Production" below.
 
 ## Getting started
 
@@ -185,11 +185,39 @@ Then follow [`docs/PILOT_HARDENING.md`](docs/PILOT_HARDENING.md) before acceptin
 
 ## Testing
 
-End-to-end tests use [Playwright](https://playwright.dev) and cover the platform's core MVP
-acceptance criteria: the public site renders, the four-step consultation form validates input and
-gates submission on required consent, a completed submission lands on a generic thank-you page
-with no PII in the URL, and the internal dashboard (overview, leads list, lead detail, market
-intelligence) renders against the seeded demo data.
+Two layers, per the brief's own tech stack (section 3): [Vitest](https://vitest.dev) for unit
+tests against pure, framework-free logic, and [Playwright](https://playwright.dev) for end-to-end
+tests that exercise real pages against the seeded demo data.
+
+### Unit tests (Vitest)
+
+`vitest.config.ts` scopes unit tests to `src/**/*.test.ts` only (`environment: "node"`, no DOM,
+no Next.js runtime) - route/page/component behaviour belongs in the E2E suite below, not here.
+Coverage currently spans every pure computation module the Market Intelligence, scoring, audit
+log, and compliance features are built on, plus the consultation form's Zod validation schema:
+`scoring.ts` (lead scoring and opportunity scoring - every point rule, band boundary, and the Do
+Not Contact override), `aggregation-utils.ts` (growth/conversion rate math, including the "null,
+never a fabricated 0%" cases, and the renewal/FYE month-distance calculation), `hotspots.ts` and
+`industries.ts` (grouping, minimum-threshold suppression, and sorting for both Market Intelligence
+dashboards), `fye-planner.ts` (the 12-month calendar, per-month breakdown, and bulk-follow-up
+eligibility), `lead-utils.ts` (display name resolution, Do Not Contact status transitions, and the
+five-check consent validity rule), `audit-log.ts` (filtering and CSV export, including comma/
+quote/newline escaping), and `validation/consultationSchema.ts` (every required-consent literal,
+the honeypot field, the business-vs-individual product/cover consistency rules, and the business-
+only required-field set).
+
+```bash
+npm run test:unit         # run once
+npm run test:unit:watch   # watch mode, useful while developing
+```
+
+### End-to-end tests (Playwright)
+
+Cover the platform's core MVP acceptance criteria: the public site renders, the four-step
+consultation form validates input and gates submission on required consent, a completed submission
+lands on a generic thank-you page with no PII in the URL, and the internal dashboard (overview,
+leads list, lead detail, market intelligence, compliance, audit log) renders against the seeded
+demo data.
 
 ```bash
 npx playwright install --with-deps chromium   # first time only
@@ -210,8 +238,8 @@ regenerate clean seed data afterwards with `node scripts/generate-seed.mjs` if i
 ### CI pipeline
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`: install → `eslint .` →
-`tsc --noEmit` → `next build` → install Playwright's Chromium browser → run the E2E suite. The
-Playwright HTML report is uploaded as a build artifact on every run (and screenshots/traces are
+`tsc --noEmit` → `vitest run` → `next build` → install Playwright's Chromium browser → run the E2E
+suite. The Playwright HTML report is uploaded as a build artifact on every run (and screenshots/traces are
 attached on failure) so a failing run in GitHub Actions can be diagnosed without reproducing it
 locally.
 
