@@ -9,7 +9,6 @@ import {
   ShieldOff,
   AlertTriangle,
   Archive,
-  Database,
   Download,
   UserMinus,
   UserCog,
@@ -56,32 +55,6 @@ function LeadExceptionCard({
       {totalCount > leads.length && (
         <p className="mt-3 text-xs text-slate-400">Showing {leads.length} of {totalCount}. Open Leads and filter for the full list.</p>
       )}
-    </div>
-  );
-}
-
-function PlaceholderCard({
-  icon: Icon,
-  title,
-  description,
-  backlogItem,
-}: {
-  icon: typeof Database;
-  title: string;
-  description: string;
-  backlogItem: string;
-}) {
-  return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-slate-400" />
-        <h3 className="text-sm font-semibold text-slate-600">{title}</h3>
-        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
-          Planned
-        </span>
-      </div>
-      <p className="mt-2 text-sm text-slate-500">{description}</p>
-      <p className="mt-3 text-xs font-medium text-slate-400">Backlog: {backlogItem}</p>
     </div>
   );
 }
@@ -286,16 +259,33 @@ export function ComplianceDashboard({ overview, canManage }: { overview: Complia
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Not yet available</h2>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <PlaceholderCard
-            icon={Download}
-            title="Export activity"
-            description="Who exported what, when, with which filters, and how many records - role-restricted and fully audited."
-            backlogItem="Role-restricted, audited CSV/report exports"
-          />
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Download className="h-4 w-4 text-primary-600" /> Export activity
+            </h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Every CSV export is role-restricted and logs who exported what, when, with which filters, and how many
+              records - browse the full trail, or export it yourself, on the Audit Log page.
+            </p>
+          </div>
+          <Link href="/dashboard/audit-log" className="flex-shrink-0 text-xs font-semibold text-primary-700 hover:underline">
+            Open audit log
+          </Link>
         </div>
+        {overview.exportActivity.count === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">No exports have been made yet.</p>
+        ) : (
+          <p className="mt-4 text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{overview.exportActivity.count}</span> export
+            {overview.exportActivity.count === 1 ? "" : "s"} logged
+            {overview.exportActivity.lastExportAt
+              ? `, most recently ${format(new Date(overview.exportActivity.lastExportAt), "d MMM yyyy, HH:mm")}`
+              : ""}
+            .
+          </p>
+        )}
       </div>
     </div>
   );

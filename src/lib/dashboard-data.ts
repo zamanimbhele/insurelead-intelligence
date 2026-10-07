@@ -1,5 +1,6 @@
 import {
   getApplicationSettings as getDemoApplicationSettings,
+  getAuditLog as getDemoAuditLog,
   getConsents as getDemoConsents,
   getDataSources as getDemoDataSources,
   getFyeCampaignPlans as getDemoFyeCampaignPlans,
@@ -10,6 +11,8 @@ import { computeGeoHotspots } from "./hotspots";
 import { computeIndustryOpportunities } from "./industries";
 import { computeFyeCalendar, computeFyeMonthBreakdown, leadsForFyeFollowUp } from "./fye-planner";
 import { MONTH_NAMES } from "./aggregation-utils";
+import { filterAuditLog } from "./audit-log";
+import type { AuditLogFilters } from "./audit-log";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import {
@@ -26,6 +29,7 @@ import {
   fetchSupabaseConsents,
   fetchSupabaseDataSources,
   fetchSupabaseDataSubjectRequests,
+  fetchSupabaseAuditLog,
   fetchSupabaseFyeCampaignPlans,
   fetchSupabaseLead,
   fetchSupabaseLeadActivities,
@@ -52,6 +56,7 @@ import type {
   DataSourceRefreshFrequency,
   DataSubjectRequest,
   DataSubjectRequestStatus,
+  AuditLogEntry,
   DataSubjectRequestType,
   FinancialYearCampaignPlan,
   FyeCampaignPlanStatus,
@@ -376,6 +381,9 @@ export type ComplianceOverview = {
   // suspend) lives on its own /dashboard/data-sources page; this is what
   // the Compliance overview's "Data source approvals" widget needs.
   dataSourceRegistry: { pendingCount: number; approvedCount: number; rejectedCount: number; suspendedCount: number; totalCount: number };
+  // Sourced from audit_logs entries this platform wrote for its own CSV
+  // exports (entity "export") - see src/app/api/audit-log/export/route.ts.
+  exportActivity: { count: number; lastExportAt?: string };
 };
 
 // A lead in one of these statuses no longer needs an active broker
@@ -455,6 +463,8 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
   }
 
   const assignedLeadIds = await getActiveAllocationLeadIds();
+  // getDashboardAuditLog() already sorts most-recent-first, so [0] below is the last export.
+  const exportLogEntries = await getDashboardAuditLog({ entity: "export" });
   const invalidConsentLeads = leads.filter((lead) => !isConsentValid(consentByLeadId.get(lead.id)));
   const doNotContactLeads = leads.filter((lead) => lead.doNotContact);
   const unassignedLeads = leads.filter((lead) => isLeadUnassigned(lead, assignedLeadIds));
@@ -514,6 +524,10 @@ export async function getComplianceOverview(): Promise<ComplianceOverview> {
       rejectedCount: dataSources.filter((source) => source.approvalStatus === "rejected").length,
       suspendedCount: dataSources.filter((source) => source.approvalStatus === "suspended").length,
       totalCount: dataSources.length,
+    },
+    exportActivity: {
+      count: exportLogEntries.length,
+      lastExportAt: exportLogEntries[0]?.timestamp,
     },
   };
 }
@@ -670,4 +684,26 @@ export async function decideDashboardDataSourceApproval(
   }
   const id = await decideSupabaseDataSourceApproval(await requireServerClient(), { dataSourceId, decision, notes, allowedForMarketing });
   return { id };
+}
+
+// --- Audit Log Viewer (project brief Phase 5: "Audit log viewer"). No new
+// RLS was needed for viewing - audit_logs already grants select to every
+// authenticated role, with row-level policies (platform admins, compliance
+// auditors, and a broker's own organisation-scoped entries) from
+// 202609110001_multi_broker_tenancy.sql. This only adds a way to browse
+// and filter what was already being written on every mutation across the
+// app, plus a CSV export of that filtered view (see audit-log route).
+
+// "Most recent N" rather than the whole table - this is a browsing/export
+// tool for recent activity, not a data warehouse query, and an unbounded
+// fetch would only get slower as the audit trail grows. The viewer and the
+// export route both say so explicitly rather than implying completeness.
+const MAX_AUDIT_LOG_ROWS = 500;
+
+export async function getDashboardAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogEntry[]> {
+  const entries =
+    getDataMode() === "demo"
+      ? getDemoAuditLog()
+      : await fetchSupabaseAuditLog(await requireServerClient(), MAX_AUDIT_LOG_ROWS);
+  return filterAuditLog(entries, filters).slice(0, MAX_AUDIT_LOG_ROWS);
 }

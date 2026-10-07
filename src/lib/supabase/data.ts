@@ -16,6 +16,7 @@ import type {
   DataSourceRefreshFrequency,
   DataSubjectRequest,
   DataSubjectRequestStatus,
+  AuditLogEntry,
   DataSubjectRequestType,
   FinancialYearCampaignPlan,
   FyeCampaignPlanStatus,
@@ -604,15 +605,67 @@ export async function updateSupabaseLead(
 export async function appendSupabaseAuditLog(
   client: SupabaseClient,
   entry: { entity: string; entityId: string; action: string; actor: string; details?: string },
-) {
-  const { error } = await client.from("audit_logs").insert({
-    entity_type: entry.entity,
-    entity_id: entry.entityId,
-    action: entry.action,
-    actor_label: entry.actor,
-    details: entry.details ? { message: entry.details } : {},
-  });
+): Promise<string | undefined> {
+  const { data, error } = await client
+    .from("audit_logs")
+    .insert({
+      entity_type: entry.entity,
+      entity_id: entry.entityId,
+      action: entry.action,
+      actor_label: entry.actor,
+      details: entry.details ? { message: entry.details } : {},
+    })
+    .select("id")
+    .single();
   fail("Unable to write audit log", error);
+  return (data as { id?: string } | null)?.id;
+}
+
+type AuditLogRow = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  actor_label: string | null;
+  created_at: string;
+  details: Record<string, unknown> | null;
+};
+
+function mapAuditLogEntry(row: AuditLogRow): AuditLogEntry {
+  // appendSupabaseAuditLog() above stores a plain-string detail as
+  // {message: "..."} ; an RPC-written entry (e.g. create_data_source())
+  // stores a richer jsonb object directly. Render the common single-message
+  // case as plain text rather than {"message":"..."}.
+  const details = row.details && Object.keys(row.details).length > 0
+    ? typeof row.details.message === "string" && Object.keys(row.details).length === 1
+      ? row.details.message
+      : JSON.stringify(row.details)
+    : undefined;
+
+  return {
+    id: row.id,
+    entity: row.entity_type as AuditLogEntry["entity"],
+    entityId: row.entity_id,
+    action: row.action,
+    actor: row.actor_label ?? "unknown",
+    timestamp: row.created_at,
+    details,
+  };
+}
+
+// Audit Log Viewer (project brief Phase 5). Capped at `limit` most recent
+// entries - filterAuditLog() in src/lib/audit-log.ts then narrows this set
+// further, both for the viewer's own display and for a CSV export, which
+// re-fetches and re-filters independently rather than trusting whatever a
+// client happens to have in memory.
+export async function fetchSupabaseAuditLog(client: SupabaseClient, limit: number): Promise<AuditLogEntry[]> {
+  const { data, error } = await client
+    .from("audit_logs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  fail("Unable to load audit log", error);
+  return ((data ?? []) as AuditLogRow[]).map(mapAuditLogEntry);
 }
 
 // Dashboard-initiated lead status changes (the Kanban board, and its

@@ -25,15 +25,20 @@ test.describe("Compliance dashboard (synthetic demo data)", () => {
     await expect(page.getByRole("heading", { name: "Unassigned leads" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Retention exceptions" })).toBeVisible();
 
-    // Only audited exports genuinely aren't built yet - the dashboard says so
-    // rather than faking the data, which guards against someone silently
-    // papering over that with mock numbers later. The opt-out/data-subject-
-    // request workflow and the Data Source Registry are both real now (see
-    // below and data-source-registry.spec.ts), so neither is a placeholder
-    // any more.
-    await expect(page.getByText("Not yet available")).toBeVisible();
+    // Export activity is now a real widget backed by the audit log, not a
+    // placeholder - see audit-log.spec.ts for the full Audit Log page. No
+    // "Planned"/"Not yet available" placeholders remain on this dashboard
+    // any more (the opt-out/data-subject-request workflow and the Data
+    // Source Registry were both already real - see below and
+    // data-source-registry.spec.ts).
+    await expect(page.getByText("Not yet available")).not.toBeVisible();
+    await expect(page.getByText("Planned")).toHaveCount(0);
     await expect(page.getByText("Export activity")).toBeVisible();
-    await expect(page.getByText("Planned")).toHaveCount(1);
+    await expect(page.getByRole("link", { name: "Open audit log" })).toBeVisible();
+    // Either "No exports have been made yet." or a real "<n> export(s)
+    // logged" sentence - never hardcode which, since this grows with every
+    // audit-log export triggered across local/CI runs.
+    await expect(page.getByText(/No exports have been made yet\.|exports? logged/)).toBeVisible();
 
     // Data Source Registry summary: a real pending/approved/rejected/
     // suspended count, not a placeholder, linking through to the full

@@ -45,10 +45,10 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   and a deployment-readiness endpoint at `/api/health`.
 - A Compliance dashboard (`/dashboard/compliance`): consent coverage, leads without a valid
   consent record, Do Not Contact count, unassigned leads, retention exceptions against a
-  configurable, admin-editable retention threshold, opt-out/data-subject-request counts, and a
-  Data Source Registry summary - gated to platform admins, compliance admins, and (read-only)
-  compliance auditors. Only the export-activity widget remains an explicit "not yet available"
-  placeholder, not fabricated data.
+  configurable, admin-editable retention threshold, opt-out/data-subject-request counts, a
+  Data Source Registry summary, and real export activity (count and most recent export, linking
+  through to the Audit Log below) - gated to platform admins, compliance admins, and (read-only)
+  compliance auditors. No placeholder widgets remain on this dashboard.
 - A Data Source Registry (`/dashboard/data-sources`): every source of business or contact
   information the platform uses, registered with its category (restricted to the project brief's
   allowed list - no scraping), legal basis, consent status, licence reference, retention period,
@@ -98,16 +98,26 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   status/Do Not Contact changes. Moving a lead to Lost now requires a loss reason, which is recorded
   on the lead and surfaced on the timeline. All writes share the Kanban board's authorisation model
   (platform admin, or a broker operator with an accepted allocation on the lead).
+- An Audit Log Viewer (`/dashboard/audit-log`): browses the platform's existing `audit_logs` table -
+  nearly every mutation across the app already writes to it - with filters by entity, action/actor
+  text, and date range. Viewing is gated to platform admins, compliance admins, and (read-only)
+  compliance auditors, same as the Compliance dashboard; a stricter platform-admin/compliance-admin-
+  only check additionally gates a "Export filtered CSV" button. The export re-derives and re-filters
+  the entries server-side (never trusting whatever the client happens to have in memory), embeds its
+  own metadata header in the CSV (exported by, export date, filters, record count, and a genuine
+  audit-log reference), and is itself an audited action. No new database migration was needed - the
+  existing `audit_logs` table and RLS already covered the read path.
 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): broker invitation UI, the industry opportunity dashboard, the
-financial year-end campaign planner, audited CSV export controls,
-buyer self-service, contracting, invoicing/payment collection, and a proactive due/overdue task
-notification mechanism (tasks themselves are built - see above; the opt-out/data-subject-request
-workflow is also built - see above). The full scope is documented in the project's build
-specification and priced in the accompanying quotation.
+build (see `BACKLOG.md`): broker invitation UI, broader role-restricted/audited exports for the
+full reporting suite (leads by source/broker/industry/etc., with time-limited links - the audit
+log's own CSV export is built, see above), buyer self-service, contracting, invoicing/payment
+collection, and a proactive due/overdue task notification mechanism (tasks themselves are built -
+see above; the opt-out/data-subject-request workflow, industry opportunity dashboard, and
+financial year-end campaign planner are also built - see above). The full scope is documented in
+the project's build specification and priced in the accompanying quotation.
 
 ## Tech stack
 
