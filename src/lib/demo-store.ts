@@ -31,6 +31,7 @@ import type {
   OptOutRequest,
 } from "./types.ts";
 import { DEFAULT_HOTSPOT_MIN_LEAD_THRESHOLD, DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS, LEGAL_TEXT_DOCUMENT_DEFINITIONS } from "./constants.ts";
+import { generateSyntheticLeadSeed } from "./demo-seed-data.ts";
 import { resolveDoNotContactForStatus } from "./lead-utils.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -880,4 +881,64 @@ export function updateLegalTextDocument(key: LegalTextDocumentKey, content: stri
     details: `documentKey=${key} version=${updated.version}`,
   });
   return updated;
+}
+
+
+// --- Demo data reset ------------------------------------------------------
+// Admin-only, demo-mode-only "start over" action - see
+// /dashboard/demo-tools, src/app/(dashboard)/dashboard/actions.ts's
+// resetDemoDataAction(), and BACKLOG.md's "Demo data reset process and
+// seeded demo accounts per role" item. Regenerates leads and consents with
+// a fresh synthetic dataset (the same generator scripts/generate-seed.mjs
+// uses via npm run seed:demo - see demo-seed-data.ts, the single shared
+// source for both) and clears every other mutable demo-mode table back to
+// its built-in default - the same default each getter above already falls
+// back to when its file is missing or empty, so this deliberately does not
+// hand-construct "empty" shapes a second time.
+//
+// Scoped to the lead-intelligence tables this platform's own brief is
+// about. It does NOT touch the separate buyer-marketplace/campaign-
+// orchestration demo tables this codebase also has (allocations.json,
+// buyers.json, campaigns.json, campaign-content-versions.json,
+// campaign-events.json, campaign-recipients.json, marketing-
+// suppressions.json, sending-identities.json) - those belong to a
+// different tenancy/commerce layer with their own lifecycle, and
+// resetting them is a separate concern this item was never asked to cover.
+//
+// Supabase (production-pilot) mode has no equivalent: real pilot data is
+// never reset from the running application. Callers must check
+// getDataMode() === "demo" themselves before calling this - see
+// resetDemoDataAction()'s own explicit check, in addition to the page
+// that renders the control not even existing in Supabase mode.
+export function resetDemoData(actorLabel: string): { leadCount: number; consentCount: number } {
+  const { leads, consents } = generateSyntheticLeadSeed();
+  writeJson(LEADS_FILE, leads);
+  writeJson(CONSENTS_FILE, consents);
+
+  writeJson(LEAD_NOTES_FILE, []);
+  writeJson(LEAD_TASKS_FILE, []);
+  writeJson(LEAD_ACTIVITIES_FILE, []);
+  writeJson(OPT_OUT_REQUESTS_FILE, []);
+  writeJson(DATA_SUBJECT_REQUESTS_FILE, []);
+  writeJson(DATA_SOURCES_FILE, []);
+  writeJson(DATA_SOURCE_APPROVALS_FILE, []);
+  writeJson(FYE_CAMPAIGN_PLANS_FILE, []);
+  writeJson(LEGAL_TEXT_DOCUMENTS_FILE, {});
+  writeJson(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, []);
+  writeJson(APPLICATION_SETTINGS_FILE, {});
+
+  // Audit log cleared last, then re-seeded with exactly one entry
+  // recording the reset itself - an empty audit log after a reset would
+  // read as a bug, not a deliberate fresh start, and every write above is
+  // already consistent with "nothing has happened yet in this workspace".
+  writeJson(AUDIT_FILE, []);
+  appendAuditLog({
+    entity: "demo_data",
+    entityId: "demo_workspace",
+    action: "demo_data_reset",
+    actor: actorLabel,
+    details: `leads=${leads.length} consents=${consents.length}; notes, tasks, activities, opt-outs, data subject requests, data sources, data source approvals, FYE campaign plans, legal text content/history, and application settings were all cleared to their defaults`,
+  });
+
+  return { leadCount: leads.length, consentCount: consents.length };
 }

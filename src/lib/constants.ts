@@ -384,3 +384,86 @@ export const LEGAL_TEXT_DOCUMENT_DEFINITIONS: {
       "[Configure retention periods per data category - to be set by Compliance Admin before go-live.] The platform-wide lead retention threshold itself is configured separately under Compliance > Retention threshold.",
   },
 ];
+
+// --- Demo-mode role switcher ---------------------------------------------
+// Six seeded, 100% synthetic demo accounts - one per role the project
+// brief defines (section 4) plus the read-only Compliance Auditor role
+// already present in auth.ts's AUDIT_ROLES. In demo mode there is no real
+// sign-in, so getDashboardIdentity() picks one of these by role key (via
+// a "demo_role" cookie set by the role switcher in the dashboard sidebar -
+// see src/app/(dashboard)/dashboard/actions.ts and DemoRoleSwitcher.tsx),
+// defaulting to the first entry (Super Admin / platform_admin) when no
+// cookie is set, so every pre-existing e2e test - which assumes full
+// admin access without selecting a role - keeps working unchanged.
+//
+// These are the only role keys isPlatformAdmin()/isComplianceAuditor()/
+// isBrokerUser() (src/lib/auth.ts) ever check against; keep this list and
+// those role sets in agreement if a role is ever added or renamed.
+export type DemoRoleKey =
+  | "platform_admin"
+  | "compliance_admin"
+  | "compliance_auditor"
+  | "broker_admin"
+  | "campaign_manager"
+  | "broker_agent";
+
+export const DEMO_ROLE_COOKIE_NAME = "demo_role";
+
+export const DEMO_ROLE_ACCOUNTS: {
+  role: DemoRoleKey;
+  label: string;
+  displayName: string;
+  email: string;
+  summary: string;
+}[] = [
+  {
+    role: "platform_admin",
+    label: "Super Admin",
+    displayName: "Thandiwe Mokoena",
+    email: "demo.superadmin@example-synthetic.co.za",
+    summary:
+      "Full platform access: users, broker teams, compliance settings, consent wording, lead sources, retention rules, reporting, campaigns, audit logs, and approved brand configuration.",
+  },
+  {
+    role: "compliance_admin",
+    label: "Compliance Admin",
+    displayName: "Naledi Dlamini",
+    email: "demo.complianceadmin@example-synthetic.co.za",
+    summary:
+      "Manages consent wording, privacy notices, marketing permissions, data sources, data retention policy, opt-outs, and data deletion requests. Cannot delete audit logs.",
+  },
+  {
+    role: "compliance_auditor",
+    label: "Compliance Auditor",
+    displayName: "Zinhle Mahlangu",
+    email: "demo.complianceauditor@example-synthetic.co.za",
+    summary:
+      "Read-only oversight: Compliance dashboard, Data Source Registry, Legal Content, the Broker Directory, and the Audit Log. Cannot edit, export, or reset anything.",
+  },
+  {
+    role: "broker_admin",
+    label: "Broker Manager",
+    displayName: "Johan van der Merwe",
+    email: "demo.brokermanager@example-synthetic.co.za",
+    summary:
+      "Views team leads, assigns or reassigns them, manages team dashboards, creates campaigns, and reviews conversion performance.",
+  },
+  {
+    role: "campaign_manager",
+    label: "Marketing Analyst",
+    displayName: "Aisha Patel",
+    email: "demo.marketinganalyst@example-synthetic.co.za",
+    summary:
+      "Views anonymised or aggregated campaign results and market intelligence dashboards, creates campaign records, and reviews attribution performance - not individual lead detail.",
+  },
+  {
+    role: "broker_agent",
+    label: "Broker",
+    displayName: "Sipho Khumalo",
+    email: "demo.broker@example-synthetic.co.za",
+    summary:
+      "Updates lead status, adds notes, logs calls/emails/meetings, creates follow-up tasks, and marks leads won, lost, or do-not-contact.",
+  },
+];
+
+export const DEFAULT_DEMO_ROLE: DemoRoleKey = DEMO_ROLE_ACCOUNTS[0].role;

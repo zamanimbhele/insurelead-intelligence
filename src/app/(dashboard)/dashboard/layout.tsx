@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone, Database, History, FileText } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone, Database, History, FileText, Wrench } from "lucide-react";
 import { canViewCompliance, getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
+import { DemoRoleSwitcher } from "@/components/dashboard/DemoRoleSwitcher";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const identity = await getDashboardIdentity();
@@ -31,6 +32,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           { href: "/dashboard/legal-content", label: "Legal Content", icon: FileText },
           { href: "/dashboard/audit-log", label: "Audit Log", icon: History },
         ]
+      : []),
+    // Demo-mode, platform-admin-only: matches /dashboard/demo-tools's own
+    // page-level gate exactly, so the link is never shown to a role that
+    // would just bounce off an access-denied redirect.
+    ...(identity.mode === "demo" && isPlatformAdmin(identity)
+      ? [{ href: "/dashboard/demo-tools", label: "Demo Tools", icon: Wrench }]
       : []),
   ];
 
@@ -70,7 +77,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </button>
             </form>
           ) : (
-            <p className="mt-2 text-xs font-medium text-amber-600">Synthetic data only</p>
+            <>
+              <p className="mt-2 text-xs font-medium text-amber-600">Synthetic data only</p>
+              <DemoRoleSwitcher currentRole={identity.role} />
+            </>
           )}
         </div>
       </aside>

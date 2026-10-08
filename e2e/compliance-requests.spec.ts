@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-// Demo mode's identity is always "demo_platform_admin" (see getDashboardIdentity()
-// in src/lib/auth.ts), which canManageCompliance() always allows, so these forms
+// Demo mode defaults to the Super Admin ("platform_admin") account unless a
+// different role is selected via the sidebar role switcher (see
+// getDashboardIdentity() / DEFAULT_DEMO_ROLE in src/lib/auth.ts), which canManageCompliance() always allows, so these forms
 // are visible without a separate sign-in step - same assumption compliance.spec.ts
 // (if present) and lead-pipeline.spec.ts make.
 
