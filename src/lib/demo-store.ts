@@ -848,6 +848,27 @@ export function updateLegalTextDocument(key: LegalTextDocumentKey, content: stri
   writeJson(LEGAL_TEXT_DOCUMENTS_FILE, stored);
 
   const versions = readJson<LegalTextDocumentVersion[]>(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, []);
+  // A document's starting version (the seeded default) is never written
+  // anywhere until its first edit - getLegalTextDocumentVersions() only
+  // synthesizes it on the fly, from LEGAL_TEXT_DOCUMENT_DEFINITIONS, for a
+  // document with zero history rows. Once this edit appends its own new
+  // version below, that synthesis path stops firing - so without this,
+  // the very first edit would permanently lose the original starting
+  // text from history. Write it now, before superseding it, exactly once
+  // (checked by document_key, not just "any history exists" - every
+  // document has its own independent starting version to preserve).
+  // The Supabase migration doesn't need this: it seeds this same row into
+  // legal_text_document_versions directly at table-creation time instead.
+  const hasHistory = versions.some((version) => version.documentKey === key);
+  if (!hasHistory) {
+    versions.unshift({
+      documentKey: key,
+      version: existing.version,
+      content: existing.content,
+      updatedBy: existing.updatedBy,
+      createdAt: existing.updatedAt,
+    });
+  }
   versions.unshift({ documentKey: key, version: updated.version, content: trimmed, updatedBy: actorLabel, createdAt: updated.updatedAt });
   writeJson(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, versions);
 

@@ -63,18 +63,25 @@ Priced in the accompanying quotation.
   fresh `randomUUID()` for the column and the original label is folded into `details.message` as
   plain text, so the Audit Log Viewer's Details column still renders one readable sentence. The
   new `update_legal_text_document()` RPC was written to avoid the same mistake from the start.
-  Known gap: this item's Playwright e2e coverage (`e2e/legal-content.spec.ts`) was written and
-  type/lint-checked but could not be executed end-to-end in this development environment - the
-  remote device-bridge shell used for this session's work is backed by a notably slow filesystem
-  (Next.js's own dev server prints its own "Slow filesystem detected" warning there), and each
-  individual command invocation in that environment is capped well under the time a `next build`
-  or even first-request `next dev` compile actually takes, so the Playwright-managed web server
-  could not reliably come up within a single invocation. A plain `next dev` run in that same
-  environment did start and serve the app correctly end to end in demo mode (confirming no runtime
-  regression), so this is a tooling/environment limitation rather than a known defect - but the
-  new spec file has not had a real Playwright pass recorded against it the way every other e2e
-  spec in this repo has, and should be run for real in CI or a normal local setup before being
-  trusted the same way.
+  This item's Playwright e2e coverage (`e2e/legal-content.spec.ts`) could not be executed inside
+  this session's own remote device-bridge shell (a notably slow filesystem there - Next.js's own
+  dev server flags it - meant the Playwright-managed web server could not reliably come up within
+  that shell's per-command time budget), so it went out for its first real run in CI instead.
+  That run caught a genuine bug: a document's starting version (the seeded default) was only ever
+  synthesized on the fly for display in `getLegalTextDocumentVersions()`, never actually written
+  to `legal_text_document_versions` - so its very first edit silently and permanently dropped that
+  starting version from history, which is exactly the "a prior version is never lost" guarantee
+  this feature exists to provide. The Supabase path never had this bug (the migration seeds the
+  starting version into `legal_text_document_versions` directly at table-creation time); only the
+  demo-mode equivalent in `demo-store.ts` lazily deferred that seeding and then never did it.
+  Fixed in `updateLegalTextDocument()`: on a document's first-ever edit, its pre-edit version is
+  now written to history before being superseded, exactly once per document. The e2e test itself
+  was also hardening against a related fragility CI's retry surfaced: it had assumed a document's
+  starting version is always "v1", which breaks the moment the same demo-store.json has already
+  been edited once (by an earlier local run, or by Playwright's own retry of a failed attempt) -
+  every other e2e test in this suite avoids the equivalent problem by giving freshly-created
+  records a `Date.now()`-unique name, which isn't available for a fixed singleton document, so
+  this test now reads its actual starting version from the page instead of hardcoding one.
 
 ## Broker Workflow
 - Add visual campaign authoring and approval forms on top of the completed MCP campaign workflow.

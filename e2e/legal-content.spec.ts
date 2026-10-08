@@ -12,7 +12,18 @@ test.describe("Legal Content manager (synthetic demo data)", () => {
 
     const card = page.getByTestId("legal-text-card").filter({ hasText: "Privacy Notice" }).first();
     await expect(card).toBeVisible();
-    await expect(card.getByTestId("legal-text-version")).toHaveText("v1");
+
+    // Read the current version rather than assuming "v1": this is a fixed
+    // singleton document, not a freshly-created record with a unique id,
+    // so a prior run in the same demo-store.json (a local rerun, or a
+    // Playwright retry of this very test after a failure) can easily have
+    // already bumped it. Every other e2e test in this suite sidesteps the
+    // same problem by giving freshly-created records a Date.now()-unique
+    // name; a singleton document has no such option, so this reads its
+    // actual starting point instead of hardcoding one.
+    const startVersionText = await card.getByTestId("legal-text-version").innerText();
+    const startVersion = Number(startVersionText.replace(/^v/, ""));
+    const nextVersion = startVersion + 1;
 
     const uniqueSentence = `This privacy notice was reviewed by E2E on ${Date.now()}.`;
     await card.getByRole("button", { name: "Edit" }).click();
@@ -21,19 +32,23 @@ test.describe("Legal Content manager (synthetic demo data)", () => {
     await textarea.fill(uniqueSentence);
     await card.getByRole("button", { name: "Save and publish" }).click();
 
-    await expect(card.getByTestId("legal-text-version")).toHaveText("v2");
+    await expect(card.getByTestId("legal-text-version")).toHaveText(`v${nextVersion}`);
     await expect(card.getByText(uniqueSentence)).toBeVisible();
 
-    // The prior version must still be readable in its history, not lost.
+    // The prior version must still be readable in its history, not lost -
+    // this is the regression check for a real bug: a document's starting
+    // version was previously only ever synthesized on the fly for display
+    // and never actually written to legal_text_document_versions, so its
+    // very first edit silently dropped it from history for good.
     await card.getByRole("button", { name: "Version history" }).click();
-    await expect(card.getByText(/^v1 by/)).toBeVisible();
+    await expect(card.getByText(new RegExp(`^v${startVersion} by`))).toBeVisible();
     await expect(card.getByText(originalContent.split("\n")[0])).toBeVisible();
 
     // The public Privacy Notice page reads the same live document - no
     // redeploy needed for a compliance admin's edit to take effect.
     await page.goto("/privacy");
     await expect(page.getByText(uniqueSentence)).toBeVisible();
-    await expect(page.getByText(/Version v2/)).toBeVisible();
+    await expect(page.getByText(new RegExp(`Version v${nextVersion}\\b`))).toBeVisible();
   });
 
   test("a non-managing viewer cannot edit, but a manager sees Edit controls on every document", async ({ page }) => {
