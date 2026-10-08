@@ -25,9 +25,12 @@ import type {
   LeadNote,
   LeadTask,
   LeadTaskStatus,
+  LegalTextDocument,
+  LegalTextDocumentKey,
+  LegalTextDocumentVersion,
   OptOutRequest,
 } from "./types.ts";
-import { DEFAULT_HOTSPOT_MIN_LEAD_THRESHOLD, DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS } from "./constants.ts";
+import { DEFAULT_HOTSPOT_MIN_LEAD_THRESHOLD, DEFAULT_LEAD_RETENTION_DAYS, INSURANCE_PRODUCTS, LEGAL_TEXT_DOCUMENT_DEFINITIONS } from "./constants.ts";
 import { resolveDoNotContactForStatus } from "./lead-utils.ts";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -178,10 +181,11 @@ export function getAuditLog(): AuditLogEntry[] {
 }
 
 // Demo-mode equivalent of the Supabase application_settings singleton row:
-// a handful of platform-wide, compliance-admin-configurable values. Starts
-// with just the lead-retention threshold; more legal/compliance text
-// fields belong here too once BACKLOG.md's "Configurable legal-text
-// fields" item is built.
+// a handful of platform-wide, compliance-admin-configurable values. The
+// 7 configurable legal-text documents (privacy notice, consent wording,
+// etc.) are a separate concern with their own version history - see
+// getLegalTextDocuments() below and legal_text_documents in Supabase
+// mode - rather than fields on this settings singleton.
 export function getApplicationSettings(): ApplicationSettings {
   // Merged with defaults (rather than only falling back when the file is
   // entirely missing) so an existing settings file saved before a new
@@ -769,6 +773,111 @@ export function updateFyeCampaignPlanStatus(
     action: "fye_campaign_plan_status_changed",
     actor: actorLabel,
     details: `from=${previousStatus} to=${status}`,
+  });
+  return updated;
+}
+
+// --- Configurable legal-text fields (project brief section 2): privacy
+// notice, consent wording, contact-permission wording, marketing
+// wording, FSP disclosures, terms of use, and the data retention
+// policy's own explanatory text. Same current-state-plus-append-only-
+// history split as the Data Source Registry above, and the same
+// Supabase shape - see supabase/migrations/202610080001_legal_text_documents.sql.
+//
+// Defaults come from LEGAL_TEXT_DOCUMENT_DEFINITIONS (src/lib/constants.ts)
+// so a fresh demo dataset and a fresh Supabase database start with
+// byte-equivalent seed text. Reading never persists the defaults to
+// disk - only an actual edit (updateLegalTextDocument) does - mirroring
+// getApplicationSettings()'s own merge-with-defaults pattern above.
+const LEGAL_TEXT_DOCUMENTS_FILE = path.join(DATA_DIR, "legal-text-documents.json");
+const LEGAL_TEXT_DOCUMENT_VERSIONS_FILE = path.join(DATA_DIR, "legal-text-document-versions.json");
+// Fixed, not Date.now(): a document that was never edited should look
+// identical (including updatedAt) on every read, exactly like the
+// Supabase migration's own seed rows, rather than drifting with each
+// server restart.
+const LEGAL_TEXT_SEED_TIMESTAMP = "2026-01-01T00:00:00.000Z";
+
+function defaultLegalTextDocument(key: LegalTextDocumentKey): LegalTextDocument {
+  const definition = LEGAL_TEXT_DOCUMENT_DEFINITIONS.find((entry) => entry.key === key);
+  if (!definition) throw new Error(`Unknown legal text document key: ${key}`);
+  return {
+    documentKey: definition.key,
+    title: definition.title,
+    content: definition.defaultContent,
+    version: 1,
+    updatedBy: "system_seed",
+    updatedAt: LEGAL_TEXT_SEED_TIMESTAMP,
+  };
+}
+
+export function getLegalTextDocuments(): LegalTextDocument[] {
+  const stored = readJson<Record<string, LegalTextDocument>>(LEGAL_TEXT_DOCUMENTS_FILE, {});
+  return LEGAL_TEXT_DOCUMENT_DEFINITIONS.map((definition) => stored[definition.key] ?? defaultLegalTextDocument(definition.key));
+}
+
+export function getLegalTextDocument(key: LegalTextDocumentKey): LegalTextDocument {
+  const stored = readJson<Record<string, LegalTextDocument>>(LEGAL_TEXT_DOCUMENTS_FILE, {});
+  return stored[key] ?? defaultLegalTextDocument(key);
+}
+
+export function getLegalTextDocumentVersions(key: LegalTextDocumentKey): LegalTextDocumentVersion[] {
+  const versions = readJson<LegalTextDocumentVersion[]>(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, []);
+  const matching = versions.filter((version) => version.documentKey === key);
+  if (matching.length > 0) return matching.sort((a, b) => b.version - a.version);
+  // No edit has ever been made to this document yet - its only "version"
+  // is the seeded default, same as the Supabase migration's own seed-into-
+  // history insert.
+  const current = getLegalTextDocument(key);
+  return [{ documentKey: current.documentKey, version: current.version, content: current.content, updatedBy: current.updatedBy, createdAt: current.updatedAt }];
+}
+
+export function updateLegalTextDocument(key: LegalTextDocumentKey, content: string, actorLabel: string): LegalTextDocument {
+  const trimmed = content.trim();
+  if (!trimmed) throw new Error("Document content must not be empty");
+
+  const stored = readJson<Record<string, LegalTextDocument>>(LEGAL_TEXT_DOCUMENTS_FILE, {});
+  const existing = stored[key] ?? defaultLegalTextDocument(key);
+  const updated: LegalTextDocument = {
+    ...existing,
+    content: trimmed,
+    version: existing.version + 1,
+    updatedBy: actorLabel,
+    updatedAt: new Date().toISOString(),
+  };
+  stored[key] = updated;
+  writeJson(LEGAL_TEXT_DOCUMENTS_FILE, stored);
+
+  const versions = readJson<LegalTextDocumentVersion[]>(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, []);
+  // A document's starting version (the seeded default) is never written
+  // anywhere until its first edit - getLegalTextDocumentVersions() only
+  // synthesizes it on the fly, from LEGAL_TEXT_DOCUMENT_DEFINITIONS, for a
+  // document with zero history rows. Once this edit appends its own new
+  // version below, that synthesis path stops firing - so without this,
+  // the very first edit would permanently lose the original starting
+  // text from history. Write it now, before superseding it, exactly once
+  // (checked by document_key, not just "any history exists" - every
+  // document has its own independent starting version to preserve).
+  // The Supabase migration doesn't need this: it seeds this same row into
+  // legal_text_document_versions directly at table-creation time instead.
+  const hasHistory = versions.some((version) => version.documentKey === key);
+  if (!hasHistory) {
+    versions.unshift({
+      documentKey: key,
+      version: existing.version,
+      content: existing.content,
+      updatedBy: existing.updatedBy,
+      createdAt: existing.updatedAt,
+    });
+  }
+  versions.unshift({ documentKey: key, version: updated.version, content: trimmed, updatedBy: actorLabel, createdAt: updated.updatedAt });
+  writeJson(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, versions);
+
+  appendAuditLog({
+    entity: "legal_text",
+    entityId: key,
+    action: "legal_text_document_updated",
+    actor: actorLabel,
+    details: `documentKey=${key} version=${updated.version}`,
   });
   return updated;
 }

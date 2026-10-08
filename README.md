@@ -107,6 +107,15 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   own metadata header in the CSV (exported by, export date, filters, record count, and a genuine
   audit-log reference), and is itself an audited action. No new database migration was needed - the
   existing `audit_logs` table and RLS already covered the read path.
+- Configurable legal-text fields (`/dashboard/legal-content`): the 7 documents the project brief
+  requires (privacy notice, consent wording, contact-permission wording, marketing wording, FSP
+  disclosures, terms of use, data retention policy text), each editable by a platform or compliance
+  admin with full version history - every save bumps the version, keeps the prior text rather than
+  overwriting it, and writes an audit-log entry, the same current-state-plus-history pattern as the
+  Data Source Registry. These are no longer hardcoded page copy: the public Privacy Notice and
+  Terms of Use pages, and the consultation form's three consent-step checkboxes, read the live,
+  currently-published text, so an edit here takes effect on the public site immediately. A lead's
+  `consentWordingVersion` is derived from the live consent-wording document's own version number.
 
 ## What is intentionally out of scope for this prototype
 
@@ -312,3 +321,7 @@ foundation, broker tenancy, and the approval-gated campaign-generation MCP.
   renders a plain-language explanation alongside the score.
 - No automated insurance advice, premiums, or underwriting decisions are generated anywhere in
   this prototype.
+- The privacy notice, consent wording, FSP disclosures, terms of use, and every other legal-text
+  field a compliance admin can edit are configurable with full version history at
+  `/dashboard/legal-content` - the public site and consultation form always show the live,
+  currently-published text, never a hardcoded copy.

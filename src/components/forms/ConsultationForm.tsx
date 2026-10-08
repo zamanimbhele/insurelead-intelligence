@@ -26,7 +26,17 @@ const STEPS = [
   { key: "consent", label: "Consent", fields: ["privacyNoticeAccepted", "contactConsent", "partnerSharingConsent", "maxPartnerRecipients", "accuracyConfirmed", "nonBindingAcknowledged"] },
 ] as const;
 
-export function ConsultationForm({ turnstileSiteKey }: { turnstileSiteKey?: string }) {
+export function ConsultationForm({
+  turnstileSiteKey,
+  contactConsentWording,
+  partnerSharingConsentWording,
+  marketingConsentWording,
+}: {
+  turnstileSiteKey?: string;
+  contactConsentWording: string;
+  partnerSharingConsentWording: string;
+  marketingConsentWording: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
@@ -155,7 +165,14 @@ export function ConsultationForm({ turnstileSiteKey }: { turnstileSiteKey?: stri
           {step === 0 && <StepApplicantDetails form={form} />}
           {step === 1 && <StepInsuranceNeeds form={form} />}
           {step === 2 && <StepContactPerson form={form} />}
-          {step === 3 && <StepConsent form={form} />}
+          {step === 3 && (
+            <StepConsent
+              form={form}
+              contactConsentWording={contactConsentWording}
+              partnerSharingConsentWording={partnerSharingConsentWording}
+              marketingConsentWording={marketingConsentWording}
+            />
+          )}
           {step === 3 && turnstileSiteKey && (
             <div className="mt-6">
               <TurnstileWidget

@@ -167,8 +167,8 @@ export interface LeadActivity {
 export interface ApplicationSettings {
   // Leads older than this, still active, are surfaced on the compliance
   // dashboard as retention exceptions needing review or deletion. See
-  // BACKLOG.md "Configurable legal-text fields" for the broader retention
-  // *policy text* this number will eventually be configured alongside.
+  // LegalTextDocument below ("data_retention_policy") for the retention
+  // *policy text* this number is configured alongside.
   leadRetentionDays: number;
   // The geographic hotspot dashboard (src/lib/hotspot-scoring.ts) will not
   // display a province/municipality/suburb breakdown with fewer leads than
@@ -176,6 +176,39 @@ export interface ApplicationSettings {
   hotspotMinLeadThreshold: number;
   updatedAt?: string;
   updatedBy?: string;
+}
+
+// Configurable legal-text fields (project brief section 2) - exactly 7
+// fixed document keys, each editable by a platform or compliance admin
+// with full version history (LegalTextDocumentVersion below). Read by the
+// public site (Privacy Notice, Terms of Use, the consultation form's
+// consent checkboxes) as well as the compliance dashboard - see
+// src/lib/runtime-data.ts vs. src/lib/dashboard-data.ts for which data
+// path each uses.
+export type LegalTextDocumentKey =
+  | "privacy_notice"
+  | "consent_wording"
+  | "contact_permission_wording"
+  | "marketing_wording"
+  | "fsp_disclosures"
+  | "terms_of_use"
+  | "data_retention_policy";
+
+export interface LegalTextDocument {
+  documentKey: LegalTextDocumentKey;
+  title: string;
+  content: string;
+  version: number;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export interface LegalTextDocumentVersion {
+  documentKey: LegalTextDocumentKey;
+  version: number;
+  content: string;
+  updatedBy: string;
+  createdAt: string;
 }
 
 export interface ConsentRecord {
@@ -388,7 +421,8 @@ export interface AuditLogEntry {
     | "data_subject_request"
     | "data_source"
     | "fye_campaign_plan"
-    | "export";
+    | "export"
+    | "legal_text";
   entityId: string;
   action: string;
   actor: string;

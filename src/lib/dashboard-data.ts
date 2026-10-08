@@ -5,6 +5,8 @@ import {
   getDataSources as getDemoDataSources,
   getFyeCampaignPlans as getDemoFyeCampaignPlans,
   getLeads,
+  getLegalTextDocuments as getDemoLegalTextDocuments,
+  getLegalTextDocumentVersions as getDemoLegalTextDocumentVersions,
 } from "./demo-store";
 import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { computeGeoHotspots } from "./hotspots";
@@ -36,6 +38,8 @@ import {
   fetchSupabaseLeadNotes,
   fetchSupabaseLeadTasks,
   fetchSupabaseLeads,
+  fetchSupabaseLegalTextDocuments,
+  fetchSupabaseLegalTextDocumentVersions,
   fetchSupabaseOptOutRequests,
   fetchSupabaseSendingIdentities,
   processSupabaseOptOutRequest,
@@ -43,6 +47,7 @@ import {
   updateSupabaseDataSource,
   updateSupabaseDataSubjectRequestStatus,
   updateSupabaseFyeCampaignPlanStatus,
+  updateSupabaseLegalTextDocument,
 } from "./supabase/data";
 import type { DashboardIdentity } from "./auth";
 import type {
@@ -64,6 +69,9 @@ import type {
   LeadActivity,
   LeadNote,
   LeadTask,
+  LegalTextDocument,
+  LegalTextDocumentKey,
+  LegalTextDocumentVersion,
   OptOutChannel,
   OptOutRequest,
   OptOutSource,
@@ -706,4 +714,36 @@ export async function getDashboardAuditLog(filters: AuditLogFilters = {}): Promi
       ? getDemoAuditLog()
       : await fetchSupabaseAuditLog(await requireServerClient(), MAX_AUDIT_LOG_ROWS);
   return filterAuditLog(entries, filters).slice(0, MAX_AUDIT_LOG_ROWS);
+}
+
+// --- Configurable legal-text fields (project brief section 2). Viewing
+// is open to anyone who can see the Compliance dashboard
+// (canViewCompliance - platform admins and compliance auditors); editing
+// is restricted to canManageCompliance (platform/compliance admins only)
+// at the API route layer, matching the Data Source Registry's own split.
+// The write path always goes through the update_legal_text_document() RPC
+// in Supabase mode (never a direct table update), which re-validates the
+// caller's role itself, bumps the version, and writes its own audit log
+// entry - see supabase/migrations/202610080001_legal_text_documents.sql.
+
+export async function getDashboardLegalTextDocuments(): Promise<LegalTextDocument[]> {
+  if (getDataMode() === "demo") return getDemoLegalTextDocuments();
+  return fetchSupabaseLegalTextDocuments(await requireServerClient());
+}
+
+export async function getDashboardLegalTextDocumentVersions(key: LegalTextDocumentKey): Promise<LegalTextDocumentVersion[]> {
+  if (getDataMode() === "demo") return getDemoLegalTextDocumentVersions(key);
+  return fetchSupabaseLegalTextDocumentVersions(await requireServerClient(), key);
+}
+
+export async function updateDashboardLegalTextDocument(
+  key: LegalTextDocumentKey,
+  content: string,
+  actorLabel: string,
+): Promise<LegalTextDocument> {
+  if (getDataMode() === "demo") {
+    const { updateLegalTextDocument } = await import("./demo-store");
+    return updateLegalTextDocument(key, content, actorLabel);
+  }
+  return updateSupabaseLegalTextDocument(await requireServerClient(), { documentKey: key, content });
 }
