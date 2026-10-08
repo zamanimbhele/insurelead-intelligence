@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "seed:demo": "node --import tsx scripts/generate-seed.mjs",
     "test:tenancy": "node --import tsx scripts/verify-tenancy.ts",
     "test:campaigns": "node --import tsx scripts/verify-campaigns.ts",
     "test:e2e": "node scripts/run-e2e.mjs",

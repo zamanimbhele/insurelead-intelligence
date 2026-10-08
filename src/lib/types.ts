@@ -422,7 +422,8 @@ export interface AuditLogEntry {
     | "data_source"
     | "fye_campaign_plan"
     | "export"
-    | "legal_text";
+    | "legal_text"
+    | "demo_data";
   entityId: string;
   action: string;
   actor: string;

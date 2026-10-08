@@ -116,6 +116,24 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   Terms of Use pages, and the consultation form's three consent-step checkboxes, read the live,
   currently-published text, so an edit here takes effect on the public site immediately. A lead's
   `consentWordingVersion` is derived from the live consent-wording document's own version number.
+- Demo accounts and a demo data reset (`/dashboard/demo-tools`, demo mode only): 6 seeded, 100%
+  synthetic demo accounts - one per role the brief defines in section 4, plus the read-only
+  Compliance Auditor role already in the codebase - selectable from a "Viewing as" control in the
+  dashboard sidebar. Switching actually changes what is reachable (navigation items, edit controls,
+  gated pages), not just a cosmetic label: `isPlatformAdmin()` previously treated every demo
+  identity as a platform admin unconditionally, which meant the demo role could never be used to
+  demonstrate the brief's own role-based access boundaries. The default account (Super Admin /
+  `platform_admin`) keeps every pre-existing e2e test passing unchanged. A platform-admin-only,
+  type-RESET-to-confirm "Reset demo data" action regenerates a fresh set of synthetic leads and
+  consent records (the same generator `npm run seed:demo` uses - see "Regenerating demo data"
+  below) and clears notes, tasks, activity timelines, opt-out requests, data subject requests, the
+  Data Source Registry, FYE campaign plans, legal content history, application settings, and the
+  audit log back to their defaults; it is disabled entirely outside demo mode, and deliberately does
+  not touch the separate buyer-marketplace/campaign-orchestration demo tables (allocations, buyers,
+  campaigns, sending identities), which are a different tenancy layer with their own lifecycle. Known
+  limitation: demo mode has no allocation/organisation-tenancy model at all, so unlike Supabase mode
+  a demo Broker or Broker Manager account is not restricted to a particular subset of leads - only
+  the dashboard's navigation and edit-control gating differs per role in demo mode.
 
 ## What is intentionally out of scope for this prototype
 
@@ -175,12 +193,17 @@ launch confirmation. Follow [`docs/CAMPAIGN_MCP_SETUP.md`](docs/CAMPAIGN_MCP_SET
 To regenerate the synthetic demo leads and their matching consent records:
 
 ```bash
-node scripts/generate-seed.mjs
+npm run seed:demo
 ```
 
 This overwrites both `data/leads.json` and `data/consents.json` - every generated lead gets a
 fully valid consent record (the same five fields the public form and `isConsentValid()` require),
-so demo-mode consent coverage reads realistically rather than near-zero.
+so demo-mode consent coverage reads realistically rather than near-zero. The generator itself lives
+in `src/lib/demo-seed-data.ts` (plain TypeScript, no file I/O) - `scripts/generate-seed.mjs` runs
+through `node --import tsx` specifically so it can import it directly, the same way
+`scripts/verify-tenancy.ts` and `scripts/verify-campaigns.ts` already run. The running app's own
+admin-only "Reset demo data" action (`/dashboard/demo-tools`, demo mode only - see above) calls the
+same generator, so the CLI command and the in-app reset can never quietly drift apart.
 
 Copy `.env.example` to `.env.local` before running in an environment that needs Supabase or the
 optional integrations. Demo mode runs without populated secrets.
@@ -242,7 +265,7 @@ reverts to normal parallel execution once the app moves to Supabase.
 
 Running `npm run test:e2e` locally will add clearly-labelled synthetic leads (for
 example `E2E Test Business <timestamp>`) into your local `data/leads.json` — harmless, but you can
-regenerate clean seed data afterwards with `node scripts/generate-seed.mjs` if it bothers you.
+regenerate clean seed data afterwards with `npm run seed:demo` if it bothers you.
 
 ### CI pipeline
 
@@ -271,7 +294,8 @@ src/
     validation/         Zod schemas for the consultation form
     scoring.ts          Transparent lead scoring engine
     demo-store.ts       File-based demo data store (see note below)
-    constants.ts        Reference lists (industries, provinces, products, consent version...)
+    demo-seed-data.ts   Synthetic lead/consent generator shared by seed:demo and the in-app reset
+    constants.ts        Reference lists (industries, provinces, products, consent version, demo roles...)
   mcp/
     server.ts            Consent-aware MCP tools for AI assistants
 data/

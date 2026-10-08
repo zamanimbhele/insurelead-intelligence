@@ -282,7 +282,69 @@ Priced in the accompanying quotation.
   before this change - both are production dependencies and worth their own deliberate upgrade
   decision, not bundled into this test-infrastructure item.
 - Accessibility review and security review checklist.
-- Demo data reset process and seeded demo accounts per role.
+- Demo accounts and demo data reset completed: 6 seeded, 100% synthetic demo accounts - one per
+  role the brief defines in section 4 (Super Admin, Compliance Admin, Broker Manager, Broker,
+  Marketing Analyst), plus the read-only Compliance Auditor role already present in this codebase's
+  own AUDIT_ROLES - defined once in `DEMO_ROLE_ACCOUNTS` (`src/lib/constants.ts`) and selectable
+  from a "Viewing as" control in the dashboard sidebar (`DemoRoleSwitcher.tsx`), backed by a
+  `demo_role` cookie `getDashboardIdentity()` (`src/lib/auth.ts`) reads in demo mode and
+  `setDemoRole()` (`src/app/(dashboard)/dashboard/actions.ts`) writes.
+  This surfaced, and fixes, a real gap rather than just adding UI: `isPlatformAdmin()` previously
+  returned `true` for every demo identity unconditionally (`identity.mode === "demo" || ...`), so
+  every demo account - regardless of which role it claimed - was already a platform admin in every
+  permission check (`canViewCompliance()`, `canManageCompliance()`, `canUpdateLeadStatus()`,
+  `canManageCampaignPlanning()`, and the brokers/marketplace page gates all call through it). A role
+  switcher built on top of that bypass would have been cosmetic - every account would have looked
+  identical regardless of which was selected. Fixed by deleting the bypass: demo mode now goes
+  through the exact same `ADMIN_ROLES`/`AUDIT_ROLES`/`BROKER_ROLES` checks Supabase mode already
+  uses, since all 6 DEMO_ROLE_ACCOUNTS role keys are drawn from those same real role strings (never
+  a separate `"demo_"`-prefixed literal). The default account is still Super Admin
+  (`platform_admin`, `DEFAULT_DEMO_ROLE`), so every pre-existing e2e test - several of which have
+  their own code comments stating the "demo mode is always a platform admin" assumption, updated in
+  this change to describe the new default-role behaviour precisely - keeps passing unchanged; the
+  difference only appears once a different role is actually selected. Verified directly (not just by
+  `tsc`/`eslint`, which this is invisible to) with an isolated script building `DashboardIdentity`
+  objects for all 6 roles and tabulating every `auth.ts` permission-check function against each -
+  confirming, for example, that a Broker Manager can respond to allocations and update lead status
+  but cannot view Compliance, and a Marketing Analyst can manage campaign planning but cannot update
+  lead status or view Compliance, matching brief section 4's role matrix.
+  Known, explicitly documented limitation: demo mode has no allocation/organisation-tenancy model at
+  all (that machinery - `lead_assignments`, organisation-scoped RLS - is Supabase-only), so unlike
+  Supabase mode a demo Broker or Broker Manager account is not restricted to a subset of leads by
+  data; only navigation and edit-control gating differs per role in demo mode. Lead-level scoping for
+  demo mode was out of scope for this item.
+  A platform-admin-only, demo-mode-only "Reset demo data" action (`/dashboard/demo-tools`) was added
+  alongside the role switcher, since both serve the same "explore the prototype from a clean slate"
+  need. `resetDemoData()` (`src/lib/demo-store.ts`) regenerates leads and consents with a fresh
+  synthetic dataset and clears notes, tasks, activity timelines, opt-out requests, data subject
+  requests, the Data Source Registry, FYE campaign plans, legal text content/history, and application
+  settings back to the exact same defaults each table's own getter already falls back to when its
+  file is missing - deliberately not hand-constructing a second copy of those defaults. It is
+  disabled entirely outside demo mode (both by the page itself and, independently, inside the server
+  action), since real pilot data must never be reset from the running application, and it
+  deliberately does not touch the separate buyer-marketplace/campaign-orchestration demo tables
+  (`allocations.json`, `buyers.json`, `campaigns.json` and related files) - a different tenancy layer
+  with its own lifecycle, out of scope for this item. The confirmation phrase ("type RESET") is
+  re-checked server-side, not trusted from the form's client-side pattern/disabled-button gate alone.
+  Verified with an isolated script that seeds a temp workspace with deliberately "dirty" state
+  (stale leads, notes, an edited legal-text document, a non-default settings override, old audit-log
+  entries) and confirms the reset clears every one of them and leaves exactly one new, accurate audit
+  log entry behind.
+  In service of this item, `scripts/generate-seed.mjs`'s generator logic was extracted into
+  `src/lib/demo-seed-data.ts` (a plain TypeScript module, no file I/O) so the CLI command
+  (`npm run seed:demo`, replacing the previously undocumented direct `node scripts/generate-seed.mjs`
+  invocation - the script now needs `node --import tsx` to import that TypeScript module, the same
+  way `scripts/verify-tenancy.ts` and `scripts/verify-campaigns.ts` already run) and the in-app reset
+  action share one generator and can never quietly drift apart - the same reasoning
+  `aggregation-utils.ts` already follows for the hotspot/industry dashboards. Two small, genuine
+  fixes came out of that extraction: the generator now reuses this codebase's own canonical
+  `PROVINCES`/`INDUSTRIES`/etc. constants (`src/lib/constants.ts`) instead of a separately maintained,
+  already-drifted copy (the prior literal list covered only 6 of the 9 real provinces and a shorter
+  industry list), and it now generates a lead's `renewalMonth` directly (previously missing from the
+  generator entirely - a one-off script had separately, deterministically backfilled the already-
+  committed `data/leads.json` with one instead, per the Industry Opportunity dashboard's own backlog
+  entry above - so every future seed or reset has it from the start, not just the one already-
+  committed dataset).
 
 ## Reporting
 - Full reporting suite: leads by source/broker/industry/location/campaign/category/score,

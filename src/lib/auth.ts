@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
+import { DEFAULT_DEMO_ROLE, DEMO_ROLE_ACCOUNTS, DEMO_ROLE_COOKIE_NAME } from "./constants";
 
 export const ADMIN_ROLES = ["platform_admin", "compliance_admin"] as const;
 export const AUDIT_ROLES = ["compliance_auditor"] as const;
@@ -13,11 +15,14 @@ export const BROKER_OPERATOR_ROLES = ["broker_admin", "broker_agent"] as const;
 // broker_agent (an ordinary Broker only ever works assigned leads).
 export const CAMPAIGN_PLANNING_ROLES = ["broker_admin", "campaign_manager"] as const;
 
+// The 6 DEMO_ROLE_ACCOUNTS roles (constants.ts) are already a subset of
+// ADMIN_ROLES | AUDIT_ROLES | BROKER_ROLES, so no separate demo-only role
+// literal is needed here - a demo identity's role is always one of these
+// same real role strings now, never a "demo_"-prefixed one.
 export type DashboardRole =
   | (typeof ADMIN_ROLES)[number]
   | (typeof AUDIT_ROLES)[number]
   | (typeof BROKER_ROLES)[number]
-  | "demo_platform_admin"
   | "anonymous"
   | "unassigned"
   | "unconfigured";
@@ -38,11 +43,25 @@ export type DashboardIdentity = {
 
 export async function getDashboardIdentity(): Promise<DashboardIdentity> {
   if (getDataMode() === "demo") {
+    // No real sign-in exists in demo mode, so the "signed-in user" is
+    // whichever of the 6 seeded DEMO_ROLE_ACCOUNTS (constants.ts) the
+    // demo_role cookie names - set by the role switcher in the dashboard
+    // sidebar (see DemoRoleSwitcher.tsx / actions.ts's setDemoRole()).
+    // Falls back to the first account (Super Admin / platform_admin) for
+    // an unset or invalid cookie, so every pre-existing e2e test that
+    // never selects a role keeps seeing full admin access unchanged.
+    const cookieStore = await cookies();
+    const requestedRole = cookieStore.get(DEMO_ROLE_COOKIE_NAME)?.value;
+    const account =
+      DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.role === requestedRole) ??
+      DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.role === DEFAULT_DEMO_ROLE)!;
     return {
       mode: "demo",
       authenticated: true,
       accessAllowed: true,
-      role: "demo_platform_admin",
+      displayName: account.displayName,
+      email: account.email,
+      role: account.role,
       organisationName: "Synthetic demo workspace",
     };
   }
@@ -153,8 +172,17 @@ export async function getDashboardIdentity(): Promise<DashboardIdentity> {
   };
 }
 
+// Previously also true for every demo identity unconditionally
+// (`identity.mode === "demo" || ...`), which meant the demo role
+// switcher above could never actually restrict anything - every demo
+// account looked like a platform admin regardless of which one was
+// selected. Now demo mode goes through the same role check as Supabase
+// mode; it still reads as "always admin" for the default demo account
+// because DEFAULT_DEMO_ROLE is "platform_admin" (a real ADMIN_ROLES
+// member), which is what keeps every pre-existing e2e test passing
+// without changes.
 export function isPlatformAdmin(identity: DashboardIdentity) {
-  return identity.mode === "demo" || ADMIN_ROLES.includes(identity.role as (typeof ADMIN_ROLES)[number]);
+  return ADMIN_ROLES.includes(identity.role as (typeof ADMIN_ROLES)[number]);
 }
 
 export function isComplianceAuditor(identity: DashboardIdentity) {

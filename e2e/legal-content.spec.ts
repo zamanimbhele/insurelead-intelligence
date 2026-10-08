@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-// Demo mode's identity is always "demo_platform_admin" (see getDashboardIdentity()
-// in src/lib/auth.ts), which canManageCompliance() always allows, so the edit
+// Demo mode defaults to the Super Admin ("platform_admin") account unless a
+// different role is selected via the sidebar role switcher (see
+// getDashboardIdentity() / DEFAULT_DEMO_ROLE in src/lib/auth.ts), which canManageCompliance() always allows, so the edit
 // controls are visible without a separate sign-in step - same assumption
 // data-source-registry.spec.ts makes.
 
