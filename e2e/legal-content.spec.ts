@@ -21,7 +21,14 @@ test.describe("Legal Content manager (synthetic demo data)", () => {
     // same problem by giving freshly-created records a Date.now()-unique
     // name; a singleton document has no such option, so this reads its
     // actual starting point instead of hardcoding one.
-    const startVersionText = await card.getByTestId("legal-text-version").innerText();
+    //
+    // textContent(), not innerText(): the badge has an "uppercase" CSS
+    // class, and innerText() returns text as rendered (CSS text-transform
+    // included), so it reads back "V1" - the capital V then fails a
+    // case-sensitive /^v/ strip and silently produces NaN. textContent()
+    // returns the raw DOM text ("v1"), unaffected by CSS, which is also
+    // what toHaveText() below actually compares against.
+    const startVersionText = ((await card.getByTestId("legal-text-version").textContent()) ?? "").trim();
     const startVersion = Number(startVersionText.replace(/^v/, ""));
     const nextVersion = startVersion + 1;
 
