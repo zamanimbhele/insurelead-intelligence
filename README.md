@@ -213,7 +213,10 @@ optional integrations. Demo mode runs without populated secrets.
 Follow [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md) to apply the migrations, configure
 server-only secrets, bootstrap the first administrator, and add approved pilot buyers. Demo mode
 remains the default so CI and local product demonstrations never require production credentials.
-Then follow [`docs/PILOT_HARDENING.md`](docs/PILOT_HARDENING.md) before accepting public traffic.
+Then follow [`docs/PILOT_HARDENING.md`](docs/PILOT_HARDENING.md) before accepting public traffic,
+alongside [`docs/ACCESSIBILITY_REVIEW.md`](docs/ACCESSIBILITY_REVIEW.md) and
+[`docs/SECURITY_REVIEW_CHECKLIST.md`](docs/SECURITY_REVIEW_CHECKLIST.md) - both are manual,
+source-level reviews rather than automated-tool reports, and each lists its own open items.
 
 ## Testing
 

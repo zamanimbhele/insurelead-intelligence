@@ -28,7 +28,7 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-8 lg:flex">
           {NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="text-sm font-medium text-slate-600 hover:text-primary-700">
               {link.label}
@@ -48,13 +48,19 @@ export function Header() {
           </Link>
         </div>
 
-        <button className="lg:hidden" onClick={() => setOpen((v) => !v)} aria-label="Toggle navigation menu">
+        <button
+          className="lg:hidden"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Toggle navigation menu"
+          aria-expanded={open}
+          aria-controls="site-mobile-nav"
+        >
           {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      <div className={cn("border-t border-slate-200 bg-white lg:hidden", open ? "block" : "hidden")}>
-        <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
+      <div id="site-mobile-nav" className={cn("border-t border-slate-200 bg-white lg:hidden", open ? "block" : "hidden")}>
+        <nav aria-label="Mobile" className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
           {NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="rounded-md px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
               {link.label}

@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   consultationFormSchema,
   ConsultationFormInput,
@@ -44,6 +44,15 @@ export function ConsultationForm({
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetSignal, setCaptchaResetSignal] = useState(0);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  // Move focus to the new step's heading whenever the step changes, so a
+  // screen reader or keyboard user gets feedback that the page content
+  // changed - without this, focus silently stays on the now-stale
+  // "Continue"/"Back" button after each step transition.
+  useEffect(() => {
+    stepHeadingRef.current?.focus();
+  }, [step]);
 
   const handleCaptchaToken = useCallback((token: string | null) => {
     setCaptchaToken(token);
@@ -126,11 +135,15 @@ export function ConsultationForm({
 
   return (
     <div className="mx-auto max-w-2xl">
+      <p className="sr-only" role="status">
+        Step {step + 1} of {STEPS.length}: {STEPS[step].label}
+      </p>
       <ol className="mb-10 flex items-center justify-between">
         {STEPS.map((s, idx) => (
           <li key={s.key} className="flex flex-1 items-center">
             <div className="flex flex-col items-center gap-2 text-center">
               <span
+                aria-current={idx === step ? "step" : undefined}
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold",
                   idx < step && "border-primary-600 bg-primary-600 text-white",
@@ -160,7 +173,9 @@ export function ConsultationForm({
         }}
         className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
       >
-        <h2 className="text-lg font-semibold text-slate-900">{STEPS[step].label}</h2>
+        <h2 ref={stepHeadingRef} tabIndex={-1} className="text-lg font-semibold text-slate-900 focus:outline-none">
+          {STEPS[step].label}
+        </h2>
         <div className="mt-6">
           {step === 0 && <StepApplicantDetails form={form} />}
           {step === 1 && <StepInsuranceNeeds form={form} />}
@@ -187,7 +202,11 @@ export function ConsultationForm({
           )}
         </div>
 
-        {submitError && <p className="mt-4 text-sm text-red-600">{submitError}</p>}
+        {submitError && (
+          <p role="alert" className="mt-4 text-sm text-red-600">
+            {submitError}
+          </p>
+        )}
 
         <div className="mt-8 flex items-center justify-between">
           <Button type="button" variant="secondary" onClick={goBack} disabled={step === 0}>

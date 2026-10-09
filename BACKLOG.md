@@ -281,7 +281,42 @@ Priced in the accompanying quotation.
   `next/og` ImageResponse) and a critical `sharp` advisory already present in the dependency tree
   before this change - both are production dependencies and worth their own deliberate upgrade
   decision, not bundled into this test-infrastructure item.
-- Accessibility review and security review checklist.
+- Accessibility review and security review checklist completed: a manual, source-level
+  WCAG 2.1 AA review (`docs/ACCESSIBILITY_REVIEW.md`) and a line-by-line pass against the
+  brief's own section 11 security requirements (`docs/SECURITY_REVIEW_CHECKLIST.md`),
+  alongside this repo's other reference docs. The accessibility review found and fixed, rather than just reported, a
+  real functional gap - the dashboard sidebar was `hidden` below the `lg` breakpoint with
+  no mobile menu toggle at all, so no nav item was reachable on a phone/tablet, directly
+  contradicting the brief's own "Mobile-first" requirement - via a new `DashboardMobileNav`
+  component that reuses the exact same server-rendered nav links as the desktop sidebar.
+  Also fixed: three option-group fields (applicant type, insurance products, business
+  cover areas) had a `<label for>` pointing at an id nothing had - replaced with a proper
+  `FieldGroup` (`<fieldset>`/`<legend>`) component in `FormField.tsx`; skip-to-main-content
+  links and a real `<main>` landmark added to both the public site and dashboard layouts
+  (the dashboard's content wrapper was a plain, landmark-less `<div>`); step-change focus
+  management and a `role="status"` step announcement added to the consultation form, which
+  previously gave no feedback at all that the page had moved to a new step; `role="alert"`
+  added to `FormField`'s shared error paragraph (cascades to every form in the app) and the
+  login/signup error banners; `scope="col"` added to every data table's header cells. A
+  `text-slate-400` contrast shortfall (~2.56:1, under the 4.5:1 AA threshold) used
+  throughout the app for meaningful secondary text, and `aria-current="page"` on the active
+  dashboard nav link (blocked on the dashboard layout being a Server Component with no
+  pathname access without adding middleware), are documented as open follow-ups rather than
+  risked as unverified blind changes - this session's remote device-bridge shell could not
+  reliably bring up a full Next.js server to visually verify a broad find-replace, the same
+  constraint already documented against the Playwright e2e suite earlier in this file. The
+  security checklist found one real gap and fixed it in the same pass - `next.config.mjs`
+  had no security headers configured at all; added `X-Frame-Options`, `X-Content-Type-
+  Options`, `Referrer-Policy`, and a conservative `Permissions-Policy` (deliberately no
+  Content-Security-Policy yet, since a safe one needs the real deployment's script/style/
+  connect origins enumerated first, not guessed). Everything else on the brief's section 11
+  list was verified, not assumed, against the actual implementation (RBAC, RLS, server-side
+  authorisation, Zod validation, rate limiting, Turnstile CAPTCHA, the honeypot field,
+  duplicate-submission detection, the `safeErrors` sanitisation convention already used
+  across 10 API routes, audit logging, restricted/audited CSV export, soft delete plus
+  redaction-based hard delete, and Supabase-managed session handling) - two items are
+  tracked as genuinely open rather than silently skipped: time-limited export links, and a
+  CI secret-scanning step.
 - Demo accounts and demo data reset completed: 6 seeded, 100% synthetic demo accounts - one per
   role the brief defines in section 4 (Super Admin, Compliance Admin, Broker Manager, Broker,
   Marketing Analyst), plus the read-only Compliance Auditor role already present in this codebase's

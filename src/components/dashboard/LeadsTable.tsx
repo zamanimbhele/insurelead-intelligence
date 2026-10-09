@@ -69,13 +69,13 @@ export function LeadsTable({ leads, demoMode = false }: { leads: Lead[]; demoMod
         <table className="w-full min-w-[840px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Lead</th>
-              <th className="px-4 py-3">Product</th>
-              <th className="px-4 py-3">Province</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Score</th>
-              <th className="px-4 py-3">Broker</th>
-              <th className="px-4 py-3">Received</th>
+              <th scope="col" className="px-4 py-3">Lead</th>
+              <th scope="col" className="px-4 py-3">Product</th>
+              <th scope="col" className="px-4 py-3">Province</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3">Score</th>
+              <th scope="col" className="px-4 py-3">Broker</th>
+              <th scope="col" className="px-4 py-3">Received</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
