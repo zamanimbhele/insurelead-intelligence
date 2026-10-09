@@ -96,9 +96,16 @@ Priced in the accompanying quotation.
   canUpdateLeadStatus() as the single write-gate across notes/tasks/interactions/status. "Follow-up
   reminders" here means due-dated tasks surfaced on the lead profile; a separate notification/digest
   mechanism that proactively alerts a broker when a task is due or overdue is still open.
-- Do Not Contact workflow enforcement across all outreach surfaces (the Kanban board and the lead
-  profile's Pipeline & Outcome card can now set and clear the flag; blocking it from campaign/
-  notification surfaces is still open).
+- Do Not Contact workflow enforcement completed: every outreach surface was audited and now
+  excludes do-not-contact leads - campaign audience evaluation (both the demo-mode evaluator and
+  the Supabase prepare_campaign_recipients() RPC), the MCP server's lead search/contact/follow-up
+  tools, lead-marketplace allocation eligibility, and the financial-year-end bulk follow-up task
+  generator were already correctly gated. The one real gap - the lead profile's ad-hoc "log an
+  interaction" and "add a follow-up task" actions had no Do Not Contact check in either data mode -
+  is now closed in demo-store.ts and the matching log_lead_interaction()/create_lead_task() RPCs.
+  Notes remain unrestricted (an internal note isn't outreach), and resolving an already-open task
+  (complete or cancel) stays available after a lead becomes Do Not Contact, so a now-irrelevant
+  task can still be cleaned up.
 
 ## Buyer Commerce
 - Extend the initial audited acceptance/release workspace with reassignment, dispute evidence, and

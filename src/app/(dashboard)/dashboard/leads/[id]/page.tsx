@@ -97,6 +97,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <LeadActivityPanel
             leadId={lead.id}
             canEdit={canEdit}
+            leadDoNotContact={lead.doNotContact}
             notes={workspace.notes}
             tasks={workspace.tasks}
             activities={workspace.activities}

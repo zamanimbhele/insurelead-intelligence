@@ -86,4 +86,37 @@ test.describe("Lead activity workflow (synthetic demo data)", () => {
     await statusSelect.selectOption(originalStatus);
     await expect(statusSelect).toHaveValue(originalStatus);
   });
+
+  test("Do Not Contact blocks new interactions and tasks, but not notes", async ({ page }) => {
+    const href = await firstLeadProfileHref(page);
+    await page.goto(href);
+    await expect(page.getByRole("heading", { name: "Pipeline & Outcome" })).toBeVisible();
+
+    const statusSelect = page.getByLabel("Status");
+    const originalStatus = await statusSelect.inputValue();
+    expect(originalStatus).not.toBe("do_not_contact");
+
+    await page.getByRole("button", { name: "Mark Do Not Contact" }).click();
+    await expect(statusSelect).toHaveValue("do_not_contact");
+
+    await expect(
+      page.getByText(/marked Do Not Contact, so new outbound interactions cannot be logged/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/marked Do Not Contact, so new follow-up tasks cannot be created/),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log interaction" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add task" })).toHaveCount(0);
+
+    // Notes are not outreach, so adding one must still work while DNC is set.
+    await expect(page.getByPlaceholder("Add a note for this lead...")).toBeVisible();
+
+    // Revert so the demo dataset is unchanged for the next local run. Moving
+    // away from the "do_not_contact" status clears the flag automatically
+    // (see resolveDoNotContactForStatus in src/lib/lead-utils.ts).
+    await statusSelect.selectOption(originalStatus);
+    await expect(statusSelect).toHaveValue(originalStatus);
+    await expect(page.getByRole("button", { name: "Log interaction" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add task" })).toBeVisible();
+  });
 });
