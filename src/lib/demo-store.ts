@@ -259,7 +259,9 @@ export function logLeadInteraction(
   input: { channel: LeadInteractionChannel; outcome: LeadInteractionOutcome; summary: string },
   actorLabel: string,
 ): LeadActivity | undefined {
-  if (!getLeadById(leadId)) return undefined;
+  const lead = getLeadById(leadId);
+  if (!lead) return undefined;
+  if (lead.doNotContact) throw new Error("Lead is marked do not contact");
   if (!input.summary.trim()) throw new Error("Interaction summary must not be empty");
 
   return appendLeadActivity({
@@ -280,7 +282,9 @@ export function createLeadTask(
   input: { title: string; dueAt?: string; assigneeLabel?: string },
   actorLabel: string,
 ): LeadTask | undefined {
-  if (!getLeadById(leadId)) return undefined;
+  const lead = getLeadById(leadId);
+  if (!lead) return undefined;
+  if (lead.doNotContact) throw new Error("Lead is marked do not contact");
   if (!input.title.trim()) throw new Error("Task title must not be empty");
 
   const tasks = readJson<LeadTask[]>(LEAD_TASKS_FILE, []);
