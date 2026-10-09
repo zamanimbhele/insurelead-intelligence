@@ -544,6 +544,43 @@ export async function respondToSupabaseAllocation(
   return data as { allocationId: string; leadId: string; status: "accepted" | "released" };
 }
 
+export async function reviewSupabaseOrganisation(
+  client: SupabaseClient,
+  input: { organisationId: string; decision: "approve" | "reject" },
+) {
+  const { data, error } = await client.rpc("review_broker_organisation", {
+    p_organisation_id: input.organisationId,
+    p_decision: input.decision,
+  });
+  fail("Unable to review organisation", error);
+  return data as { id: string; onboardingStatus: string; status: string };
+}
+
+export async function updateSupabaseProfileMembership(
+  client: SupabaseClient,
+  input: { profileId: string; role: string; memberStatus: string },
+) {
+  const { data, error } = await client.rpc("update_profile_membership", {
+    p_profile_id: input.profileId,
+    p_role: input.role,
+    p_member_status: input.memberStatus,
+  });
+  fail("Unable to update member", error);
+  return data as { id: string; role: string; memberStatus: string };
+}
+
+export async function reviewSupabaseSendingIdentity(
+  client: SupabaseClient,
+  input: { identityId: string; status: "verified" | "disabled" },
+) {
+  const { data, error } = await client.rpc("review_sending_identity", {
+    p_identity_id: input.identityId,
+    p_status: input.status,
+  });
+  fail("Unable to review sending identity", error);
+  return data as { id: string; status: string };
+}
+
 export async function hasRecentSupabaseDuplicate(
   client: SupabaseClient,
   email: string,
