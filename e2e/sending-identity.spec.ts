@@ -14,8 +14,24 @@ test.describe("Broker self-service sending identity creation (synthetic demo dat
   });
 
   test("a Broker Manager can add a sending identity, which appears pending", async ({ page }) => {
+    // The role select auto-submits a server action on change
+    // (DemoRoleSwitcher.tsx's requestSubmit()), which sets the demo_role
+    // cookie and then redirects back to /dashboard (always /dashboard -
+    // the form has no hidden "next" field, so setDemoRole()'s
+    // safeNextPath() falls back to it). Because that redirect's target is
+    // the SAME route we are already on, waiting on the URL would be
+    // vacuously true before the round trip even finishes; an immediate
+    // page.goto() to a different page then races ahead of (and can
+    // cancel) the in-flight submission, so the cookie is never applied
+    // and the next page load still shows the previous role. Waiting for
+    // the sidebar's own identity line to show the new demo account's
+    // name is a real, state-dependent signal instead - server-rendered
+    // from the cookie-derived identity, so it cannot appear until the
+    // redirect has actually landed. (This exact race broke the sibling
+    // e2e/broker-team-invite.spec.ts in real CI - see BACKLOG.md.)
     await page.goto("/dashboard");
     await page.getByLabel("Viewing as (demo role)").selectOption("broker_admin");
+    await expect(page.getByRole("complementary").getByText("Johan van der Merwe")).toBeVisible();
 
     await page.goto("/dashboard/broker-profile");
     const form = page.getByTestId("sending-identity-form");
@@ -30,13 +46,17 @@ test.describe("Broker self-service sending identity creation (synthetic demo dat
 
     await expect(form.getByText("A platform administrator still needs to verify this identity")).toBeVisible();
     await expect(page.getByText(fromEmail, { exact: true })).toBeVisible();
-    await expect(page.getByText(domain)).toBeVisible();
+    // Non-exact getByText(domain) also matches the from-email paragraph,
+    // which contains the domain as a substring ("consultations@mail.e2e-
+    // ...") - exact: true scopes this to the domain-only paragraph.
+    await expect(page.getByText(domain, { exact: true })).toBeVisible();
     await expect(page.getByText("pending", { exact: true }).first()).toBeVisible();
   });
 
   test("an ordinary Broker (broker_agent) does not see the add-identity form", async ({ page }) => {
     await page.goto("/dashboard");
     await page.getByLabel("Viewing as (demo role)").selectOption("broker_agent");
+    await expect(page.getByRole("complementary").getByText("Sipho Khumalo")).toBeVisible();
 
     await page.goto("/dashboard/broker-profile");
     await expect(page.getByTestId("sending-identity-form")).toHaveCount(0);

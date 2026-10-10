@@ -102,9 +102,20 @@ Priced in the accompanying quotation.
   status, first-identity-becomes-default, a second identity for the same org does not also become
   default, a duplicate from-email for the same organisation is rejected, an empty domain is
   rejected, and a different organisation gets its own independent default. A new Playwright spec
-  (`e2e/sending-identity.spec.ts`, lint/type-checked but not run end-to-end - this environment's
-  documented `next build`/Playwright limitation) covers the role gate (visible to Broker Manager,
-  not to the default Super Admin or to an ordinary Broker) and the create-then-see-pending flow.
+  (`e2e/sending-identity.spec.ts`) covers the role gate (visible to Broker Manager, not to the
+  default Super Admin or to an ordinary Broker) and the create-then-see-pending flow. Actually run,
+  not just lint/type-checked - this environment's device shell can't fit a `next build`+Playwright
+  run in its per-call time budget, so verification used a separate scratch checkout of the pushed
+  branch instead (`npm run build`, then `npx playwright test` against the preinstalled Chromium).
+  The first version of this spec had two real bugs, both caught this way and fixed: (1) the same
+  role-switch race documented in the broker-team-invitations item below -
+  `selectOption("broker_admin")` immediately followed by `page.goto()` races ahead of the demo role
+  switcher's own server-action redirect, so the `demo_role` cookie was never applied; fixed by
+  waiting on the sidebar's identity line instead of a vacuous URL check; (2) a locator-specificity
+  bug - `page.getByText(domain)` (non-exact) also matched the from-email paragraph, which contains
+  the domain as a substring, so Playwright's strict mode correctly refused to resolve it to one
+  element; fixed with `{ exact: true }`. All 54 specs in the full suite pass against this branch
+  after both fixes.
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable
