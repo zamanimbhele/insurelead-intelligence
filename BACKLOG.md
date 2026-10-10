@@ -63,16 +63,49 @@ Priced in the accompanying quotation.
   dashboard at all - today that only happens via the same manual SQL scripts used for broker
   provisioning - so this review action is only useful once an identity already exists; a
   broker-side creation form is explicitly open future work, documented in
-  `docs/BROKER_TENANCY_SETUP.md` rather than silently left out. Also explicitly out of scope:
-  inviting an additional team member into an *already-approved* organisation currently means
-  another self-signup, which creates a second pending organisation rather than joining the
-  existing one - a reasonable next refinement, not attempted here. This migration could not be
+  `docs/BROKER_TENANCY_SETUP.md` rather than silently left out. Also explicitly out of scope at
+  the time: inviting an additional team member into an *already-approved* organisation (closed by
+  the next item below). This migration could not be
   executed against a real Postgres instance from this session (no `supabase`/`psql` CLI
   available, consistent with every other migration in this series being written for the user's
   own `npx supabase db push`) - verified instead by a careful manual read-through plus a
   balanced-syntax check (function count, matching `begin`/`end`, matched `$$` delimiters, balanced
   parentheses) and by closely mirroring the exact structure of this codebase's many already-
   working RPCs (`log_lead_interaction()`, `create_lead_task()`, `respond_to_lead_allocation()`).
+- Broker-side self-service team invitations completed: the gap flagged above - a colleague joining
+  an already-approved organisation had no path except another self-signup, which `handle_new_user()`
+  turns into a *second*, duplicate `pending` organisation rather than joining the existing one - is
+  closed. `/dashboard/broker-profile` ("Invite a team member", `broker_admin` only via
+  `canInviteTeamMember()`) collects an email, optional display name, and role, and posts to
+  `/api/broker-team/invite`. That route is the first place in this codebase to call the Supabase
+  Admin API rather than only the caller's own session client: `inviteSupabaseAuthUser()`
+  (`src/lib/supabase/admin.ts`) uses the existing service-role admin client
+  (`createSupabaseAdminClient()`, already used for the public lead-capture path) to create a real
+  auth user and send Supabase's own invite email, deliberately never setting `brokerage_name` in
+  its metadata so `handle_new_user()` correctly leaves it alone. The resulting user id is then
+  attached to the *inviter's own* organisation by a new `invite_broker_team_member()` SECURITY
+  DEFINER RPC (`supabase/migrations/202610110002_broker_team_invitations.sql`), which re-checks the
+  caller is an active `broker_admin`, resolves the organisation from the caller's own profile
+  server-side (never a client-supplied id), rejects a role outside the three broker roles, rejects a
+  target that already has a profile (defense in depth - the Admin API itself already refuses to
+  invite an address that is already registered, so this should be unreachable in practice), and
+  writes its own `audit_logs` entry (`profile_invited`). Known, explicitly accepted limitation: an
+  email that already self-signed-up and is stuck in its own duplicate pending organisation still
+  cannot be invited this way (Supabase refuses to invite an already-registered address) - an
+  account-merge flow is a reasonable further refinement, not attempted here. This is also the only
+  Supabase-mode-only broker self-service action added so far with no demo-mode equivalent at all
+  (unlike sending identities or FYE plans, which have one): inviting someone requires creating a
+  real, separately-authenticating account, which has no meaningful analogue in demo mode's
+  single-shared-cookie identity model - the form and API route both refuse outright in demo mode
+  with the same pattern the sending-identity review action already established
+  ("Team invitations require Supabase mode"). The new RPC could not be executed against a real
+  Postgres instance from this session either, for the same reason as every other migration in this
+  series - verified instead by the same manual read-through and balanced-syntax check. A new
+  Playwright spec (`e2e/broker-team-invite.spec.ts`, lint/type-checked but not run end-to-end - this
+  environment's documented `next build`/Playwright limitation) covers what demo mode can actually
+  verify: the role gate (visible to Broker Manager, not to the default Super Admin or an ordinary
+  Broker) and that the API route correctly refuses to run in demo mode rather than silently doing
+  nothing.
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable

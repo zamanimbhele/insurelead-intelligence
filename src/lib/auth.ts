@@ -226,3 +226,14 @@ export function canManageCompliance(identity: DashboardIdentity) {
 export function canManageCampaignPlanning(identity: DashboardIdentity) {
   return isPlatformAdmin(identity) || CAMPAIGN_PLANNING_ROLES.includes(identity.role as (typeof CAMPAIGN_PLANNING_ROLES)[number]);
 }
+
+// Inviting a teammate into your own organisation (invite_broker_team_
+// member() RPC) is a narrower, organisation-scoped admin action: only
+// broker_admin, never campaign_manager/broker_agent, and - like every
+// self-service broker action in this codebase that always resolves the
+// organisation from the caller's own profile server-side - deliberately
+// excludes platform_admin/compliance_admin too, since the platform
+// organisation is not a broker tenant to invite anyone into.
+export function canInviteTeamMember(identity: DashboardIdentity) {
+  return identity.role === "broker_admin";
+}
