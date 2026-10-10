@@ -38,10 +38,15 @@ row (`member_status = 'invited'`) for them - there is nothing to run by hand for
    write an `audit_logs` entry (`organisation_reviewed` / `profile_membership_updated`).
 3. Rejecting leaves the organisation inactive; the signed-up user stays `invited` and sees `/access-denied` if they
    try to sign in.
-4. Add further team members to an already-approved organisation the same way: have them sign up at `/signup` with
-   the same brokerage name (today this creates a *second* `pending` organisation rather than joining the existing
-   one - inviting a colleague into an already-approved org, rather than always creating a new one, is a reasonable
-   next refinement but out of scope here), or fall back to the manual path below.
+4. Add further team members to an already-approved organisation from the dashboard: on `/dashboard/broker-profile`,
+   a `broker_admin` uses **Invite a team member** to send a real Supabase invite email and attach the new account to
+   *this* organisation directly (`invite_broker_team_member()` RPC -
+   `supabase/migrations/202610110002_broker_team_invitations.sql`). This is the correct path for a colleague joining
+   an existing, already-approved organisation - unlike step-4's older advice of "have them sign up again", which
+   `handle_new_user()` would instead turn into a *second*, duplicate `pending` organisation. Known limitation: an
+   email address that has already self-signed-up (and is stuck in its own duplicate pending organisation) cannot be
+   invited this way, since Supabase refuses to invite an address that is already registered - resolving that case
+   needs an account-merge flow, a further refinement not attempted here.
 
 **Security note:** `raw_user_meta_data` on a Supabase auth user is client-supplied at signup time and is never
 trusted for anything above the lowest privilege tier - `handle_new_user()` always creates the new profile as
@@ -69,6 +74,18 @@ actions for platform admins (`review_sending_identity()` RPC - manual attestatio
 were checked, not an automated DNS/Resend API check). There is still no self-service way for a broker to *add* a
 sending identity from the dashboard - today that only happens via the manual SQL scripts above - so this review
 action is only useful once an identity already exists to review; a broker-side creation form is open future work.
+
+### Team invitations
+
+A `broker_admin` can invite a new teammate from `/dashboard/broker-profile` without touching SQL or Supabase
+Authentication directly: `inviteSupabaseAuthUser()` (`src/lib/supabase/admin.ts`) uses the Supabase Admin API
+(service-role key, never exposed to the browser - the only place in this codebase that calls `auth.admin.*`) to
+create the auth user and send Supabase's own invite email, then `invite_broker_team_member()` attaches the new
+account to the inviter's own organisation as an `invited` profile. `handle_new_user()` is unaffected - the invite
+call deliberately never sets `brokerage_name` in the new user's metadata, so the self-signup trigger correctly
+leaves an admin-invited user alone rather than also creating a stray second organisation for them. Requires
+`SUPABASE_SERVICE_ROLE_KEY` to be configured (see `.env.example`); demo mode refuses this action outright, the
+same way it refuses sending-identity review.
 
 ## Tenant boundary
 

@@ -1,6 +1,7 @@
-import { getDashboardIdentity, isBrokerUser } from "@/lib/auth";
+import { canInviteTeamMember, getDashboardIdentity, isBrokerUser } from "@/lib/auth";
 import { getDashboardBrokerWorkspace } from "@/lib/dashboard-data";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { InviteTeamMemberForm } from "@/components/dashboard/InviteTeamMemberForm";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,7 @@ export default async function BrokerProfilePage() {
             </div>
           ))}
         </div>
+        {canInviteTeamMember(identity) ? <InviteTeamMemberForm /> : null}
       </section>
     </div>
   );
