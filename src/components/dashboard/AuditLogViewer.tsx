@@ -165,11 +165,11 @@ export function AuditLogViewer({ entries, canExport }: { entries: AuditLogEntry[
             <table className="w-full min-w-[800px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wide text-slate-400">
-                  <th className="py-2 pr-4">When</th>
-                  <th className="py-2 pr-4">Entity</th>
-                  <th className="py-2 pr-4">Action</th>
-                  <th className="py-2 pr-4">Actor</th>
-                  <th className="py-2 pr-4">Details</th>
+                  <th scope="col" className="py-2 pr-4">When</th>
+                  <th scope="col" className="py-2 pr-4">Entity</th>
+                  <th scope="col" className="py-2 pr-4">Action</th>
+                  <th scope="col" className="py-2 pr-4">Actor</th>
+                  <th scope="col" className="py-2 pr-4">Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

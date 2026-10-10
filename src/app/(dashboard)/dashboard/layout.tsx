@@ -4,6 +4,7 @@ import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOu
 import { canViewCompliance, getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
 import { DemoRoleSwitcher } from "@/components/dashboard/DemoRoleSwitcher";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardMobileNav";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const identity = await getDashboardIdentity();
@@ -41,8 +42,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : []),
   ];
 
+  // Rendered once and reused in both the desktop sidebar and the mobile
+  // drawer so the two can never quietly drift apart.
+  const navLinks = nav.map((item) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-700"
+    >
+      <item.icon className="h-4 w-4" />
+      {item.label}
+    </Link>
+  ));
+
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        Skip to main content
+      </a>
       <aside className="hidden w-64 flex-shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
         <div className="flex items-center gap-2 border-b border-slate-200 px-6 py-5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white">
@@ -50,17 +70,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </span>
           <span className="text-sm font-semibold text-slate-900">InsureLead Intelligence</span>
         </div>
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-primary-50 hover:text-primary-700"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
+        <nav aria-label="Dashboard" className="flex-1 space-y-1 px-3 py-4">
+          {navLinks}
         </nav>
         <div className="border-t border-slate-200 p-4">
           <Link href="/" className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-primary-700">
@@ -85,11 +96,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
       <div className="flex-1">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 lg:hidden">
-          <span className="text-sm font-semibold text-slate-900">InsureLead Intelligence</span>
-          <Link href="/" className="text-xs font-medium text-primary-700">Exit</Link>
-        </header>
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</div>
+        <DashboardMobileNav>{navLinks}</DashboardMobileNav>
+        <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

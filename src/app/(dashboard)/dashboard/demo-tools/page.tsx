@@ -78,10 +78,10 @@ export default async function DemoToolsPage({
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead>
               <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="py-2 pr-4">Role</th>
-                <th className="py-2 pr-4">Demo account</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2">What they can do</th>
+                <th scope="col" className="py-2 pr-4">Role</th>
+                <th scope="col" className="py-2 pr-4">Demo account</th>
+                <th scope="col" className="py-2 pr-4">Email</th>
+                <th scope="col" className="py-2">What they can do</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

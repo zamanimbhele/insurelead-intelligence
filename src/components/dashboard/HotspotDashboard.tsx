@@ -34,14 +34,14 @@ function HotspotTable({ level, hotspots }: { level: HotspotLevel; hotspots: GeoH
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wide text-slate-400">
-                <th className="py-2 pr-4">Area</th>
-                <th className="py-2 pr-4">Leads</th>
-                <th className="py-2 pr-4">Growth</th>
-                <th className="py-2 pr-4">Conversion</th>
-                <th className="py-2 pr-4">Top industry</th>
-                <th className="py-2 pr-4">Top need</th>
-                <th className="py-2 pr-4">Top campaign</th>
-                <th className="py-2 pr-4">Opportunity score</th>
+                <th scope="col" className="py-2 pr-4">Area</th>
+                <th scope="col" className="py-2 pr-4">Leads</th>
+                <th scope="col" className="py-2 pr-4">Growth</th>
+                <th scope="col" className="py-2 pr-4">Conversion</th>
+                <th scope="col" className="py-2 pr-4">Top industry</th>
+                <th scope="col" className="py-2 pr-4">Top need</th>
+                <th scope="col" className="py-2 pr-4">Top campaign</th>
+                <th scope="col" className="py-2 pr-4">Opportunity score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
