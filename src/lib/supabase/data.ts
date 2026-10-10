@@ -569,6 +569,19 @@ export async function updateSupabaseProfileMembership(
   return data as { id: string; role: string; memberStatus: string };
 }
 
+export async function attachSupabaseInvitedProfile(
+  client: SupabaseClient,
+  input: { userId: string; role: string; displayName?: string },
+) {
+  const { data, error } = await client.rpc("invite_broker_team_member", {
+    p_user_id: input.userId,
+    p_role: input.role,
+    p_display_name: input.displayName ?? null,
+  });
+  fail("Unable to add the invited team member", error);
+  return data as { id: string; organisationId: string; role: string; memberStatus: string; displayName?: string; email?: string };
+}
+
 export async function reviewSupabaseSendingIdentity(
   client: SupabaseClient,
   input: { identityId: string; status: "verified" | "disabled" },

@@ -1,5 +1,5 @@
 import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
-import { Field, inputClass } from "../FormField";
+import { Field, FieldGroup, inputClass } from "../FormField";
 import {
   INDUSTRIES,
   BUSINESS_TYPES,
@@ -45,11 +45,7 @@ export function StepApplicantDetails({ form }: { form: ConsultationFormHandle })
 
   return (
     <div className="flex flex-col gap-6">
-      <Field
-        label="Who needs insurance?"
-        htmlFor="applicantType"
-        error={errors.applicantType?.message}
-      >
+      <FieldGroup legend="Who needs insurance?" error={errors.applicantType?.message}>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
             <input
@@ -78,7 +74,7 @@ export function StepApplicantDetails({ form }: { form: ConsultationFormHandle })
             </span>
           </label>
         </div>
-      </Field>
+      </FieldGroup>
 
       {applicantType === "business" && (
         <div className="grid gap-5 border-t border-slate-200 pt-6 sm:grid-cols-2">

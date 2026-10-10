@@ -60,11 +60,10 @@ Priced in the accompanying quotation.
   Sending-domain verification's admin-review half (mark an existing identity verified/disabled, a
   manual DNS-checked attestation, not an automated Resend API call) is complete; the broker-side
   *creation* half - previously an explicitly open gap, since the only way to add an identity was
-  the manual SQL scripts used for broker provisioning - is now also complete (see the next item
-  below). Still explicitly out of scope: inviting an additional team member into an
-  *already-approved* organisation currently means another self-signup, which creates a second
-  pending organisation rather than joining the existing one - a reasonable next refinement, not
-  attempted here. This migration could not be
+  the manual SQL scripts used for broker provisioning - is now also complete, and so is inviting an
+  additional team member into an *already-approved* organisation - previously that meant another
+  self-signup, which created a second pending organisation rather than joining the existing one.
+  Both gaps are closed by the next two items below. This migration could not be
   executed against a real Postgres instance from this session (no `supabase`/`psql` CLI
   available, consistent with every other migration in this series being written for the user's
   own `npx supabase db push`) - verified instead by a careful manual read-through plus a
@@ -116,6 +115,55 @@ Priced in the accompanying quotation.
   the domain as a substring, so Playwright's strict mode correctly refused to resolve it to one
   element; fixed with `{ exact: true }`. All 54 specs in the full suite pass against this branch
   after both fixes.
+- Broker-side self-service team invitations completed: the gap flagged above - a colleague joining
+  an already-approved organisation had no path except another self-signup, which `handle_new_user()`
+  turns into a *second*, duplicate `pending` organisation rather than joining the existing one - is
+  closed. `/dashboard/broker-profile` ("Invite a team member", `broker_admin` only via
+  `canInviteTeamMember()`) collects an email, optional display name, and role, and posts to
+  `/api/broker-team/invite`. That route is the first place in this codebase to call the Supabase
+  Admin API rather than only the caller's own session client: `inviteSupabaseAuthUser()`
+  (`src/lib/supabase/admin.ts`) uses the existing service-role admin client
+  (`createSupabaseAdminClient()`, already used for the public lead-capture path) to create a real
+  auth user and send Supabase's own invite email, deliberately never setting `brokerage_name` in
+  its metadata so `handle_new_user()` correctly leaves it alone. The resulting user id is then
+  attached to the *inviter's own* organisation by a new `invite_broker_team_member()` SECURITY
+  DEFINER RPC (`supabase/migrations/202610110002_broker_team_invitations.sql`), which re-checks the
+  caller is an active `broker_admin`, resolves the organisation from the caller's own profile
+  server-side (never a client-supplied id), rejects a role outside the three broker roles, rejects a
+  target that already has a profile (defense in depth - the Admin API itself already refuses to
+  invite an address that is already registered, so this should be unreachable in practice), and
+  writes its own `audit_logs` entry (`profile_invited`). Known, explicitly accepted limitation: an
+  email that already self-signed-up and is stuck in its own duplicate pending organisation still
+  cannot be invited this way (Supabase refuses to invite an already-registered address) - an
+  account-merge flow is a reasonable further refinement, not attempted here. This is also the only
+  Supabase-mode-only broker self-service action added so far with no demo-mode equivalent at all
+  (unlike sending identities or FYE plans, which have one): inviting someone requires creating a
+  real, separately-authenticating account, which has no meaningful analogue in demo mode's
+  single-shared-cookie identity model - the form and API route both refuse outright in demo mode
+  with the same pattern the sending-identity review action already established
+  ("Team invitations require Supabase mode"). The new RPC could not be executed against a real
+  Postgres instance from this session either, for the same reason as every other migration in this
+  series - verified instead by the same manual read-through and balanced-syntax check. A new
+  Playwright spec (`e2e/broker-team-invite.spec.ts`) covers what demo mode can actually verify: the
+  role gate (visible to Broker Manager, not to the default Super Admin or an ordinary Broker) and
+  that the API route correctly refuses to run in demo mode rather than silently doing nothing. This
+  spec was actually run, not just lint/type-checked: this environment's device shell can't fit a
+  `next build`+Playwright run in its per-call time budget, so it was verified instead by cloning the
+  pushed branch into a separate scratch checkout and running the full suite there (`npm run build`,
+  then `npx playwright test` against the preinstalled Chromium). The first version of this spec
+  failed - genuinely, against real CI too (PR #23 came back 2/3 checks, the Playwright step red):
+  `selectOption("broker_admin")` immediately followed by `page.goto()` to a different page races
+  ahead of the demo role switcher's own server-action redirect (DemoRoleSwitcher.tsx auto-submits
+  on change; the redirect target is always `/dashboard`, the same route the test was already on, so
+  an `expect(page).toHaveURL(...)` guard is vacuously true and never actually waits for it) - the
+  interrupted redirect meant the `demo_role` cookie was never applied, so the next page load still
+  showed the previous role. Fixed by waiting on a real, state-dependent signal instead - the
+  sidebar's own identity line showing the new demo account's name - before navigating on; all 54
+  specs in the full suite pass against this branch after the fix. Every other Playwright spec this
+  series of migrations/features has written (DNC enforcement, sending-identity creation) was
+  authored under the same unverified lint/type-check-only process and has not yet been run against
+  real CI - this is now a known risk worth re-checking, not an assumption to keep repeating.
+
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable
@@ -372,7 +420,42 @@ Priced in the accompanying quotation.
   `next/og` ImageResponse) and a critical `sharp` advisory already present in the dependency tree
   before this change - both are production dependencies and worth their own deliberate upgrade
   decision, not bundled into this test-infrastructure item.
-- Accessibility review and security review checklist.
+- Accessibility review and security review checklist completed: a manual, source-level
+  WCAG 2.1 AA review (`docs/ACCESSIBILITY_REVIEW.md`) and a line-by-line pass against the
+  brief's own section 11 security requirements (`docs/SECURITY_REVIEW_CHECKLIST.md`),
+  alongside this repo's other reference docs. The accessibility review found and fixed, rather than just reported, a
+  real functional gap - the dashboard sidebar was `hidden` below the `lg` breakpoint with
+  no mobile menu toggle at all, so no nav item was reachable on a phone/tablet, directly
+  contradicting the brief's own "Mobile-first" requirement - via a new `DashboardMobileNav`
+  component that reuses the exact same server-rendered nav links as the desktop sidebar.
+  Also fixed: three option-group fields (applicant type, insurance products, business
+  cover areas) had a `<label for>` pointing at an id nothing had - replaced with a proper
+  `FieldGroup` (`<fieldset>`/`<legend>`) component in `FormField.tsx`; skip-to-main-content
+  links and a real `<main>` landmark added to both the public site and dashboard layouts
+  (the dashboard's content wrapper was a plain, landmark-less `<div>`); step-change focus
+  management and a `role="status"` step announcement added to the consultation form, which
+  previously gave no feedback at all that the page had moved to a new step; `role="alert"`
+  added to `FormField`'s shared error paragraph (cascades to every form in the app) and the
+  login/signup error banners; `scope="col"` added to every data table's header cells. A
+  `text-slate-400` contrast shortfall (~2.56:1, under the 4.5:1 AA threshold) used
+  throughout the app for meaningful secondary text, and `aria-current="page"` on the active
+  dashboard nav link (blocked on the dashboard layout being a Server Component with no
+  pathname access without adding middleware), are documented as open follow-ups rather than
+  risked as unverified blind changes - this session's remote device-bridge shell could not
+  reliably bring up a full Next.js server to visually verify a broad find-replace, the same
+  constraint already documented against the Playwright e2e suite earlier in this file. The
+  security checklist found one real gap and fixed it in the same pass - `next.config.mjs`
+  had no security headers configured at all; added `X-Frame-Options`, `X-Content-Type-
+  Options`, `Referrer-Policy`, and a conservative `Permissions-Policy` (deliberately no
+  Content-Security-Policy yet, since a safe one needs the real deployment's script/style/
+  connect origins enumerated first, not guessed). Everything else on the brief's section 11
+  list was verified, not assumed, against the actual implementation (RBAC, RLS, server-side
+  authorisation, Zod validation, rate limiting, Turnstile CAPTCHA, the honeypot field,
+  duplicate-submission detection, the `safeErrors` sanitisation convention already used
+  across 10 API routes, audit logging, restricted/audited CSV export, soft delete plus
+  redaction-based hard delete, and Supabase-managed session handling) - two items are
+  tracked as genuinely open rather than silently skipped: time-limited export links, and a
+  CI secret-scanning step.
 - Demo accounts and demo data reset completed: 6 seeded, 100% synthetic demo accounts - one per
   role the brief defines in section 4 (Super Admin, Compliance Admin, Broker Manager, Broker,
   Marketing Analyst), plus the read-only Compliance Auditor role already present in this codebase's

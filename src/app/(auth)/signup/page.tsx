@@ -38,7 +38,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           <p>Broker accounts are reviewed before campaigns or leads become available. Registration does not automatically approve your brokerage.</p>
         </div>
 
-        {error && <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         {checkEmail && (
           <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             Check your email to confirm your account. The InsureLead team will review your broker details before enabling dashboard access.

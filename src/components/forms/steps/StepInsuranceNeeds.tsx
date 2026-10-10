@@ -1,5 +1,5 @@
 import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
-import { Field, inputClass } from "../FormField";
+import { Field, FieldGroup, inputClass } from "../FormField";
 import { BUSINESS_COVER_OPTIONS, INSURANCE_PRODUCTS, CURRENT_INSURANCE_STATUS, MONTHS } from "@/lib/constants";
 import type { BusinessCoverInterest, InsuranceProduct } from "@/lib/types";
 
@@ -29,7 +29,7 @@ export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Field label="Insurance products of interest" htmlFor="insuranceProducts" error={errors.insuranceProducts?.message as string}>
+      <FieldGroup legend="Insurance products of interest" error={errors.insuranceProducts?.message as string}>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {availableProducts.map((p) => (
             <label key={p.value} className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50">
@@ -41,10 +41,10 @@ export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
             </label>
           ))}
         </div>
-      </Field>
+      </FieldGroup>
 
       {selected.includes("business_insurance") && (
-        <Field label="Business cover areas" htmlFor="businessCoverInterests" optional>
+        <FieldGroup legend="Business cover areas" optional>
           <p className="mb-3 text-xs text-slate-500">Select any known requirements, or leave this blank for a general review.</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {BUSINESS_COVER_OPTIONS.map((cover) => (
@@ -59,7 +59,7 @@ export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
               </label>
             ))}
           </div>
-        </Field>
+        </FieldGroup>
       )}
 
       <Field label="Current insurance status" htmlFor="currentInsuranceStatus" error={errors.currentInsuranceStatus?.message}>

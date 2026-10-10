@@ -82,14 +82,14 @@ export function IndustryOpportunityDashboard({ industries }: { industries: Indus
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wide text-slate-400">
-                <th className="py-2 pr-4">Industry</th>
-                <th className="py-2 pr-4">Leads</th>
-                <th className="py-2 pr-4">Growth</th>
-                <th className="py-2 pr-4">Conversion</th>
-                <th className="py-2 pr-4">Renewing soon</th>
-                <th className="py-2 pr-4">Top cover need</th>
-                <th className="py-2 pr-4">Attention</th>
-                <th className="py-2 pr-4">Opportunity score</th>
+                <th scope="col" className="py-2 pr-4">Industry</th>
+                <th scope="col" className="py-2 pr-4">Leads</th>
+                <th scope="col" className="py-2 pr-4">Growth</th>
+                <th scope="col" className="py-2 pr-4">Conversion</th>
+                <th scope="col" className="py-2 pr-4">Renewing soon</th>
+                <th scope="col" className="py-2 pr-4">Top cover need</th>
+                <th scope="col" className="py-2 pr-4">Attention</th>
+                <th scope="col" className="py-2 pr-4">Opportunity score</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
