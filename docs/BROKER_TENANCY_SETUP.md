@@ -64,18 +64,27 @@ still provisioned exactly as before:
 
 ### Sending-domain verification
 
-`/dashboard/brokers` also shows each organisation's `broker_sending_identities` with **Mark verified**/**Disable**
+`/dashboard/brokers` shows each organisation's `broker_sending_identities` with **Mark verified**/**Disable**
 actions for platform admins (`review_sending_identity()` RPC - manual attestation that the domain's DNS records
-were checked, not an automated DNS/Resend API check). There is still no self-service way for a broker to *add* a
-sending identity from the dashboard - today that only happens via the manual SQL scripts above - so this review
-action is only useful once an identity already exists to review; a broker-side creation form is open future work.
+were checked, not an automated DNS/Resend API check).
+
+A broker admin or campaign manager can now add their own sending identity from `/dashboard/broker-profile`
+("Add a sending identity") - no manual SQL script required. It calls `create_broker_sending_identity()`
+(`supabase/migrations/202610110001_broker_sending_identity_self_service.sql`), which resolves the organisation
+from the caller's own active profile server-side (never a client-supplied organisation id, so one tenant can
+never create an identity for another), validates the domain/from-name/from-email, and always inserts it
+`pending` - a platform admin still has to run the **Mark verified** action above before a campaign can send
+from it. The first identity an organisation creates becomes its default; later ones do not. Deliberately not
+exposed to `platform_admin`/`compliance_admin` as a creator: the platform organisation has no broker tenant of
+its own to attach an identity to, so this is a broker self-service action only (see `canCreateSendingIdentity()`
+in `src/lib/auth.ts`).
 
 ## Tenant boundary
 
 - Dashboard reads use the signed-in Supabase session and Row Level Security.
 - A broker tenant can see leads only while it has a `reserved`, `accepted`, or `disputed` allocation.
 - A released allocation no longer grants access to the lead.
-- Only platform administrators can create allocations or mark sending identities as verified.
+- Only platform administrators can create allocations or mark sending identities as verified; a broker admin/campaign manager may add a new sending identity for their own organisation, but it is always created pending.
 - Broker operators respond through the `respond_to_lead_allocation` RPC, which validates tenant ownership and writes an audit record.
 - Suspended members do not resolve to an active organisation and therefore lose tenant access.
 

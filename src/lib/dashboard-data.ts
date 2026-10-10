@@ -8,7 +8,7 @@ import {
   getLegalTextDocuments as getDemoLegalTextDocuments,
   getLegalTextDocumentVersions as getDemoLegalTextDocumentVersions,
 } from "./demo-store";
-import { getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
+import { createSendingIdentity, getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { computeGeoHotspots } from "./hotspots";
 import { computeIndustryOpportunities } from "./industries";
 import { computeFyeCalendar, computeFyeMonthBreakdown, leadsForFyeFollowUp } from "./fye-planner";
@@ -23,6 +23,7 @@ import {
   createSupabaseFyeCampaignPlan,
   createSupabaseLeadTask,
   createSupabaseOptOutRequest,
+  createSupabaseSendingIdentity,
   decideSupabaseDataSourceApproval,
   fetchSupabaseAllocations,
   fetchSupabaseApplicationSettings,
@@ -293,6 +294,29 @@ export async function createDashboardFyeCampaignPlan(
   }
   const id = await createSupabaseFyeCampaignPlan(await requireServerClient(), input);
   return { id };
+}
+
+// Broker self-service "add a sending identity" action
+// (createCreateSendingIdentityForm / SendingIdentityForm.tsx on
+// /dashboard/broker-profile). Demo mode has no organisation-tenancy
+// model (see getDashboardBrokerWorkspace() above), so there is only ever
+// one demo "organisation" to attach it to - the first seeded buyer, the
+// same one the rest of the broker-profile page already shows. In
+// Supabase mode the RPC itself resolves the caller's organisation
+// server-side (create_broker_sending_identity() never trusts a
+// client-supplied organisation id), so identity.organisationId is not
+// even passed through here.
+export async function createDashboardSendingIdentity(
+  identity: DashboardIdentity,
+  input: { domain: string; fromName: string; fromEmail: string; replyToEmail?: string },
+) {
+  const actorLabel = identity.displayName ?? identity.organisationName;
+  if (getDataMode() === "demo") {
+    const buyer = getBuyers()[0];
+    if (!buyer) throw new Error("No demo broker organisation is available");
+    return createSendingIdentity({ organisationId: buyer.id, ...input }, actorLabel);
+  }
+  return createSupabaseSendingIdentity(await requireServerClient(), input);
 }
 
 export async function updateDashboardFyeCampaignPlanStatus(

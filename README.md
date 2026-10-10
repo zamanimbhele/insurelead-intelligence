@@ -138,15 +138,15 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
 ## What is intentionally out of scope for this prototype
 
 This remains a production-pilot foundation, not the full production build. Deferred to the full
-build (see `BACKLOG.md`): a broker-side self-service form to add a sending identity (the platform-
-admin review half - approve/reject organisations, change a member's role or status, verify or
-disable a sending identity - is built; see `docs/BROKER_TENANCY_SETUP.md`), broader role-restricted/audited exports for the
-full reporting suite (leads by source/broker/industry/etc., with time-limited links - the audit
-log's own CSV export is built, see above), buyer self-service, contracting, invoicing/payment
-collection, and a proactive due/overdue task notification mechanism (tasks themselves are built -
-see above; the opt-out/data-subject-request workflow, industry opportunity dashboard, and
-financial year-end campaign planner are also built - see above). The full scope is documented in
-the project's build specification and priced in the accompanying quotation.
+build (see `BACKLOG.md`): broader role-restricted/audited exports for the full reporting suite
+(leads by source/broker/industry/etc., with time-limited links - the audit log's own CSV export is
+built, see above), buyer self-service, contracting, invoicing/payment collection, and a proactive
+due/overdue task notification mechanism (tasks themselves are built - see above; the opt-out/
+data-subject-request workflow, industry opportunity dashboard, and financial year-end campaign
+planner are also built - see above). Platform administration (organisation approval, invitations,
+role changes) and sending-identity management (broker self-service creation plus platform-admin
+verify/disable review) are both built - see `docs/BROKER_TENANCY_SETUP.md`. The full scope is
+documented in the project's build specification and priced in the accompanying quotation.
 
 ## Tech stack
 

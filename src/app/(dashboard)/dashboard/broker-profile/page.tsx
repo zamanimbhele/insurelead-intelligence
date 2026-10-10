@@ -1,6 +1,7 @@
-import { getDashboardIdentity, isBrokerUser } from "@/lib/auth";
+import { canCreateSendingIdentity, getDashboardIdentity, isBrokerUser } from "@/lib/auth";
 import { getDashboardBrokerWorkspace } from "@/lib/dashboard-data";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { SendingIdentityForm } from "@/components/dashboard/SendingIdentityForm";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function BrokerProfilePage() {
               </div>
             ))}
           </div>
+          {canCreateSendingIdentity(identity) ? <SendingIdentityForm /> : null}
         </section>
       </div>
 

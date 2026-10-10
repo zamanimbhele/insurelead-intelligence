@@ -581,6 +581,30 @@ export async function reviewSupabaseSendingIdentity(
   return data as { id: string; status: string };
 }
 
+export async function createSupabaseSendingIdentity(
+  client: SupabaseClient,
+  input: { domain: string; fromName: string; fromEmail: string; replyToEmail?: string },
+) {
+  const { data, error } = await client.rpc("create_broker_sending_identity", {
+    p_domain: input.domain,
+    p_from_name: input.fromName,
+    p_from_email: input.fromEmail,
+    p_reply_to_email: input.replyToEmail ?? null,
+  });
+  fail("Unable to add sending identity", error);
+  return data as {
+    id: string;
+    organisationId: string;
+    domain: string;
+    fromName: string;
+    fromEmail: string;
+    replyToEmail?: string;
+    provider: "resend";
+    status: string;
+    isDefault: boolean;
+  };
+}
+
 export async function hasRecentSupabaseDuplicate(
   client: SupabaseClient,
   email: string,
