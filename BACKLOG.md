@@ -23,8 +23,56 @@ Priced in the accompanying quotation.
   hotspot_snapshots, industry_snapshots, financial_year_calendars, opt_out_requests,
   data_subject_requests, audit_logs, application_settings.
 - Extend Row Level Security policies to every future sensitive table.
-- Add a platform administration UI for invitations, role changes, organisation approval, and
-  sending-domain verification; the database roles and tenant policies are already in place.
+- Platform administration UI for invitations, role changes, and organisation approval completed
+  (sending-domain verification partially - see below). The schema already had everything this
+  needed, designed but never wired up: `organisations.onboarding_status` already supported
+  `pending`/`in_review`/`approved`/`rejected` and `profiles.member_status` already supported
+  `invited` (multi-broker tenancy), but nothing ever wrote an `invited` profile, and the only
+  documented way to provision a broker was a platform admin manually running two example SQL
+  scripts by hand (`docs/BROKER_TENANCY_SETUP.md`). Worse, a real and previously undetected dead
+  end: self-service sign-up (`/signup`) already created a genuine Supabase auth user with
+  brokerage/role metadata, but nothing ever turned that into a `profiles` row -
+  `getDashboardIdentity()` already had a `reason: "profile_missing"` branch and `/access-denied`
+  already said "ask a platform administrator to complete your access setup", but there was no way
+  for an admin to ever discover that a signup had happened at all; the account was simply stuck
+  forever. Closed with a new migration (`202610100001_platform_admin_onboarding.sql`):
+  `handle_new_user()`, a trigger on `auth.users`, now creates a pending organisation and an
+  invited profile automatically at signup time, and three new platform-admin-only SECURITY
+  DEFINER RPCs - `review_broker_organisation()` (approve/reject), `update_profile_membership()`
+  (role and invited/active/suspended status changes, with a self-lockout guard preventing an
+  admin from changing their own role/status), and `review_sending_identity()` (verified/disabled)
+  - let a platform admin act on it, each writing its own `audit_logs` entry following this
+  codebase's established RPC pattern exactly. `/dashboard/brokers` (Broker Directory, already
+  platform-admin/compliance-auditor gated) now shows an approve/reject panel on any pending
+  organisation, an editable team-members roster per organisation (role + status, read-only for
+  compliance auditors), and verify/disable actions on each sending identity -
+  `BrokerAdminControls.tsx` holds the three client components, each calling its own new `/api/
+  admin/...` route. A deliberate security hardening, not an afterthought: `raw_user_meta_data` on
+  a Supabase auth user is client-supplied at signup time (a direct call to Supabase's own signup
+  endpoint can set it to anything, bypassing this app's own form), so `handle_new_user()` never
+  trusts it for privilege - the new profile is always created `invited` (never `active`) and
+  `requested_role` is clamped to the three broker-side roles only, defaulting to `broker_admin`;
+  a spoofed `"platform_admin"` in the metadata can still only ever produce an invited,
+  access-denied broker-role profile requiring a real platform admin's explicit, re-validated
+  review. Demo mode is unaffected and unchanged (per its own already-documented limitation, it has
+  no tenancy/allocation model to manage); `getDashboardBrokerDirectory()` returns an empty
+  `members` array there rather than attempting anything.
+  Sending-domain verification is only partially done: the admin review action (mark an existing
+  identity verified/disabled, a manual DNS-checked attestation, not an automated Resend API call)
+  works, but there was and still is no broker-side way to *add* a sending identity from the
+  dashboard at all - today that only happens via the same manual SQL scripts used for broker
+  provisioning - so this review action is only useful once an identity already exists; a
+  broker-side creation form is explicitly open future work, documented in
+  `docs/BROKER_TENANCY_SETUP.md` rather than silently left out. Also explicitly out of scope:
+  inviting an additional team member into an *already-approved* organisation currently means
+  another self-signup, which creates a second pending organisation rather than joining the
+  existing one - a reasonable next refinement, not attempted here. This migration could not be
+  executed against a real Postgres instance from this session (no `supabase`/`psql` CLI
+  available, consistent with every other migration in this series being written for the user's
+  own `npx supabase db push`) - verified instead by a careful manual read-through plus a
+  balanced-syntax check (function count, matching `begin`/`end`, matched `$$` delimiters, balanced
+  parentheses) and by closely mirroring the exact structure of this codebase's many already-
+  working RPCs (`log_lead_interaction()`, `create_lead_task()`, `respond_to_lead_allocation()`).
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable

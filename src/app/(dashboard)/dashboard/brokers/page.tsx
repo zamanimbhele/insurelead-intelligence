@@ -1,6 +1,11 @@
 import { getDashboardIdentity, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { getDashboardBrokerDirectory } from "@/lib/dashboard-data";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import {
+  MemberMembershipControls,
+  OrganisationReviewControls,
+  SendingIdentityReviewControls,
+} from "@/components/dashboard/BrokerAdminControls";
 
 export const dynamic = "force-dynamic";
 
@@ -17,20 +22,25 @@ export default async function BrokerDirectoryPage() {
     );
   }
 
-  const { buyers, sendingIdentities } = await getDashboardBrokerDirectory();
+  const canManage = isPlatformAdmin(identity);
+  const { buyers, sendingIdentities, members } = await getDashboardBrokerDirectory();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Broker Directory</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-500">
-          Approved product appetite, territory, capacity, service levels, and sending-identity readiness for every tenant.
+          Approved product appetite, territory, capacity, service levels, team membership, and sending-identity
+          readiness for every tenant.
+          {canManage && " Pending organisations, team roles and sending-domain verification can be managed below."}
         </p>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
         {buyers.map((buyer) => {
           const identities = sendingIdentities.filter((item) => item.organisationId === buyer.id);
+          const roster = members.filter((item) => item.organisationId === buyer.id);
+          const pendingApproval = buyer.onboardingStatus === "pending" || buyer.onboardingStatus === "in_review";
           return (
             <article key={buyer.id} data-testid="broker-card" className="rounded-xl border border-slate-200 bg-white p-6">
               <div className="flex items-start justify-between gap-4">
@@ -42,6 +52,8 @@ export default async function BrokerDirectoryPage() {
                   {buyer.onboardingStatus} · {buyer.status}
                 </span>
               </div>
+
+              {canManage && pendingApproval && <OrganisationReviewControls organisationId={buyer.id} />}
 
               <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 <div><dt className="text-slate-400">Daily capacity</dt><dd className="font-semibold text-slate-800">{buyer.dailyLeadCapacity} leads/day</dd></div>
@@ -67,15 +79,33 @@ export default async function BrokerDirectoryPage() {
               </div>
 
               <div className="mt-5 border-t border-slate-100 pt-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Team members</p>
+                {roster.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-400">No team members provisioned yet.</p>
+                ) : (
+                  <div className="mt-2 flex flex-col gap-2">
+                    {roster.map((member) => (
+                      <MemberMembershipControls key={member.id} member={member} canEdit={canManage} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 border-t border-slate-100 pt-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Sending identities</p>
                 {identities.length === 0 ? (
                   <p className="mt-2 text-sm text-amber-700">No sending identity configured</p>
                 ) : identities.map((sendingIdentity) => (
                   <div key={sendingIdentity.id} className="mt-2 flex items-center justify-between gap-3 text-sm">
                     <span className="text-slate-600">{sendingIdentity.fromEmail}</span>
-                    <span className={sendingIdentity.status === "verified" ? "text-emerald-700" : "text-amber-700"}>
-                      {sendingIdentity.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={sendingIdentity.status === "verified" ? "text-emerald-700" : "text-amber-700"}>
+                        {sendingIdentity.status}
+                      </span>
+                      {canManage && (
+                        <SendingIdentityReviewControls identityId={sendingIdentity.id} status={sendingIdentity.status} />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

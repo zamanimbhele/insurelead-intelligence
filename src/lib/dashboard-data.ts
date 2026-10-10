@@ -52,6 +52,7 @@ import {
 import type { DashboardIdentity } from "./auth";
 import type {
   ApplicationSettings,
+  BrokerMember,
   ConsentRecord,
   DataQualityRating,
   DataSource,
@@ -173,14 +174,21 @@ export async function getDashboardAllocationData() {
 
 export async function getDashboardBrokerDirectory() {
   if (getDataMode() === "demo") {
-    return { buyers: getBuyers(), sendingIdentities: getSendingIdentities() };
+    // Demo mode has no allocation/organisation-tenancy model at all (see
+    // the Demo Accounts item in BACKLOG.md), so there is no per-member
+    // roster to show here - only the Supabase-backed real tenancy model
+    // has individual broker-staff profiles to review.
+    return { buyers: getBuyers(), sendingIdentities: getSendingIdentities(), members: [] as BrokerMember[] };
   }
   const client = await requireServerClient();
   const [buyers, sendingIdentities] = await Promise.all([
     fetchSupabaseBuyers(client),
     fetchSupabaseSendingIdentities(client),
   ]);
-  return { buyers, sendingIdentities };
+  const membersByOrg = await Promise.all(
+    buyers.map((buyer) => fetchSupabaseBrokerMembers(client, buyer.id)),
+  );
+  return { buyers, sendingIdentities, members: membersByOrg.flat() };
 }
 
 export async function getDashboardBrokerWorkspace(identity: DashboardIdentity) {
