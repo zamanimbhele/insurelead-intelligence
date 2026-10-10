@@ -101,11 +101,25 @@ Priced in the accompanying quotation.
   ("Team invitations require Supabase mode"). The new RPC could not be executed against a real
   Postgres instance from this session either, for the same reason as every other migration in this
   series - verified instead by the same manual read-through and balanced-syntax check. A new
-  Playwright spec (`e2e/broker-team-invite.spec.ts`, lint/type-checked but not run end-to-end - this
-  environment's documented `next build`/Playwright limitation) covers what demo mode can actually
-  verify: the role gate (visible to Broker Manager, not to the default Super Admin or an ordinary
-  Broker) and that the API route correctly refuses to run in demo mode rather than silently doing
-  nothing.
+  Playwright spec (`e2e/broker-team-invite.spec.ts`) covers what demo mode can actually verify: the
+  role gate (visible to Broker Manager, not to the default Super Admin or an ordinary Broker) and
+  that the API route correctly refuses to run in demo mode rather than silently doing nothing. This
+  spec was actually run, not just lint/type-checked: this environment's device shell can't fit a
+  `next build`+Playwright run in its per-call time budget, so it was verified instead by cloning the
+  pushed branch into a separate scratch checkout and running the full suite there (`npm run build`,
+  then `npx playwright test` against the preinstalled Chromium). The first version of this spec
+  failed - genuinely, against real CI too (PR #23 came back 2/3 checks, the Playwright step red):
+  `selectOption("broker_admin")` immediately followed by `page.goto()` to a different page races
+  ahead of the demo role switcher's own server-action redirect (DemoRoleSwitcher.tsx auto-submits
+  on change; the redirect target is always `/dashboard`, the same route the test was already on, so
+  an `expect(page).toHaveURL(...)` guard is vacuously true and never actually waits for it) - the
+  interrupted redirect meant the `demo_role` cookie was never applied, so the next page load still
+  showed the previous role. Fixed by waiting on a real, state-dependent signal instead - the
+  sidebar's own identity line showing the new demo account's name - before navigating on; all 54
+  specs in the full suite pass against this branch after the fix. Every other Playwright spec this
+  series of migrations/features has written (DNC enforcement, sending-identity creation) was
+  authored under the same unverified lint/type-check-only process and has not yet been run against
+  real CI - this is now a known risk worth re-checking, not an assumption to keep repeating.
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable

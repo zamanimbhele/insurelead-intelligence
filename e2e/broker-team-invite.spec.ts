@@ -19,14 +19,33 @@ test.describe("Broker self-service team invitations (synthetic demo data)", () =
   });
 
   test("a Broker Manager sees the invite form; an ordinary Broker does not", async ({ page }) => {
+    // The role select auto-submits a server action on change
+    // (DemoRoleSwitcher.tsx's requestSubmit()), which sets the demo_role
+    // cookie and then redirects back to /dashboard (always /dashboard -
+    // the form has no hidden "next" field, so setDemoRole()'s
+    // safeNextPath() falls back to it). Because that redirect's target is
+    // the SAME route we are already on, waiting on the URL would be
+    // vacuously true before the round trip even finishes; an immediate
+    // page.goto() to a different page then races ahead of (and can
+    // cancel) the in-flight submission, so the cookie is never applied
+    // and the next page load still shows the previous role. Waiting for
+    // the sidebar's own identity line to show the new demo account's
+    // name is a real, state-dependent signal instead - server-rendered
+    // from the cookie-derived identity, so it cannot appear until the
+    // redirect has actually landed. (Found and fixed via a local
+    // Playwright run reproducing this suite's actual CI failure - see
+    // BACKLOG.md.)
+    const sidebar = page.getByRole("complementary");
     await page.goto("/dashboard");
     await page.getByLabel("Viewing as (demo role)").selectOption("broker_admin");
+    await expect(sidebar.getByText("Johan van der Merwe")).toBeVisible();
 
     await page.goto("/dashboard/broker-profile");
     await expect(page.getByTestId("invite-team-member-form")).toBeVisible();
 
     await page.goto("/dashboard");
     await page.getByLabel("Viewing as (demo role)").selectOption("broker_agent");
+    await expect(sidebar.getByText("Sipho Khumalo")).toBeVisible();
     await page.goto("/dashboard/broker-profile");
     await expect(page.getByTestId("invite-team-member-form")).toHaveCount(0);
   });
