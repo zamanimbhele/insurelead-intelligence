@@ -1,8 +1,10 @@
 import { format } from "date-fns";
+import Link from "next/link";
 
-import { getDashboardIdentity } from "@/lib/auth";
+import { canManageCampaigns, getDashboardIdentity } from "@/lib/auth";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
-import { getDashboardCampaignData } from "@/lib/dashboard-data";
+import { getDashboardCampaignAuthoringContext, getDashboardCampaignData } from "@/lib/dashboard-data";
+import { CampaignCreateForm } from "@/components/dashboard/CampaignCreateForm";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,10 @@ const statusStyles: Record<string, string> = {
 
 export default async function CampaignsPage() {
   const identity = await getDashboardIdentity();
-  const { campaigns, buyers, recipients } = await getDashboardCampaignData(identity);
+  const [{ campaigns, buyers, recipients }, authoring] = await Promise.all([
+    getDashboardCampaignData(identity),
+    canManageCampaigns(identity) ? getDashboardCampaignAuthoringContext(identity) : Promise.resolve(null),
+  ]);
   const buyersById = new Map(buyers.map((buyer) => [buyer.id, buyer]));
   const active = campaigns.filter((campaign) => ["approved", "scheduled", "sending"].includes(campaign.status)).length;
   const awaitingApproval = campaigns.filter((campaign) => campaign.status === "pending_review").length;
@@ -47,10 +52,25 @@ export default async function CampaignsPage() {
         <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="font-semibold text-slate-900">Campaign workspace</h2>
-            <p className="mt-1 text-xs text-slate-400">Use the MCP tools to draft, validate, preview, approve, and explicitly launch.</p>
+            <p className="mt-1 text-xs text-slate-400">Draft and author a campaign here; validation, approval, test sends, and explicit launch stay separate audited steps.</p>
           </div>
           <span className="text-xs font-medium text-slate-500">{active} active</span>
         </div>
+
+        {authoring?.organisationId && (
+          // organisationId only resolves for a broker/insurer's own user
+          // (or any demo role, which has no real per-user tenancy to
+          // begin with - see resolveCampaignOrganisationId() in
+          // dashboard-data.ts). A platform/compliance admin in Supabase
+          // mode has no broker organisation of their own to draft into,
+          // same reasoning canCreateSendingIdentity() already documents,
+          // so this self-service form simply does not render for them -
+          // they still author and approve any tenant's *existing*
+          // campaign on its own detail page instead.
+          <div className="border-b border-slate-200 px-6 py-4">
+            <CampaignCreateForm approvedProducts={authoring.buyer?.insuranceProducts ?? []} sendingIdentities={authoring.sendingIdentities} />
+          </div>
+        )}
 
         {campaigns.length === 0 ? (
           <p className="px-6 py-12 text-center text-sm text-slate-500">No campaigns are visible in this tenant.</p>
@@ -63,7 +83,9 @@ export default async function CampaignsPage() {
                 <article key={campaign.id} data-testid="campaign-card" className="grid gap-5 px-6 py-5 lg:grid-cols-[1.5fr_1fr_0.8fr] lg:items-center">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">{campaign.name}</h3>
+                      <Link href={`/dashboard/campaigns/${campaign.id}`} className="font-semibold text-slate-900 hover:text-primary-700 hover:underline">
+                        {campaign.name}
+                      </Link>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusStyles[campaign.status] ?? statusStyles.draft}`}>
                         {campaign.status.replaceAll("_", " ")}
                       </span>
