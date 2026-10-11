@@ -57,21 +57,64 @@ Priced in the accompanying quotation.
   review. Demo mode is unaffected and unchanged (per its own already-documented limitation, it has
   no tenancy/allocation model to manage); `getDashboardBrokerDirectory()` returns an empty
   `members` array there rather than attempting anything.
-  Sending-domain verification is only partially done: the admin review action (mark an existing
-  identity verified/disabled, a manual DNS-checked attestation, not an automated Resend API call)
-  works, but there was and still is no broker-side way to *add* a sending identity from the
-  dashboard at all - today that only happens via the same manual SQL scripts used for broker
-  provisioning - so this review action is only useful once an identity already exists; a
-  broker-side creation form is explicitly open future work, documented in
-  `docs/BROKER_TENANCY_SETUP.md` rather than silently left out. Also explicitly out of scope at
-  the time: inviting an additional team member into an *already-approved* organisation (closed by
-  the next item below). This migration could not be
+  Sending-domain verification's admin-review half (mark an existing identity verified/disabled, a
+  manual DNS-checked attestation, not an automated Resend API call) is complete; the broker-side
+  *creation* half - previously an explicitly open gap, since the only way to add an identity was
+  the manual SQL scripts used for broker provisioning - is now also complete, and so is inviting an
+  additional team member into an *already-approved* organisation - previously that meant another
+  self-signup, which created a second pending organisation rather than joining the existing one.
+  Both gaps are closed by the next two items below. This migration could not be
   executed against a real Postgres instance from this session (no `supabase`/`psql` CLI
   available, consistent with every other migration in this series being written for the user's
   own `npx supabase db push`) - verified instead by a careful manual read-through plus a
   balanced-syntax check (function count, matching `begin`/`end`, matched `$$` delimiters, balanced
   parentheses) and by closely mirroring the exact structure of this codebase's many already-
   working RPCs (`log_lead_interaction()`, `create_lead_task()`, `respond_to_lead_allocation()`).
+- Broker-side self-service sending identity creation completed: the gap flagged above (and in
+  `docs/BROKER_TENANCY_SETUP.md`/`README.md`'s "out of scope" section) - no way for a broker to
+  add a sending identity except a platform admin running a manual SQL script - is closed.
+  `/dashboard/broker-profile` ("Add a sending identity") lets a `broker_admin`/`campaign_manager`
+  add their own organisation's domain, from-name, from-email, and optional reply-to address. A new
+  `create_broker_sending_identity()` SECURITY DEFINER RPC
+  (`supabase/migrations/202610110001_broker_sending_identity_self_service.sql`) resolves the
+  organisation from the caller's own active profile server-side - never a client-supplied
+  organisation id, so one broker tenant can never create an identity for another - validates the
+  three required fields, and always inserts the identity `pending`: only the existing
+  `review_sending_identity()` RPC (platform admin only, already shipped) can move it to `verified`,
+  so self-service creation can never hand a broker their own instantly-usable sending identity.
+  The first identity an organisation creates becomes its default, matching the one-default-per-org
+  unique index the schema already enforced. Deliberately excludes `platform_admin`/
+  `compliance_admin` as creators (`canCreateSendingIdentity()`, `src/lib/auth.ts`) - unlike every
+  other `canManage*()` helper, which also allows platform admins: the platform organisation isn't a
+  broker tenant, so a platform admin has no organisation of its own to attach an identity to; they
+  keep their existing, separate verify/disable review action instead. Demo mode has its own
+  counterpart, `createSendingIdentity()` in `marketplace-store.ts` (writing to the same
+  `sending-identities.json` the admin review action already reads), attached to the first seeded
+  buyer, the same org the rest of the broker-profile page already shows in demo mode - consistent
+  with demo mode's own documented lack of a real multi-organisation tenancy model. A new
+  `"sending_identity"` audit-log entity (added to the `AuditLogEntry` union, the Audit Log
+  Viewer's entity filter, and demo mode's `appendAuditLog()` call) records every creation,
+  alongside the existing `sending_identity_reviewed` entries. The new RPC could not be executed
+  against a real Postgres instance from this session either, for the same reason as every other
+  migration in this series - verified instead by the same manual read-through and balanced-syntax
+  check, plus an isolated script exercising the demo-mode equivalent directly: confirms pending
+  status, first-identity-becomes-default, a second identity for the same org does not also become
+  default, a duplicate from-email for the same organisation is rejected, an empty domain is
+  rejected, and a different organisation gets its own independent default. A new Playwright spec
+  (`e2e/sending-identity.spec.ts`) covers the role gate (visible to Broker Manager, not to the
+  default Super Admin or to an ordinary Broker) and the create-then-see-pending flow. Actually run,
+  not just lint/type-checked - this environment's device shell can't fit a `next build`+Playwright
+  run in its per-call time budget, so verification used a separate scratch checkout of the pushed
+  branch instead (`npm run build`, then `npx playwright test` against the preinstalled Chromium).
+  The first version of this spec had two real bugs, both caught this way and fixed: (1) the same
+  role-switch race documented in the broker-team-invitations item below -
+  `selectOption("broker_admin")` immediately followed by `page.goto()` races ahead of the demo role
+  switcher's own server-action redirect, so the `demo_role` cookie was never applied; fixed by
+  waiting on the sidebar's identity line instead of a vacuous URL check; (2) a locator-specificity
+  bug - `page.getByText(domain)` (non-exact) also matched the from-email paragraph, which contains
+  the domain as a substring, so Playwright's strict mode correctly refused to resolve it to one
+  element; fixed with `{ exact: true }`. All 54 specs in the full suite pass against this branch
+  after both fixes.
 - Broker-side self-service team invitations completed: the gap flagged above - a colleague joining
   an already-approved organisation had no path except another self-signup, which `handle_new_user()`
   turns into a *second*, duplicate `pending` organisation rather than joining the existing one - is
@@ -120,6 +163,7 @@ Priced in the accompanying quotation.
   series of migrations/features has written (DNC enforcement, sending-identity creation) was
   authored under the same unverified lint/type-check-only process and has not yet been run against
   real CI - this is now a known risk worth re-checking, not an assumption to keep repeating.
+
 
 ## Lead Capture Hardening
 - Production-pilot hardening foundation completed: Cloudflare Turnstile integration, a durable

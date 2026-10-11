@@ -40,6 +40,60 @@ export function getSendingIdentities(organisationId?: string): BrokerSendingIden
     : identities;
 }
 
+// Demo-mode counterpart to create_broker_sending_identity() (see
+// supabase/migrations/202610110001_broker_sending_identity_self_service.sql):
+// a broker's self-service "add a sending identity" action. Always
+// created 'pending' - only the platform-admin review action in demo mode
+// (none exists yet; demo mode has no tenancy/review UI at all, same
+// documented limitation as the rest of multi-broker tenancy) or, in
+// Supabase mode, review_sending_identity() can move it to 'verified'.
+// The first identity for an organisation becomes its default, matching
+// the Supabase RPC's own rule.
+export function createSendingIdentity(
+  input: { organisationId: string; domain: string; fromName: string; fromEmail: string; replyToEmail?: string },
+  actorLabel: string,
+): BrokerSendingIdentity {
+  const domain = input.domain.trim();
+  const fromName = input.fromName.trim();
+  const fromEmail = input.fromEmail.trim().toLowerCase();
+  const replyToEmail = input.replyToEmail?.trim().toLowerCase() || undefined;
+  if (!domain) throw new Error("A sending domain is required");
+  if (!fromName) throw new Error("A from-name is required");
+  if (!fromEmail.includes("@")) throw new Error("A valid from-email address is required");
+  if (replyToEmail && !replyToEmail.includes("@")) throw new Error("The reply-to address is not valid");
+
+  const identities = readJson<BrokerSendingIdentity[]>(SENDING_IDENTITIES_FILE, []);
+  if (identities.some((identity) => identity.organisationId === input.organisationId && identity.fromEmail === fromEmail)) {
+    throw new Error("A sending identity with this from-email already exists for your organisation");
+  }
+
+  const isDefault = !identities.some((identity) => identity.organisationId === input.organisationId && identity.isDefault);
+  const identity: BrokerSendingIdentity = {
+    id: `sid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    organisationId: input.organisationId,
+    domain,
+    fromName,
+    fromEmail,
+    replyToEmail,
+    provider: "resend",
+    status: "pending",
+    isDefault,
+    createdAt: new Date().toISOString(),
+  };
+  identities.push(identity);
+  writeJson(SENDING_IDENTITIES_FILE, identities);
+
+  appendAuditLog({
+    entity: "sending_identity",
+    entityId: identity.id,
+    action: "sending_identity_created",
+    actor: actorLabel,
+    details: `${fromEmail} (${domain})${isDefault ? " - set as default" : ""}`,
+  });
+
+  return identity;
+}
+
 export function getBuyerMatchDecision(
   lead: Lead,
   buyer: Buyer,

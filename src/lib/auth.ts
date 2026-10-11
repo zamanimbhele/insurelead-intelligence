@@ -227,6 +227,25 @@ export function canManageCampaignPlanning(identity: DashboardIdentity) {
   return isPlatformAdmin(identity) || CAMPAIGN_PLANNING_ROLES.includes(identity.role as (typeof CAMPAIGN_PLANNING_ROLES)[number]);
 }
 
+// Adding a broker sending identity (an email-sending domain/from-address
+// used for campaign delivery) is a broker self-service action, not a
+// platform one - deliberately excludes isPlatformAdmin(), unlike every
+// other canManage*() helper above. The create_broker_sending_identity()
+// RPC always infers the new identity's organisation from the caller's
+// own active profile (never a client-supplied organisation id), so a
+// platform admin - who belongs to the platform organisation, not a
+// broker one - has no organisation of their own to attach an identity
+// to; platform admins keep their existing, separate review action
+// (verify/disable) via reviewSupabaseSendingIdentity() instead. Reuses
+// CAMPAIGN_PLANNING_ROLES (broker_admin, campaign_manager) since those
+// are exactly the roles that also create and launch the campaigns a
+// sending identity is for; an ordinary broker_agent does not manage
+// sending domains, same exclusion CAMPAIGN_PLANNING_ROLES already
+// documents above.
+export function canCreateSendingIdentity(identity: DashboardIdentity) {
+  return CAMPAIGN_PLANNING_ROLES.includes(identity.role as (typeof CAMPAIGN_PLANNING_ROLES)[number]);
+}
+
 // Inviting a teammate into your own organisation (invite_broker_team_
 // member() RPC) is a narrower, organisation-scoped admin action: only
 // broker_admin, never campaign_manager/broker_agent, and - like every
