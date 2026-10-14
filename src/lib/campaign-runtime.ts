@@ -4,6 +4,7 @@ import {
   createCampaign,
   getCampaignById,
   getCampaignEvents,
+  getCampaignRecipientByProviderMessageId,
   getCampaignRecipients,
   getCampaigns,
   getCurrentCampaignContent,
@@ -13,6 +14,11 @@ import {
   updateCampaign,
   updateCampaignRecipient,
 } from "./campaign-store.ts";
+import {
+  mapResendWebhookEventType,
+  nextRecipientStatusForWebhookEvent,
+  suppressionReasonForWebhookEvent,
+} from "./campaign-webhooks.ts";
 import { evaluateCampaignAudience, hashCampaignEmail } from "./campaign-policy.ts";
 import {
   getRuntimeConsent,
@@ -29,6 +35,7 @@ import {
   fetchSupabaseCampaign,
   fetchSupabaseCampaignContent,
   fetchSupabaseCampaignEvents,
+  fetchSupabaseCampaignRecipientByProviderMessageId,
   fetchSupabaseCampaignRecipients,
   fetchSupabaseCampaigns,
   fetchSupabaseMarketingSuppressions,
@@ -228,11 +235,15 @@ export async function listRuntimeMarketingSuppressions(organisationId: string) {
     : fetchSupabaseMarketingSuppressions(requireAdminClient(), organisationId);
 }
 
-export async function suppressRuntimeCampaignRecipient(input: {
+// Shared by the recipient-initiated unsubscribe flow and the inbound
+// bounce/complaint webhook handler below - both end in exactly the same
+// hashed, broker-scoped suppression record, just with a different reason
+// and a different caller-chosen event to log alongside it.
+async function saveRuntimeMarketingSuppression(input: {
   organisationId: string;
-  campaignId: string;
   leadId: string;
   reason: MarketingSuppression["reason"];
+  sourceCampaignId: string;
 }) {
   const lead = await getRuntimeLead(input.leadId);
   if (!lead) throw new Error("Lead not found");
@@ -242,12 +253,26 @@ export async function suppressRuntimeCampaignRecipient(input: {
     emailHash: hashCampaignEmail(lead.contactEmail),
     reason: input.reason,
   };
-  const suppression = getDataMode() === "demo"
+  return getDataMode() === "demo"
     ? saveMarketingSuppression(suppressionInput)
-    : await saveSupabaseMarketingSuppression(requireAdminClient(), {
+    : saveSupabaseMarketingSuppression(requireAdminClient(), {
       ...suppressionInput,
-      sourceCampaignId: input.campaignId,
+      sourceCampaignId: input.sourceCampaignId,
     });
+}
+
+export async function suppressRuntimeCampaignRecipient(input: {
+  organisationId: string;
+  campaignId: string;
+  leadId: string;
+  reason: MarketingSuppression["reason"];
+}) {
+  const suppression = await saveRuntimeMarketingSuppression({
+    organisationId: input.organisationId,
+    leadId: input.leadId,
+    reason: input.reason,
+    sourceCampaignId: input.campaignId,
+  });
   await appendRuntimeCampaignEvent({
     campaignId: input.campaignId,
     eventType: "recipient_unsubscribed",
@@ -255,6 +280,80 @@ export async function suppressRuntimeCampaignRecipient(input: {
     details: { leadId: input.leadId, suppressionId: suppression.id },
   });
   return suppression;
+}
+
+export async function findRuntimeCampaignRecipientByProviderMessageId(providerMessageId: string) {
+  return getDataMode() === "demo"
+    ? getCampaignRecipientByProviderMessageId(providerMessageId)
+    : fetchSupabaseCampaignRecipientByProviderMessageId(requireAdminClient(), providerMessageId);
+}
+
+export type CampaignWebhookOutcome =
+  | { outcome: "ignored" }
+  | { outcome: "unmatched" }
+  | { outcome: "duplicate" }
+  | { outcome: "processed"; campaignId: string; recipientId: string; eventType: string; statusChanged: boolean };
+
+/**
+ * Applies one verified inbound Resend webhook event (see
+ * campaign-webhooks.ts for the signature check this must run after, and the
+ * route handler at src/app/api/webhooks/resend/route.ts). Idempotent per
+ * Svix delivery id: Resend/Svix can and does retry a webhook delivery, so
+ * before writing anything this checks whether an event already carries the
+ * same svixId and, if so, returns "duplicate" without reprocessing -
+ * campaign_delivery_events has no dedicated unique constraint for this (it
+ * is an immutable, insert-only log, by design - see
+ * reject_campaign_history_mutation() in the campaign-generation migration),
+ * so the check is done by reading, not by relying on an insert conflict.
+ */
+export async function processRuntimeCampaignDeliveryWebhookEvent(input: {
+  providerMessageId: string;
+  resendEventType: string;
+  svixId: string;
+}): Promise<CampaignWebhookOutcome> {
+  const eventType = mapResendWebhookEventType(input.resendEventType);
+  if (!eventType) return { outcome: "ignored" };
+
+  const recipient = await findRuntimeCampaignRecipientByProviderMessageId(input.providerMessageId);
+  if (!recipient) return { outcome: "unmatched" };
+
+  const existingEvents = await listRuntimeCampaignEvents(recipient.campaignId);
+  const alreadyProcessed = existingEvents.some((event) => event.details?.svixId === input.svixId);
+  if (alreadyProcessed) return { outcome: "duplicate" };
+
+  const nextStatus = nextRecipientStatusForWebhookEvent(recipient.status, eventType);
+  if (nextStatus) {
+    await updateRuntimeCampaignRecipient(recipient.id, { status: nextStatus });
+  }
+
+  const suppressionReason = suppressionReasonForWebhookEvent(eventType);
+  if (suppressionReason) {
+    const campaign = await getRuntimeCampaign(recipient.campaignId);
+    if (campaign) {
+      await saveRuntimeMarketingSuppression({
+        organisationId: campaign.organisationId,
+        leadId: recipient.leadId,
+        reason: suppressionReason,
+        sourceCampaignId: campaign.id,
+      });
+    }
+  }
+
+  await appendRuntimeCampaignEvent({
+    campaignId: recipient.campaignId,
+    recipientId: recipient.id,
+    eventType,
+    actor: "resend_webhook",
+    details: { svixId: input.svixId, providerMessageId: input.providerMessageId, statusChanged: Boolean(nextStatus) },
+  });
+
+  return {
+    outcome: "processed",
+    campaignId: recipient.campaignId,
+    recipientId: recipient.id,
+    eventType,
+    statusChanged: Boolean(nextStatus),
+  };
 }
 
 export async function getRuntimeCampaignPerformance(campaignId: string) {

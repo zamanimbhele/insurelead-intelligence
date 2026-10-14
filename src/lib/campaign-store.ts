@@ -123,6 +123,15 @@ export function getCampaignRecipients(campaignId: string): CampaignRecipient[] {
     .filter((recipient) => recipient.campaignId === campaignId);
 }
 
+// providerMessageId is set once, at send time (see updateCampaignRecipient's
+// "sent" transition), and is unique per send - inbound provider webhooks
+// (campaign-webhooks.ts) key off it rather than campaign/recipient ids,
+// since a webhook payload carries only the provider's own message id.
+export function getCampaignRecipientByProviderMessageId(providerMessageId: string): CampaignRecipient | undefined {
+  return readJson<CampaignRecipient[]>(RECIPIENTS_FILE, [])
+    .find((recipient) => recipient.providerMessageId === providerMessageId);
+}
+
 export function replaceCampaignRecipients(campaignId: string, leadIds: string[]) {
   const others = readJson<CampaignRecipient[]>(RECIPIENTS_FILE, [])
     .filter((recipient) => recipient.campaignId !== campaignId);

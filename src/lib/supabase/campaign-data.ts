@@ -260,6 +260,22 @@ export async function fetchSupabaseCampaignRecipients(client: SupabaseClient, ca
   return ((data ?? []) as RecipientRow[]).map(mapRecipient);
 }
 
+// Mirrors campaign-store.ts's demo-mode getCampaignRecipientByProviderMessageId -
+// see its comment. provider_message_id is not declared unique in the schema
+// (one send retried with a fresh idempotency key could theoretically reuse a
+// slot), so this takes the most recently created match rather than assuming
+// exactly one row.
+export async function fetchSupabaseCampaignRecipientByProviderMessageId(
+  client: SupabaseClient,
+  providerMessageId: string,
+) {
+  const { data, error } = await client.from("campaign_recipients")
+    .select("*").eq("provider_message_id", providerMessageId)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  fail("Unable to load campaign recipient", error);
+  return data ? mapRecipient(data as RecipientRow) : undefined;
+}
+
 export async function prepareSupabaseCampaignRecipients(client: SupabaseClient, campaignId: string) {
   const { data, error } = await client.rpc("prepare_campaign_recipients", { p_campaign_id: campaignId });
   fail("Unable to prepare campaign recipients", error);

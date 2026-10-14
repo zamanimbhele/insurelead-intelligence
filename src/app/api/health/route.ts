@@ -6,6 +6,7 @@ import { getDataMode } from "@/lib/supabase/config";
 import { getLeadNotificationStatus } from "@/lib/notifications";
 import { getCampaignDeliveryStatus } from "@/lib/campaign-delivery";
 import { getCampaignUnsubscribeStatus } from "@/lib/campaign-unsubscribe";
+import { getResendWebhookStatus } from "@/lib/campaign-webhooks";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,11 @@ export async function GET() {
   const status = !dataStoreHealthy ? "unavailable" : readyForPublicTraffic ? "ok" : "degraded";
   const campaignDelivery = getCampaignDeliveryStatus();
   const campaignUnsubscribe = getCampaignUnsubscribeStatus();
+  // Informational only - a missing webhook secret does not block sending a
+  // campaign, it only means delivered/bounced/complained/opened/clicked
+  // provider feedback is never ingested, so this does not factor into
+  // readyForCampaignDelivery the way campaignDelivery/campaignUnsubscribe do.
+  const campaignWebhooks = getResendWebhookStatus();
   const readyForCampaignDelivery = mode === "supabase"
     && campaignDelivery === "live"
     && campaignUnsubscribe === "configured";
@@ -57,6 +63,7 @@ export async function GET() {
         notifications,
         campaignDelivery,
         campaignUnsubscribe,
+        campaignWebhooks,
       },
     },
     {
