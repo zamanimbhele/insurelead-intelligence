@@ -377,7 +377,16 @@ export type CampaignEventType =
   | "recipient_failed"
   | "paused"
   | "completed"
-  | "recipient_unsubscribed";
+  | "recipient_unsubscribed"
+  // Inbound provider delivery/engagement webhooks (see campaign-webhooks.ts) -
+  // "delivered"/"bounced"/"complained" also move CampaignRecipientStatus;
+  // "opened"/"clicked" are engagement signals recorded only as events, since
+  // CampaignRecipientStatus has no corresponding state for them.
+  | "delivered"
+  | "bounced"
+  | "complained"
+  | "opened"
+  | "clicked";
 
 export interface CampaignEvent {
   id: string;

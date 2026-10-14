@@ -124,14 +124,62 @@ Each launch batch rechecks:
 - the configured batch ceiling.
 
 The launch result and performance tool expose aggregate outcomes, not recipient names or email
-addresses. Provider delivery, bounce, complaint, and engagement webhooks remain a production
-integration task; this increment records accepted provider sends and immediate provider failures.
+addresses. This increment records an accepted provider send or an immediate provider failure at
+launch time; what happens to the message afterwards (delivered, bounced, complained, opened,
+clicked) is ingested separately - see the next section.
 
-## 6. Validate locally
+## 6. Configure provider delivery and engagement webhooks
+
+Resend reports what happens to a sent message - delivered, bounced, complained, opened, clicked -
+asynchronously, by calling a webhook endpoint you register. `POST /api/webhooks/resend`
+(`src/app/api/webhooks/resend/route.ts`) receives these, verifies Resend's own signature, matches
+the event back to the `campaign_recipients` row that send created (by the provider message ID
+recorded at send time), updates that recipient's status where the event represents one
+(`delivered`, `bounced`, `complained` - `opened`/`clicked` are recorded as events only, since they
+are engagement signals rather than delivery states), and appends an immutable
+`campaign_delivery_events` row either way. A bounce or complaint also writes a hashed
+`marketing_suppressions` record for that broker - the same list a recipient's own unsubscribe
+click writes to - so neither this nor any future campaign for that broker ever re-targets the
+address again.
+
+Resend signs these webhooks with Svix. In the Resend dashboard, under Webhooks, add an endpoint:
+
+```
+URL: <NEXT_PUBLIC_APP_URL>/api/webhooks/resend
+Events: email.delivered, email.bounced, email.complained, email.opened, email.clicked
+```
+
+Resend shows a signing secret starting `whsec_` when you create the endpoint. Paste it into:
+
+```dotenv
+RESEND_WEBHOOK_SECRET=whsec_PASTE_THE_SIGNING_SECRET
+```
+
+This is the only authority check on this endpoint - there is no Supabase session or dashboard
+role attached to a provider callback, so a request with a missing, stale (older than 5 minutes),
+or invalid signature is rejected (401) before any lookup or database write runs, and the response
+never distinguishes "bad signature" from "no matching recipient" or any other reason, so the
+endpoint cannot be used to probe for valid campaign or recipient state. `/api/health` reports
+`checks.campaignWebhooks` as `configured` once `RESEND_WEBHOOK_SECRET` is set - this is
+informational only and does not gate `readyForCampaignDelivery`, since a missing webhook secret
+does not stop a campaign from sending, it only means delivery feedback is never ingested.
+
+Demo mode has a full equivalent of this entire flow against its own JSON-file campaign store (no
+Resend account or real webhook needed to exercise it): the signature verification, status
+transitions, idempotency, and `email.*` type mapping are identical code paths in both modes - only
+the secret and where a `campaign_recipients`/`campaign_delivery_events`/`marketing_suppressions`
+row is read from and written to differ. In demo mode `RESEND_WEBHOOK_SECRET` is ignored entirely
+in favour of a fixed, clearly-labelled demo secret (the same convention
+`CAMPAIGN_UNSUBSCRIBE_SECRET` already follows for the unsubscribe link), so the e2e suite and a
+local demo run can both sign a test webhook request deterministically without any real Resend
+account.
+
+## 7. Validate locally
 
 ```bash
 npm run typecheck
 npm run lint
+npm run test:unit
 npm run test:tenancy
 npm run test:campaigns
 npm run build

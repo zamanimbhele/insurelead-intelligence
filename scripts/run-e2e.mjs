@@ -17,6 +17,7 @@ const child = spawn(process.execPath, [playwrightCli, "test", ...process.argv.sl
     INSURELEAD_CAMPAIGN_DELIVERY_MODE: "disabled",
     RESEND_API_KEY: "",
     CAMPAIGN_UNSUBSCRIBE_SECRET: "",
+    RESEND_WEBHOOK_SECRET: "",
   },
 });
 

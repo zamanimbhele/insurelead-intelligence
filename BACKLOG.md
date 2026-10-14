@@ -588,6 +588,116 @@ Priced in the accompanying quotation.
   performance, hotspot conversion performance.
 
 ## Campaign Orchestration MCP
-- Ingest signed Resend delivery, bounce, complaint, open, and click webhooks into immutable events.
+- Resend delivery and engagement webhook ingestion completed: the gap flagged in the Broker
+  Workflow section's "Visual campaign authoring" entry and in `docs/CAMPAIGN_MCP_SETUP.md`
+  ("Provider delivery, bounce, complaint, and engagement webhooks remain a production integration
+  task") is closed. `POST /api/webhooks/resend` receives Resend's `email.delivered`/`email.
+  bounced`/`email.complained`/`email.opened`/`email.clicked` callbacks, matches each one back to
+  the `campaign_recipients` row that send created (by the provider message ID recorded at send
+  time), and appends an immutable `campaign_delivery_events` row - `delivered`/`bounced`/
+  `complained` also move that recipient's own status (now reachable for the first time:
+  `CampaignRecipientStatus` already had these three states from the original campaign-generation
+  migration, nothing had ever fed them). `opened`/`clicked` are recorded as events only, never a
+  status change, since `CampaignRecipientStatus` has no corresponding state for pure engagement
+  signals. A bounce or complaint also writes a hashed `marketing_suppressions` record - the exact
+  same list a recipient's own unsubscribe click writes to - so neither this nor any future
+  campaign for that broker ever re-targets the address again; without this a hard bounce would
+  otherwise just sit as a status footnote and keep being re-selected by future campaigns.
+  All decision logic lives in a new, framework-free pure module, `src/lib/campaign-webhooks.ts`,
+  the same no-I/O convention as `campaign-policy.ts`/`campaign-unsubscribe.ts`: Svix signature
+  verification (`verifyResendWebhookSignature` - HMAC-SHA256 over `svixId.svixTimestamp.body`,
+  constant-time comparison via `timingSafeEqual`, a 5-minute replay-protection window, support for
+  multiple space-separated `v1,<sig>` candidates for secret rotation), the Resend-type-to-internal-
+  event-type mapping, the recipient-status transition decision, and the suppression-reason mapping.
+  Two things this module deliberately gets right: a status already in a terminal state (`bounced`,
+  `complained`, `suppressed`, `failed`) is never regressed by a later webhook delivery, since Resend
+  does not guarantee delivery order and a stray late "delivered" must not resurrect a bounced
+  recipient; and `delivered` only ever applies to a recipient still in `sent` (never `queued`),
+  so a malformed or mismatched callback can't fabricate a delivery for something that was never
+  actually sent.
+  The route itself (`src/app/api/webhooks/resend/route.ts`) is the only place in this codebase
+  with no Supabase session and no dashboard role to check at all - a provider callback has neither
+  - so the Svix signature is the entire trust boundary: a request that doesn't verify is rejected
+  (401) before any lookup or write runs, and every response, success or failure, stays generic (no
+  recipient email, lead name, or campaign detail; no hint about *why* a request failed) so the
+  endpoint can never be used as an oracle to probe for valid campaign/recipient state. A verified
+  request with an event type this platform doesn't act on, or whose body doesn't match the expected
+  shape, or whose provider message ID doesn't match any known recipient, is acknowledged (200,
+  `processed: false`) rather than treated as an error, so Resend's own retry policy doesn't keep
+  redelivering something that can never succeed; a real transient failure (for example Supabase
+  unreachable) returns 500 instead, so Resend's retry schedule gets a genuine chance to recover it
+  later. Idempotency is handled by re-reading a recipient's existing campaign events and checking
+  for the inbound Svix delivery id (`details.svixId`) before writing anything, rather than a
+  dedicated unique constraint - `campaign_delivery_events` is an immutable, insert-only log by
+  design (`reject_campaign_history_mutation()`, the original campaign-generation migration), and
+  event volume per campaign is bounded by the same small batch ceiling campaign launches already
+  enforce, so a read-then-check is an acceptable, simpler tradeoff here over adding a new index and
+  an `on conflict` path to a generic, shared event-append function used by many unrelated event
+  types.
+  `findRuntimeCampaignRecipientByProviderMessageId` and `processRuntimeCampaignDeliveryWebhookEvent`
+  (`campaign-runtime.ts`) are the stateful counterparts - a new demo-mode lookup
+  (`getCampaignRecipientByProviderMessageId`, `campaign-store.ts`) and a new Supabase lookup
+  (`fetchSupabaseCampaignRecipientByProviderMessageId`, `supabase/campaign-data.ts`) underneath
+  them, following the identical per-mode-branch pattern every other runtime function in this file
+  already uses. The existing `suppressRuntimeCampaignRecipient` (the recipient-initiated unsubscribe
+  path) was refactored, not rewritten, to share its suppression-saving half
+  (`saveRuntimeMarketingSuppression`) with the new webhook handler, rather than duplicating that
+  logic a second time - its own existing behaviour and event type (`recipient_unsubscribed`) are
+  unchanged.
+  `CampaignEventType` (`types.ts`) gained the five new event names, and a new migration
+  (`supabase/migrations/202610140001_campaign_delivery_webhooks.sql`) widens
+  `campaign_delivery_events`'s `event_type` check constraint to accept them - the only schema change
+  this feature needed. No grant changes were required: the webhook route always runs on the
+  service-role client (there is no authenticated Supabase session to run it as), which already has
+  full table access independent of the `authenticated`/`anon` grants this migration series manages.
+  Like every other migration in this series, it could not be executed against a real Postgres
+  instance from this session - verified instead by the same balanced-syntax check (matched
+  parentheses, even quote count) and a close read against the original table definition.
+  Demo mode needed one deliberate design decision: `getResendWebhookSecret()` ignores
+  `RESEND_WEBHOOK_SECRET` entirely in demo mode and always returns a fixed, clearly-labelled demo
+  secret instead - the exact same convention `campaign-unsubscribe.ts`'s `getSecret()` already
+  established for its own secret. This is what makes both a local demo run and the e2e suite able to
+  sign a test webhook request deterministically with no real Resend account or webhook secret ever
+  configured; `RESEND_WEBHOOK_SECRET` was also added to `scripts/run-e2e.mjs`'s blanked-env list
+  alongside `RESEND_API_KEY`/`CAMPAIGN_UNSUBSCRIBE_SECRET` for the same hygiene reason those are
+  blanked there even though demo mode already ignores them. `/api/health` now reports
+  `checks.campaignWebhooks` (`configured`/`missing-secret`) - informational only, deliberately not
+  factored into `readyForCampaignDelivery`, since a missing webhook secret doesn't stop a campaign
+  from sending, it only means delivery feedback is never ingested.
+  Verification used three layers, since this environment's remote device-bridge shell still cannot
+  reliably complete a `next build` within its per-call time budget (the same constraint every other
+  e2e-covered item in this backlog has hit) even though this particular feature's own e2e spec needs
+  no browser at all. (1) 19 new Vitest unit tests (`src/lib/campaign-webhooks.test.ts`, 129 total
+  across the suite now) cover the signature verification against an independently-computed
+  reference signature (valid, tampered body, wrong secret, stale timestamp, missing headers,
+  multiple signature candidates), the event-type mapping, every status-transition case including
+  terminal-state protection, and the suppression-reason mapping. (2) An isolated, throwaway runtime
+  script (not committed, deleted after use - the same technique the "Reset demo data" item above
+  documents using) ran `process.chdir()` to an empty scratch directory *before* importing
+  `campaign-store.ts`/`demo-store.ts` (whose `DATA_DIR` constants are computed from
+  `process.cwd()` at module-evaluation time), seeded one synthetic lead/campaign/sent-recipient
+  there, and exercised `processRuntimeCampaignDeliveryWebhookEvent` directly end to end: signature
+  verification, recipient lookup (found and not-found), a `delivered` event moving status and
+  logging an event, a retried delivery of the same Svix id being correctly treated as a duplicate
+  and not reprocessed, a `bounced` event moving status to a terminal state and writing exactly one
+  marketing suppression, a *later* `delivered` webhook after that bounce being logged but correctly
+  **not** regressing the terminal status, an `opened` engagement event changing no status, an
+  unmatched provider message ID, and an ignored Resend event type - all nine checks passed, and
+  `git status` on the real repository confirmed its actual `data/` directory was never touched by
+  any of it. (3) A new Playwright spec, `e2e/campaign-webhooks.spec.ts` (5 tests), covers the
+  route's own trust boundary and response contract through the `request` fixture only (the same
+  no-browser-needed style `health.spec.ts`/`rate-limit.spec.ts` already use for an API endpoint with
+  no page of its own): no signature, a wrongly-signed request, and three correctly-signed-but-
+  inapplicable bodies (unmatched recipient, an ignored event type, an unrecognisable payload shape)
+  - each asserting the exact response contract. This spec could not be run live here either (Chromium
+  is unneeded for it, but `playwright.config.ts`'s `webServer` still always runs `npm run build &&
+  npm run start` first, and that build is the exact step already timing out in this shell), so it
+  was instead verified with `npx playwright test --list` (parses correctly, lists all 5 tests) and
+  `tsc --noEmit`. One honestly-documented gap: a full black-box happy-path e2e test (a real
+  `sent` recipient actually reaching `delivered`/`bounced` through this route) is not reachable
+  from e2e's HTTP surface at all - only the MCP server's own `launch_campaign` tool can ever put a
+  recipient into `sent` status with a provider message id, and the dashboard deliberately has no
+  launch action of its own (see the "Visual campaign authoring" entry above) - so that path is
+  covered by the isolated runtime script above instead, not by Playwright.
 - Add scheduled-job execution and per-tenant daily/monthly delivery quotas beyond the bounded MCP batch.
 - Add visual campaign authoring, approval, version comparison, and recipient-exclusion drill-down.
