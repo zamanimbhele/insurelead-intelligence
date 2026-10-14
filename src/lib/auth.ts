@@ -256,3 +256,31 @@ export function canCreateSendingIdentity(identity: DashboardIdentity) {
 export function canInviteTeamMember(identity: DashboardIdentity) {
   return identity.role === "broker_admin";
 }
+
+// Authoring a campaign - creating a draft, generating/saving a content
+// version - mirrors the database's own can_manage_campaigns() SQL
+// function (202609110002_campaign_generation_mcp.sql) and the Campaign
+// Orchestration MCP server's assertCanCreate() (src/mcp/campaign-
+// tools.ts) exactly: platform_admin bypass plus broker_admin and
+// campaign_manager for the caller's own organisation. This is a
+// deliberately separate function from canManageCampaignPlanning() above
+// even though the two currently share an identical role set -
+// campaign planning is the FYE reminder/calendar feature, this is the
+// outbound-email campaign workflow the dashboard forms below create and
+// approve, and the two are allowed to diverge independently in future
+// (e.g. if planning is ever opened to broker_agent).
+export function canManageCampaigns(identity: DashboardIdentity) {
+  return isPlatformAdmin(identity) || CAMPAIGN_PLANNING_ROLES.includes(identity.role as (typeof CAMPAIGN_PLANNING_ROLES)[number]);
+}
+
+// Approving a campaign for delivery is narrower than authoring one -
+// mirrors the database's can_approve_campaigns() and the MCP's
+// assertCanApprove(): platform_admin bypass plus broker_admin only,
+// deliberately excluding campaign_manager. A campaign_manager may draft
+// a campaign and write its content, but the final human sign-off that a
+// real audience is about to receive marketing email is reserved for the
+// broker's own administrator (or a platform admin), same split the
+// database RLS enforces independently of this UI-level gate.
+export function canApproveCampaigns(identity: DashboardIdentity) {
+  return isPlatformAdmin(identity) || identity.role === "broker_admin";
+}

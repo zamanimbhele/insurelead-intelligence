@@ -77,11 +77,42 @@ import type {
   OptOutChannel,
   OptOutRequest,
   OptOutSource,
+  Campaign,
+  CampaignAudienceRules,
+  InsuranceProduct,
 } from "./types";
 import { getLeadDisplayName, isConsentValid } from "./lead-utils";
 import { DEFAULT_LEAD_RETENTION_DAYS } from "./constants";
-import { getCampaignRecipients, getCampaigns } from "./campaign-store";
-import { fetchSupabaseCampaignRecipients, fetchSupabaseCampaigns } from "./supabase/campaign-data";
+import {
+  appendCampaignContent,
+  appendCampaignEvent,
+  createCampaign,
+  getCampaignById,
+  getCampaignEvents,
+  getCampaignRecipients,
+  getCampaigns,
+  getCurrentCampaignContent,
+  getMarketingSuppressions,
+  updateCampaign,
+} from "./campaign-store";
+import {
+  appendSupabaseCampaignEvent,
+  createSupabaseCampaign,
+  fetchSupabaseCampaign,
+  fetchSupabaseCampaignContent,
+  fetchSupabaseCampaignEvents,
+  fetchSupabaseCampaignRecipients,
+  fetchSupabaseCampaigns,
+  fetchSupabaseMarketingSuppressions,
+  saveSupabaseCampaignApproval,
+  saveSupabaseCampaignContent,
+} from "./supabase/campaign-data";
+import {
+  evaluateCampaignAudience,
+  generateCampaignCopy,
+  summariseAudience,
+  validateCampaign,
+} from "./campaign-policy";
 
 async function requireServerClient() {
   const client = await createSupabaseServerClient();
@@ -238,6 +269,300 @@ export async function getDashboardCampaignData(identity: DashboardIdentity) {
     campaigns.map(async (campaign) => [campaign.id, await fetchSupabaseCampaignRecipients(client, campaign.id)] as const),
   );
   return { campaigns, buyers, recipients: new Map(recipientEntries) };
+}
+
+// Resolves which broker/insurer organisation a campaign-authoring action
+// acts on. Demo mode has no per-session tenancy (see
+// getDashboardBrokerWorkspace() above), so it always resolves to the
+// same single seeded organisation the self-service sending-identity form
+// already uses (getBuyers()[0] - "Gauteng Commercial Broker Pilot"),
+// matching that established convention rather than inventing a second
+// one. Supabase mode uses the caller's own profile organisation, which
+// the campaigns RLS policies (can_manage_campaigns()/
+// can_approve_campaigns() in 202609110002_campaign_generation_mcp.sql)
+// independently re-verify server-side regardless of what this resolves
+// to - this is a UX convenience, not the authority boundary.
+function resolveCampaignOrganisationId(identity: DashboardIdentity): string | undefined {
+  if (getDataMode() === "demo") return getBuyers()[0]?.id;
+  return identity.organisationType === "broker" || identity.organisationType === "insurer"
+    ? identity.organisationId
+    : undefined;
+}
+
+// What the "new campaign" and content-authoring forms need to render
+// their own choices: the broker's approved product appetite (so the
+// product checklist never offers a product the tenant isn't allowed to
+// run a campaign for) and its sending identities. Deliberately returns
+// every sending identity, not only "verified" ones - creating a draft
+// with a pending identity is allowed by both the MCP's
+// create_campaign_draft tool and the campaigns RLS insert policy (which
+// only checks the identity belongs to the same organisation, not its
+// status); only validateCampaign()'s "sender_unverified" issue, surfaced
+// on the detail page, blocks that draft from being approved later.
+export async function getDashboardCampaignAuthoringContext(identity: DashboardIdentity) {
+  const organisationId = resolveCampaignOrganisationId(identity);
+  if (!organisationId) return { organisationId: undefined, buyer: undefined, sendingIdentities: [] };
+  if (getDataMode() === "demo") {
+    return {
+      organisationId,
+      buyer: getBuyers().find((buyer) => buyer.id === organisationId),
+      sendingIdentities: getSendingIdentities(organisationId),
+    };
+  }
+  const client = await requireServerClient();
+  const [buyers, sendingIdentities] = await Promise.all([
+    fetchSupabaseBuyers(client),
+    fetchSupabaseSendingIdentities(client, organisationId),
+  ]);
+  return {
+    organisationId,
+    buyer: buyers.find((buyer) => buyer.id === organisationId),
+    sendingIdentities,
+  };
+}
+
+// Creates a new "draft" campaign brief - never content, never an
+// approval, never a send. Mirrors the MCP server's create_campaign_draft
+// tool (src/mcp/campaign-tools.ts) including its pre-checks (broker
+// active+approved, campaigns permission enabled, products within the
+// broker's approved appetite, sending identity owned by the same
+// organisation) so a broker gets a clear, specific error message here
+// instead of a raw RLS/constraint failure from the database. Those same
+// rules are re-enforced independently by the campaigns table's own RLS
+// insert policy in Supabase mode, so this pre-check is a UX improvement,
+// not the authority boundary.
+export async function createDashboardCampaignDraft(
+  identity: DashboardIdentity,
+  input: {
+    name: string;
+    objective: Campaign["objective"];
+    insuranceProducts: InsuranceProduct[];
+    sendingIdentityId: string;
+    audienceRules: CampaignAudienceRules;
+  },
+) {
+  const actorLabel = identity.displayName ?? identity.organisationName;
+  const organisationId = resolveCampaignOrganisationId(identity);
+  if (!organisationId) throw new Error("Your account has no organisation to create a campaign for");
+
+  const context = await getDashboardCampaignAuthoringContext(identity);
+  const buyer = context.buyer;
+  if (!buyer || buyer.status !== "active" || buyer.onboardingStatus !== "approved") {
+    throw new Error("Campaign broker must be active and approved");
+  }
+  if (!buyer.acceptsCampaigns) throw new Error("Campaign permission is disabled for this broker");
+  const unapprovedProducts = input.insuranceProducts.filter((product) => !buyer.insuranceProducts.includes(product));
+  if (unapprovedProducts.length) throw new Error("Campaign includes products outside the broker's approved appetite");
+  const sendingIdentity = context.sendingIdentities.find((candidate) => candidate.id === input.sendingIdentityId);
+  if (!sendingIdentity) throw new Error("Sending identity belongs to another tenant or does not exist");
+
+  const draft = {
+    organisationId,
+    name: input.name,
+    objective: input.objective,
+    insuranceProducts: input.insuranceProducts,
+    audienceRules: input.audienceRules,
+    contactBasis: "marketing_consent" as const,
+    sendingIdentityId: input.sendingIdentityId,
+    createdBy: actorLabel,
+  };
+
+  if (getDataMode() === "demo") {
+    const campaign = createCampaign(draft);
+    appendCampaignEvent({
+      campaignId: campaign.id,
+      eventType: "draft_created",
+      actor: actorLabel,
+      details: { organisationId, insuranceProducts: input.insuranceProducts },
+    });
+    return campaign;
+  }
+  const client = await requireServerClient();
+  const campaign = await createSupabaseCampaign(client, draft);
+  await appendSupabaseCampaignEvent(client, {
+    campaignId: campaign.id,
+    eventType: "draft_created",
+    actor: actorLabel,
+    details: { organisationId, insuranceProducts: input.insuranceProducts },
+  });
+  return campaign;
+}
+
+// Generates and stores a new immutable content version from a plain-
+// language key message and call-to-action, mirroring the MCP server's
+// generate_campaign_content tool. Content generation never approves or
+// sends anything - saveSupabaseCampaignContent()'s underlying RPC
+// (save_campaign_content_version) always resets any prior approval on
+// the campaign, so a new version can never inherit an old sign-off.
+export async function generateDashboardCampaignContent(
+  identity: DashboardIdentity,
+  campaignId: string,
+  input: { keyMessage: string; callToActionLabel: string; callToActionUrl: string },
+) {
+  const actorLabel = identity.displayName ?? identity.organisationName;
+
+  if (getDataMode() === "demo") {
+    const campaign = getCampaignById(campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    if (["sending", "completed", "cancelled"].includes(campaign.status)) {
+      throw new Error("Campaign content can no longer be changed");
+    }
+    const buyer = getBuyers().find((buyer) => buyer.id === campaign.organisationId);
+    if (!buyer) throw new Error("Campaign broker not found");
+    const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input });
+    const content = appendCampaignContent(campaignId, { ...generated, generatedBy: actorLabel });
+    appendCampaignEvent({
+      campaignId,
+      eventType: "content_generated",
+      actor: actorLabel,
+      details: { contentVersion: content.version },
+    });
+    return content;
+  }
+
+  const client = await requireServerClient();
+  const campaign = await fetchSupabaseCampaign(client, campaignId);
+  if (!campaign) throw new Error("Campaign not found");
+  if (["sending", "completed", "cancelled"].includes(campaign.status)) {
+    throw new Error("Campaign content can no longer be changed");
+  }
+  const buyers = await fetchSupabaseBuyers(client);
+  const buyer = buyers.find((buyer) => buyer.id === campaign.organisationId);
+  if (!buyer) throw new Error("Campaign broker not found");
+  const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input });
+  const content = await saveSupabaseCampaignContent(client, campaignId, { ...generated, generatedBy: actorLabel });
+  await appendSupabaseCampaignEvent(client, {
+    campaignId,
+    eventType: "content_generated",
+    actor: actorLabel,
+    details: { contentVersion: content.version },
+  });
+  return content;
+}
+
+// Records the final human sign-off on the current content version,
+// mirroring the MCP server's approve_campaign tool: only a draft or
+// pending-review campaign may be approved, and every validateCampaign()
+// error (not just a missing content version) blocks it - the same
+// "approve" button that calls this can never skip a policy failure the
+// MCP agent would also have been stopped by. The attestation string is
+// re-checked verbatim by the Supabase RPC (approve_campaign_content) as
+// a z.literal equivalent on both sides of the dual-mode split.
+export async function approveDashboardCampaign(
+  identity: DashboardIdentity,
+  campaignId: string,
+  attestation: string,
+) {
+  const actorLabel = identity.displayName ?? identity.organisationName;
+  const detail = await getDashboardCampaignDetail(identity, campaignId);
+  if (!detail) throw new Error("Campaign not found");
+  const { campaign, content } = detail;
+  if (!["draft", "pending_review"].includes(campaign.status)) {
+    throw new Error("Only a draft or pending-review campaign can be approved");
+  }
+  const errors = detail.issues.filter((issue) => issue.severity === "error");
+  if (errors.length) throw new Error(errors[0].message);
+  if (!content) throw new Error("Current content could not be loaded");
+
+  if (getDataMode() === "demo") {
+    const approved = updateCampaign(campaign.id, {
+      status: "approved",
+      approvedContentVersion: content.version,
+      approvedBy: actorLabel,
+      approvedAt: new Date().toISOString(),
+    });
+    appendCampaignEvent({
+      campaignId: campaign.id,
+      eventType: "approved",
+      actor: actorLabel,
+      details: { contentVersion: content.version, attestation },
+    });
+    return approved;
+  }
+  const client = await requireServerClient();
+  const approved = await saveSupabaseCampaignApproval(client, {
+    campaignId: campaign.id,
+    contentVersionId: content.id,
+    actor: actorLabel,
+    attestation,
+  });
+  await appendSupabaseCampaignEvent(client, {
+    campaignId: campaign.id,
+    eventType: "approved",
+    actor: actorLabel,
+    details: { contentVersion: content.version, attestation },
+  });
+  return approved;
+}
+
+// Assembles everything the campaign detail page shows in one place: the
+// campaign itself, its broker and sending identity, its current content
+// version, a summarised audience evaluation, every validateCampaign()
+// issue (the same checks create/content/approve above and the MCP tools
+// all share), and its recipients/events for an audit trail. Returns
+// undefined both when the campaign truly does not exist and when RLS
+// hides it from this caller (a platform admin/compliance auditor or the
+// owning tenant only - "campaign viewers use tenant scope" in
+// 202609110002_campaign_generation_mcp.sql) - the two are
+// indistinguishable from here by design, same as every other tenant-
+// scoped detail lookup in this file.
+export async function getDashboardCampaignDetail(identity: DashboardIdentity, campaignId: string) {
+  if (getDataMode() === "demo") {
+    const campaign = getCampaignById(campaignId);
+    if (!campaign) return undefined;
+    const buyer = getBuyers().find((candidate) => candidate.id === campaign.organisationId);
+    const sendingIdentity = getSendingIdentities(campaign.organisationId)
+      .find((candidate) => candidate.id === campaign.sendingIdentityId);
+    const content = getCurrentCampaignContent(campaignId);
+    const { leads, allocations, consents } = await getDashboardMarketplaceData();
+    const suppressions = getMarketingSuppressions(campaign.organisationId);
+    const audienceDecisions = evaluateCampaignAudience({ campaign, buyer, leads, consents, allocations, suppressions });
+    const issues = validateCampaign({ campaign, buyer, sendingIdentity, content, audience: audienceDecisions });
+    return {
+      campaign,
+      buyer,
+      sendingIdentity,
+      content,
+      audience: summariseAudience(audienceDecisions),
+      issues,
+      recipients: getCampaignRecipients(campaignId),
+      events: getCampaignEvents(campaignId),
+    };
+  }
+
+  const client = await requireServerClient();
+  const campaign = await fetchSupabaseCampaign(client, campaignId);
+  if (!campaign) return undefined;
+  const [buyers, sendingIdentities, content, marketplace, suppressions, recipients, events] = await Promise.all([
+    fetchSupabaseBuyers(client),
+    fetchSupabaseSendingIdentities(client, campaign.organisationId),
+    fetchSupabaseCampaignContent(client, campaignId, campaign.currentContentVersion),
+    getDashboardMarketplaceData(),
+    fetchSupabaseMarketingSuppressions(client, campaign.organisationId),
+    fetchSupabaseCampaignRecipients(client, campaignId),
+    fetchSupabaseCampaignEvents(client, campaignId),
+  ]);
+  const buyer = buyers.find((candidate) => candidate.id === campaign.organisationId);
+  const sendingIdentity = sendingIdentities.find((candidate) => candidate.id === campaign.sendingIdentityId);
+  const audienceDecisions = evaluateCampaignAudience({
+    campaign,
+    buyer,
+    leads: marketplace.leads,
+    consents: marketplace.consents,
+    allocations: marketplace.allocations,
+    suppressions,
+  });
+  const issues = validateCampaign({ campaign, buyer, sendingIdentity, content, audience: audienceDecisions });
+  return {
+    campaign,
+    buyer,
+    sendingIdentity,
+    content,
+    audience: summariseAudience(audienceDecisions),
+    issues,
+    recipients,
+    events,
+  };
 }
 
 export async function getApplicationSettings(): Promise<ApplicationSettings> {

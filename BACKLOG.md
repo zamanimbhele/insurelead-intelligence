@@ -223,7 +223,69 @@ Priced in the accompanying quotation.
   this test now reads its actual starting version from the page instead of hardcoding one.
 
 ## Broker Workflow
-- Add visual campaign authoring and approval forms on top of the completed MCP campaign workflow.
+- Visual campaign authoring and approval forms completed, on top of the already-completed MCP
+  campaign workflow: a "New campaign draft" form on `/dashboard/campaigns` (`CampaignCreateForm.tsx`,
+  gated by the new `canManageCampaigns()` in `auth.ts`) and, on each campaign's own new detail page
+  (`/dashboard/campaigns/[id]`), a content-generation form (`CampaignContentForm.tsx`) and an
+  approval form (`CampaignApprovalForm.tsx`, gated by the new, narrower `canApproveCampaigns()`).
+  Both new auth helpers deliberately mirror the database's own `can_manage_campaigns()`/
+  `can_approve_campaigns()` SQL functions and the Campaign Orchestration MCP server's
+  `assertCanCreate()`/`assertCanApprove()` (`src/mcp/campaign-tools.ts`) role-for-role, so the
+  dashboard button and the MCP tool are stopped by exactly the same rule, never two independently
+  drifting ones.
+  The key scoping finding, made before writing any code: the campaigns table's RLS insert policy
+  and both of its SECURITY DEFINER RPCs (`save_campaign_content_version`,
+  `approve_campaign_content` - `202609110002_campaign_generation_mcp.sql`) were already granted to
+  the `authenticated` role, not only `service_role` - so this feature needed no new migration, only
+  application-layer code. It deliberately does **not** reuse `campaign-runtime.ts` (the MCP server's
+  own data-access layer), which always talks to Supabase through `requireAdminClient()`, the
+  service-role client that bypasses RLS entirely - appropriate for a trusted MCP agent process, but
+  the wrong authority model for an end-user's own browser session. New dashboard-data.ts functions
+  (`createDashboardCampaignDraft`, `generateDashboardCampaignContent`, `approveDashboardCampaign`,
+  `getDashboardCampaignDetail`, `getDashboardCampaignAuthoringContext`) instead follow the same
+  pattern the campaigns *read* path (`getDashboardCampaignData`) already used:
+  `requireServerClient()`, the authenticated, RLS-respecting client - so Supabase's own
+  `current_organisation_id() = organisation_id` check is a second, independent enforcement layer
+  underneath this page's own role gates, not a trust fall onto client-supplied input. Each new
+  function re-implements the MCP tools' own pre-checks (broker active+approved+accepts-campaigns,
+  product-appetite subset, sending-identity same-tenant ownership, status-based re-generation
+  lock, full `validateCampaign()` before approval) so a broker gets the same specific, readable
+  error a few lines of application code can give, instead of a raw RLS or constraint failure from
+  the database.
+  The content-generation form never renders the generated HTML with `dangerouslySetInnerHTML` -
+  the detail page shows the plain-text body as the primary preview and the HTML source as plain
+  text inside a collapsed `<details>`, since this codebase has no existing precedent anywhere for
+  rendering any stored string as live HTML and introducing the first one for a marketing-content
+  preview was not worth it.
+  A platform or compliance admin's dashboard identity has no broker organisation of its own to
+  draft a *new* campaign into in Supabase mode (same reasoning `canCreateSendingIdentity()`
+  already documents for the sending-identity form), so the "New campaign draft" form only renders
+  when `getDashboardCampaignAuthoringContext()` actually resolves an organisation id; a platform
+  admin still authors content and approves *any* tenant's existing campaign from its detail page,
+  exactly as the database's own `is_platform_admin()` bypass in `can_manage_campaigns()`/
+  `can_approve_campaigns()` already allows.
+  Demo mode has no per-session tenancy, so every authoring action resolves to the same single
+  seeded organisation the sending-identity form already uses (`getBuyers()[0]`, "Gauteng Commercial
+  Broker Pilot") - and that organisation's seed data happens to make a full, real "approved" state
+  unreachable in demo mode: its one sending identity is seeded `pending` (sending-domain
+  verification explicitly refuses to run outside Supabase mode - `/api/admin/sending-
+  identities/[id]/review`'s existing, pre-dated guard), and `data/allocations.json` has zero
+  `accepted` rows for *any* buyer, so every demo campaign's audience evaluates to zero regardless of
+  organisation. `e2e/campaign-authoring.spec.ts` is written against that real, reachable state
+  rather than manufacturing a success path demo mode cannot actually reach: it proves a Broker
+  Manager can draft a campaign and generate content, and that the exact same `validateCampaign()`
+  issues the MCP tools and the database would also stop on ("sender_unverified", then
+  "audience_empty" once content exists) visibly block the dashboard's own approve button - plus
+  that a Marketing Analyst sees authoring but not approval, and an ordinary Broker sees neither.
+  That spec could not be run with a real browser inside this session's own remote device-bridge
+  shell this time (Playwright's Chromium download is blocked by that shell's network allowlist, and
+  no system Chromium exists there either - a different, harder failure than the slow-filesystem
+  issue the Legal Content item above hit), so instead every one of its assertions was independently
+  re-verified by hand: starting the production build with `INSURELEAD_DATA_MODE=demo` (matching
+  `scripts/run-e2e.mjs`'s own test-mode override) and driving the exact same role-cookie, page, and
+  API requests with `curl` - all 22 checks passed, including the two 403s for an unauthorised role.
+  The Playwright spec itself is unchanged from, and should be run for real in CI the same way
+  `e2e/legal-content.spec.ts` eventually was.
 - Kanban pipeline completed: drag-and-drop (plus a keyboard-accessible "Move to" select) across all
   13 lead statuses, gated by a platform-admin-or-allocated-broker-operator check in a SECURITY
   DEFINER database function, with the Do Not Contact flag kept in sync and every move audited.
