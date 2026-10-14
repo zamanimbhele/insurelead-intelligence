@@ -62,7 +62,12 @@ test.describe("Visual campaign authoring and approval (synthetic demo data)", ()
     await contentForm.getByRole("button", { name: "Generate content" }).click();
 
     await expect(contentForm.getByText(/Content version 1 generated/)).toBeVisible();
-    await expect(page.getByText("Request a review", { exact: true }).first()).toBeVisible();
+    // The CTA label is also visible, as plain text, inside the closed
+    // HTML-source <details> below (as anchor text) - so this targets the
+    // plain-text preview pre specifically rather than an exact page-wide
+    // text match, which would otherwise try to match a tiny fragment
+    // against that pre's single giant multi-line text node and fail.
+    await expect(page.getByTestId("campaign-content-preview")).toContainText("Request a review");
 
     // Content now exists, so the content_missing issue clears, but the
     // unverified sending identity and empty audience still block

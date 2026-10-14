@@ -114,7 +114,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
                 </div>
                 <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs font-medium text-slate-500">Plain-text preview</p>
-                  <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-700">{content.textBody}</pre>
+                  <pre data-testid="campaign-content-preview" className="mt-2 whitespace-pre-wrap text-xs text-slate-700">{content.textBody}</pre>
                 </div>
                 <details className="rounded-md border border-slate-200 p-3">
                   <summary className="cursor-pointer text-xs font-medium text-slate-500">HTML source</summary>
