@@ -13,6 +13,7 @@ const ERRORS: Record<string, string> = {
 const MESSAGES: Record<string, string> = {
   account_created: "Your account was created. Sign in while the InsureLead team reviews your broker profile.",
   email_confirmed: "Your email address has been confirmed. Sign in while the InsureLead team reviews your broker profile.",
+  reset_requested: "If that address has an InsureLead account, a password reset link is on its way. Check your inbox and spam folder.",
 };
 
 export const metadata = { title: "Sign in | InsureLead Intelligence" };
@@ -60,6 +61,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               Password
               <input name="password" type="password" autoComplete="current-password" required className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2" />
             </label>
+            <p className="-mt-3 text-right text-sm">
+              <Link href="/forgot-password" className="font-medium text-primary-700 hover:text-primary-800">Forgot password?</Link>
+            </p>
             <button type="submit" className="w-full rounded-md bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">
               Sign in
             </button>

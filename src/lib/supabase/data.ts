@@ -1427,3 +1427,39 @@ export async function updateSupabaseLegalTextDocument(
     updatedAt: result.updatedAt ?? new Date().toISOString(),
   };
 }
+
+// Platform-admin-only appetite and permission editor; see
+// update_buyer_preferences() in migration 202610180001 for the
+// authoritative checks and the before/after audit entry.
+export async function updateSupabaseBuyerPreferences(
+  client: SupabaseClient,
+  input: {
+    organisationId: string;
+    insuranceProducts: string[];
+    provinces: string[];
+    minimumScore: number;
+    dailyLeadCapacity: number;
+    acceptsCampaigns: boolean;
+    acceptsSharedLeads: boolean;
+  },
+) {
+  const { data, error } = await client.rpc("update_buyer_preferences", {
+    p_organisation_id: input.organisationId,
+    p_insurance_products: input.insuranceProducts,
+    p_provinces: input.provinces,
+    p_minimum_score: input.minimumScore,
+    p_daily_lead_capacity: input.dailyLeadCapacity,
+    p_accepts_campaigns: input.acceptsCampaigns,
+    p_accepts_shared_leads: input.acceptsSharedLeads,
+  });
+  fail("Unable to update broker preferences", error);
+  return data as { organisationId: string; insuranceProducts: string[] };
+}
+
+// Activates the caller's own 'invited' profile once they have set a
+// password; a no-op for every other profile state.
+export async function acceptSupabaseProfileInvitation(client: SupabaseClient) {
+  const { data, error } = await client.rpc("accept_profile_invitation");
+  fail("Unable to accept invitation", error);
+  return data as { accepted: boolean };
+}

@@ -701,3 +701,30 @@ Priced in the accompanying quotation.
   covered by the isolated runtime script above instead, not by Playwright.
 - Add scheduled-job execution and per-tenant daily/monthly delivery quotas beyond the bounded MCP batch.
 - Add visual campaign authoring, approval, version comparison, and recipient-exclusion drill-down.
+
+## Password reset, invite acceptance and broker appetite editor (2026-10-18)
+
+Production incident: Discovery Brokers' campaign form showed an empty product list and could
+never submit ("Select at least one insurance product"). Root cause: `review_broker_organisation()`
+approved tenants without creating a `buyer_preferences` row, and no screen could set appetite, so
+`fetchSupabaseBuyers()` fell back to no products and campaigns disabled. Separately, the app had
+no way for anyone to set or reset a password, which also left invited team members unable to
+finish joining.
+
+- Migration `202610180001_broker_appetite_and_invite_acceptance.sql`: backfills a default
+  preferences row for every broker/insurer; approval now creates one; new platform-admin-only
+  `update_buyer_preferences()` with validation and a before/after audit entry; new
+  `accept_profile_invitation()` activating the caller's own `invited` profile once their
+  organisation is active. Verified against Postgres 16 with a schema stub (16 scenario checks,
+  idempotent rerun); not yet run against a real Supabase project.
+- Broker Directory: "Edit appetite & permissions" editor per broker (`BrokerAppetiteEditor`),
+  backed by `POST /api/admin/organisations/[id]/preferences`; works in demo mode too.
+- Auth: "Forgot password?" on `/login`, `/forgot-password` (enumeration-safe), `/reset-password`
+  for recovery links, invite links and signed-in "Change password" (sidebar), and
+  `/auth/confirm` routing `recovery`/`invite` links there. Requires the Reset password and Invite
+  user email templates from docs/SUPABASE_SETUP.md section 3.
+- Campaign form: explains an empty appetite or disabled campaigns instead of rendering an unusable
+  form; minimum lead score must be a whole number.
+- Tests: `password.test.ts`, `brokerPreferences.test.ts` (unit, passing);
+  `e2e/broker-appetite.spec.ts` written but not yet run (no Chromium in the build environment).
+

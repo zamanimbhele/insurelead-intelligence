@@ -68,7 +68,11 @@ export default async function CampaignsPage() {
           // they still author and approve any tenant's *existing*
           // campaign on its own detail page instead.
           <div className="border-b border-slate-200 px-6 py-4">
-            <CampaignCreateForm approvedProducts={authoring.buyer?.insuranceProducts ?? []} sendingIdentities={authoring.sendingIdentities} />
+            <CampaignCreateForm
+              approvedProducts={authoring.buyer?.insuranceProducts ?? []}
+              sendingIdentities={authoring.sendingIdentities}
+              campaignsEnabled={authoring.buyer?.acceptsCampaigns ?? false}
+            />
           </div>
         )}
 

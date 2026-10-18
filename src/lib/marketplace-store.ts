@@ -186,3 +186,31 @@ export function allocateLead(input: { leadId: string; buyerId: string; priceCent
   appendAuditLog({ entity: "assignment", entityId: allocation.id, action: "lead_reserved", actor: input.actor, details: `Lead ${input.leadId} reserved for buyer ${input.buyerId}` });
   return allocation;
 }
+
+// Demo-mode counterpart to update_buyer_preferences() (migration
+// 202610180001): the platform-admin appetite and permission editor on the
+// Broker Directory. Input is already validated by brokerPreferencesSchema
+// in the API route; this only persists it and writes the audit entry.
+export function updateBuyerPreferences(
+  organisationId: string,
+  changes: Pick<
+    Buyer,
+    "insuranceProducts" | "provinces" | "minimumScore" | "dailyLeadCapacity" | "acceptsCampaigns" | "acceptsSharedLeads"
+  >,
+  actorLabel: string,
+): Buyer {
+  const buyers = readJson<Buyer[]>(BUYERS_FILE, []);
+  const index = buyers.findIndex((buyer) => buyer.id === organisationId);
+  if (index === -1) throw new Error("Broker organisation not found");
+  const previous = getBuyers()[index];
+  buyers[index] = { ...buyers[index], ...changes };
+  writeJson(BUYERS_FILE, buyers);
+  appendAuditLog({
+    entity: "organisation",
+    entityId: organisationId,
+    action: "buyer_preferences_updated",
+    actor: actorLabel,
+    details: `${previous.organisationName}: products [${previous.insuranceProducts.join(", ") || "none"}] -> [${changes.insuranceProducts.join(", ") || "none"}], campaigns ${previous.acceptsCampaigns ? "on" : "off"} -> ${changes.acceptsCampaigns ? "on" : "off"}`,
+  });
+  return getBuyers()[index];
+}
