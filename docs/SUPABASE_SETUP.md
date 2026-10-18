@@ -66,9 +66,31 @@ the email template in the Supabase Dashboard:
 3. Under Authentication → URL Configuration, set **Site URL** to the deployment's public URL
    (matching `NEXT_PUBLIC_APP_URL`), and add that same URL (and any preview URLs) to
    **Redirect URLs**. `{{ .SiteURL }}` in the template above resolves from this setting.
-4. Repeat the same `token_hash`/`type` link pattern for any other enabled template that should
-   land on this route (for example "Reset password" uses `type=recovery`, "Change email address"
-   uses `type=email_change`) if those flows are enabled.
+4. Apply the same `token_hash`/`type` link pattern to the **Reset password** and **Invite user**
+   templates. Both are required: `/auth/confirm` sends `type=recovery` to `/reset-password` and
+   `type=invite` to `/reset-password?flow=invite`, where the person chooses a password. With the
+   default templates, recovery and invite links bypass the app and the person never gets a
+   chance to set a password.
+
+   Reset password:
+
+   ```html
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery">
+     Choose a new password
+   </a>
+   ```
+
+   Invite user:
+
+   ```html
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">
+     Accept your invitation
+   </a>
+   ```
+
+   Setting the first password through an invite link also activates the person's `invited`
+   profile (`accept_profile_invitation()`, migration `202610180001`), provided their organisation
+   is active. "Change email address" uses `type=email_change` if that flow is enabled.
 5. Send a real test signup to a mailbox you control and confirm the link lands on
    `/login?message=email_confirmed`; an expired or already-used link should land on
    `/login?error=confirmation_failed`.

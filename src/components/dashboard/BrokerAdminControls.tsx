@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BrokerMember } from "@/lib/types";
+import type { BrokerMember, InsuranceProduct } from "@/lib/types";
+import { INSURANCE_PRODUCTS, PROVINCES } from "@/lib/constants";
+import { brokerPreferencesSchema } from "@/lib/validation/brokerPreferences";
 
 const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "broker_admin", label: "Broker Admin" },
@@ -230,6 +232,190 @@ export function SendingIdentityReviewControls({ identityId, status }: { identity
           {error}
         </p>
       )}
+    </div>
+  );
+}
+
+// Platform-admin appetite & permissions editor for one broker card on the
+// Broker Directory. Collapsed by default so the directory stays readable;
+// the API route (and, in Supabase mode, update_buyer_preferences()) is
+// the authority - this only gives early feedback.
+export function BrokerAppetiteEditor({
+  organisationId,
+  organisationName,
+  initial,
+}: {
+  organisationId: string;
+  organisationName: string;
+  initial: {
+    insuranceProducts: InsuranceProduct[];
+    provinces: string[];
+    minimumScore: number;
+    dailyLeadCapacity: number;
+    acceptsCampaigns: boolean;
+    acceptsSharedLeads: boolean;
+  };
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [products, setProducts] = useState<InsuranceProduct[]>(initial.insuranceProducts);
+  const [provinces, setProvinces] = useState<string[]>(initial.provinces);
+  const [minimumScore, setMinimumScore] = useState(String(initial.minimumScore));
+  const [dailyLeadCapacity, setDailyLeadCapacity] = useState(String(initial.dailyLeadCapacity));
+  const [acceptsCampaigns, setAcceptsCampaigns] = useState(initial.acceptsCampaigns);
+  const [acceptsSharedLeads, setAcceptsSharedLeads] = useState(initial.acceptsSharedLeads);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function toggle<T>(list: T[], value: T) {
+    return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+  }
+
+  async function save() {
+    setError(null);
+    setNotice(null);
+    const payload = {
+      insuranceProducts: products,
+      provinces,
+      minimumScore: Number(minimumScore),
+      dailyLeadCapacity: Number(dailyLeadCapacity),
+      acceptsCampaigns,
+      acceptsSharedLeads,
+    };
+    const parsed = brokerPreferencesSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Check the values and try again");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/organisations/${organisationId}/preferences`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed.data),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "The broker's preferences could not be updated");
+      setNotice("Appetite and permissions saved.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The broker's preferences could not be updated");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-primary-300 hover:text-primary-700"
+      >
+        Edit appetite &amp; permissions
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4" data-testid="broker-appetite-editor">
+      <p className="text-xs font-semibold text-slate-900">Appetite &amp; permissions · {organisationName}</p>
+
+      <fieldset className="mt-3">
+        <legend className="text-xs font-medium text-slate-500">Approved insurance products</legend>
+        <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+          {INSURANCE_PRODUCTS.map((product) => (
+            <label key={product.value} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={products.includes(product.value)}
+                onChange={() => setProducts((prev) => toggle(prev, product.value))}
+                className="h-3.5 w-3.5 rounded border-slate-300"
+              />
+              {product.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-3">
+        <legend className="text-xs font-medium text-slate-500">Province coverage (none selected = national)</legend>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {PROVINCES.map((province) => (
+            <label key={province} className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={provinces.includes(province)}
+                onChange={() => setProvinces((prev) => toggle(prev, province))}
+                className="h-3 w-3 rounded border-slate-300"
+              />
+              {province}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+          Minimum lead score (0-100)
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            step={1}
+            value={minimumScore}
+            onChange={(event) => setMinimumScore(event.target.value)}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+          Daily lead capacity (1-1000)
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={1000}
+            step={1}
+            value={dailyLeadCapacity}
+            onChange={(event) => setDailyLeadCapacity(event.target.value)}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2 text-xs text-slate-700">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={acceptsCampaigns} onChange={(event) => setAcceptsCampaigns(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" />
+          Campaigns enabled
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={acceptsSharedLeads} onChange={(event) => setAcceptsSharedLeads(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" />
+          Accepts shared leads
+        </label>
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={busy}
+          className="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+        >
+          {busy ? "Saving…" : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          disabled={busy}
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700"
+        >
+          Close
+        </button>
+      </div>
+      {error ? <p className="mt-2 text-xs text-red-600" role="alert">{error}</p> : null}
+      {notice ? <p className="mt-2 text-xs text-emerald-700" role="status">{notice}</p> : null}
     </div>
   );
 }

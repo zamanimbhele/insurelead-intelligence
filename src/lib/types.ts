@@ -433,7 +433,8 @@ export interface AuditLogEntry {
     | "export"
     | "legal_text"
     | "demo_data"
-    | "sending_identity";
+    | "sending_identity"
+    | "organisation";
   entityId: string;
   action: string;
   actor: string;

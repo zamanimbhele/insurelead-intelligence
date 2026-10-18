@@ -2,6 +2,7 @@ import { getDashboardIdentity, isComplianceAuditor, isPlatformAdmin } from "@/li
 import { getDashboardBrokerDirectory } from "@/lib/dashboard-data";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
 import {
+  BrokerAppetiteEditor,
   MemberMembershipControls,
   OrganisationReviewControls,
   SendingIdentityReviewControls,
@@ -64,6 +65,9 @@ export default async function BrokerDirectoryPage() {
 
               <div className="mt-5">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Approved products</p>
+                {buyer.insuranceProducts.length === 0 && (
+                  <p className="mt-2 text-sm text-amber-700">No approved products yet - this broker cannot run campaigns or receive matched leads.</p>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {buyer.insuranceProducts.map((product) => (
                     <span key={product} className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
@@ -72,6 +76,21 @@ export default async function BrokerDirectoryPage() {
                   ))}
                 </div>
               </div>
+
+              {canManage && (
+                <BrokerAppetiteEditor
+                  organisationId={buyer.id}
+                  organisationName={buyer.organisationName}
+                  initial={{
+                    insuranceProducts: buyer.insuranceProducts,
+                    provinces: buyer.provinces,
+                    minimumScore: buyer.minimumScore,
+                    dailyLeadCapacity: buyer.dailyLeadCapacity,
+                    acceptsCampaigns: buyer.acceptsCampaigns,
+                    acceptsSharedLeads: buyer.acceptsSharedLeads,
+                  }}
+                />
+              )}
 
               <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
                 <div><p className="text-xs text-slate-400">Province coverage</p><p className="mt-1 text-slate-600">{buyer.provinces.join(", ") || "National"}</p></div>

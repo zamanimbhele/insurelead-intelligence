@@ -24,6 +24,7 @@ const ENTITY_LABELS: Record<AuditLogEntry["entity"], string> = {
   legal_text: "Legal text",
   demo_data: "Demo data reset",
   sending_identity: "Sending identity",
+  organisation: "Organisation",
 };
 
 const ENTITY_OPTIONS = Object.entries(ENTITY_LABELS) as [AuditLogEntry["entity"], string][];

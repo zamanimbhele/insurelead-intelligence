@@ -25,9 +25,11 @@ const OBJECTIVES: { value: string; label: string }[] = [
 export function CampaignCreateForm({
   approvedProducts,
   sendingIdentities,
+  campaignsEnabled = true,
 }: {
   approvedProducts: InsuranceProduct[];
   sendingIdentities: BrokerSendingIdentity[];
+  campaignsEnabled?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -63,6 +65,11 @@ export function CampaignCreateForm({
       setError("Select a sending identity");
       return;
     }
+    const score = minimumScore.trim() === "" ? undefined : Number(minimumScore);
+    if (score !== undefined && (!Number.isInteger(score) || score < 0 || score > 100)) {
+      setError("Minimum lead score must be a whole number from 0 to 100");
+      return;
+    }
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -76,7 +83,7 @@ export function CampaignCreateForm({
           insuranceProducts: products,
           sendingIdentityId,
           provinces: provinces.length ? provinces : undefined,
-          minimumScore: minimumScore ? Number(minimumScore) : undefined,
+          minimumScore: score,
         }),
       });
       const body = await response.json().catch(() => ({}));
@@ -92,6 +99,23 @@ export function CampaignCreateForm({
     } finally {
       setBusy(false);
     }
+  }
+
+  // An approved tenant with no product appetite (no buyer_preferences
+  // products yet) would otherwise render an empty checklist that can never
+  // pass the "select at least one product" check. Explain it instead.
+  if (availableProducts.length === 0 || !campaignsEnabled) {
+    return (
+      <div className="mt-4 rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-xs text-amber-900" data-testid="campaign-create-form">
+        <p className="font-semibold">Campaign drafting is not available yet</p>
+        <p className="mt-1">
+          {availableProducts.length === 0
+            ? "Your broker has no approved insurance products yet."
+            : "Campaigns are not enabled for your broker yet."}{" "}
+          A platform administrator can set your approved appetite and enable campaigns in the Broker Directory.
+        </p>
+      </div>
+    );
   }
 
   if (sendingIdentities.length === 0) {
@@ -146,8 +170,10 @@ export function CampaignCreateForm({
           Minimum lead score (optional)
           <input
             type="number"
+            inputMode="numeric"
             min={0}
             max={100}
+            step={1}
             value={minimumScore}
             onChange={(event) => setMinimumScore(event.target.value)}
             className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
