@@ -254,6 +254,8 @@ export function BrokerAppetiteEditor({
     dailyLeadCapacity: number;
     acceptsCampaigns: boolean;
     acceptsSharedLeads: boolean;
+    campaignDailySendLimit: number;
+    campaignMonthlySendLimit: number;
   };
 }) {
   const router = useRouter();
@@ -264,6 +266,8 @@ export function BrokerAppetiteEditor({
   const [dailyLeadCapacity, setDailyLeadCapacity] = useState(String(initial.dailyLeadCapacity));
   const [acceptsCampaigns, setAcceptsCampaigns] = useState(initial.acceptsCampaigns);
   const [acceptsSharedLeads, setAcceptsSharedLeads] = useState(initial.acceptsSharedLeads);
+  const [campaignDailySendLimit, setCampaignDailySendLimit] = useState(String(initial.campaignDailySendLimit));
+  const [campaignMonthlySendLimit, setCampaignMonthlySendLimit] = useState(String(initial.campaignMonthlySendLimit));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -282,6 +286,8 @@ export function BrokerAppetiteEditor({
       dailyLeadCapacity: Number(dailyLeadCapacity),
       acceptsCampaigns,
       acceptsSharedLeads,
+      campaignDailySendLimit: Number(campaignDailySendLimit),
+      campaignMonthlySendLimit: Number(campaignMonthlySendLimit),
     };
     const parsed = brokerPreferencesSchema.safeParse(payload);
     if (!parsed.success) {
@@ -384,6 +390,36 @@ export function BrokerAppetiteEditor({
           />
         </label>
       </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+          Campaign emails per day
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={50000}
+            step={1}
+            value={campaignDailySendLimit}
+            onChange={(event) => setCampaignDailySendLimit(event.target.value)}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+          Campaign emails per month
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={1000000}
+            step={1}
+            value={campaignMonthlySendLimit}
+            onChange={(event) => setCampaignMonthlySendLimit(event.target.value)}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900"
+          />
+        </label>
+      </div>
+      <p className="mt-1 text-xs text-slate-400">Across all of this broker&apos;s campaigns, per South African calendar day and month.</p>
 
       <div className="mt-3 flex flex-col gap-2 text-xs text-slate-700">
         <label className="flex items-center gap-2">

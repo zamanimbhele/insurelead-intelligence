@@ -15,16 +15,12 @@ import {
   getRuntimeCampaign,
   getRuntimeCampaignEvaluation,
   getRuntimeCampaignPerformance,
-  listRuntimeCampaignRecipients,
   listRuntimeCampaigns,
-  prepareRuntimeCampaignRecipients,
   saveRuntimeCampaignContent,
   updateRuntimeCampaign,
-  updateRuntimeCampaignRecipient,
 } from "../lib/campaign-runtime.ts";
-import { createCampaignUnsubscribeUrl } from "../lib/campaign-unsubscribe.ts";
+import { sendCampaignBatch } from "../lib/campaign-sender.ts";
 import {
-  getRuntimeLead,
   listRuntimeBuyers,
   listRuntimeSendingIdentities,
 } from "../lib/runtime-data.ts";
@@ -474,127 +470,28 @@ export function registerCampaignTools(server: McpServer) {
         assertCanCreate(actor);
         const campaign = await loadAccessibleCampaign(campaignId, actor);
         if (confirmation !== `LAUNCH ${campaign.id}`) throw new Error(`Confirmation must equal LAUNCH ${campaign.id}`);
-        if (!["approved", "sending", "paused"].includes(campaign.status)) throw new Error("Campaign is not approved for launch");
-        if (!campaign.currentContentVersion || campaign.approvedContentVersion !== campaign.currentContentVersion) {
-          throw new Error("The current content version does not have approval");
-        }
-        const evaluation = await getRuntimeCampaignEvaluation(campaign);
-        const issues = validateCampaign({ campaign, ...evaluation });
-        const errors = issues.filter((issue) => issue.severity === "error");
-        if (errors.length) throw new Error(errors.map((issue) => issue.message).join(" "));
-        if (!evaluation.content || !evaluation.sendingIdentity) throw new Error("Campaign content or sending identity is missing");
-        if (getDataMode() !== "demo" && getCampaignDeliveryMode() !== "live") {
-          throw new Error("INSURELEAD_CAMPAIGN_DELIVERY_MODE must be live to launch a campaign");
-        }
-
-        let recipients = await listRuntimeCampaignRecipients(campaign.id);
-        if (recipients.length === 0) recipients = await prepareRuntimeCampaignRecipients(campaign);
-        const configuredMaximum = Math.max(1, Math.min(100, Number(process.env.CAMPAIGN_MAX_BATCH_SIZE ?? 25)) || 25);
-        const selected = recipients.filter((recipient) => recipient.status === "queued").slice(0, Math.min(batchSize, configuredMaximum));
-        if (!selected.length) throw new Error("No queued, eligible recipients remain");
-
-        const launchedAt = campaign.launchedAt ?? new Date().toISOString();
-        await updateRuntimeCampaign(campaign.id, { status: "sending", launchedAt });
-        await appendRuntimeCampaignEvent({
-          campaignId: campaign.id,
-          eventType: "launch_started",
+        // Shared with the scheduled sender: state and approval checks, the
+        // send lease, the tenant's daily/monthly quota, and per-recipient
+        // eligibility at send time (src/lib/campaign-sender.ts).
+        const result = await sendCampaignBatch({
+          campaign,
           actor: actor.label,
-          details: { contentVersion: evaluation.content.version, batchSize: selected.length },
+          trigger: "mcp",
+          requestedBatchSize: batchSize,
         });
-
-        let sent = 0;
-        let failed = 0;
-        let suppressed = 0;
-        for (const recipient of selected) {
-          const latestCampaign = await getRuntimeCampaign(campaign.id);
-          if (!latestCampaign || latestCampaign.status !== "sending") break;
-          const latestEvaluation = await getRuntimeCampaignEvaluation(latestCampaign);
-          const latestBlockingIssue = validateCampaign({ campaign: latestCampaign, ...latestEvaluation })
-            .find((issue) => issue.severity === "error" && issue.code !== "audience_empty");
-          if (latestBlockingIssue) {
-            await updateRuntimeCampaign(campaign.id, { status: "paused", pausedAt: new Date().toISOString() });
-            await appendRuntimeCampaignEvent({
-              campaignId: campaign.id,
-              eventType: "paused",
-              actor: actor.label,
-              details: { reason: `Automatic safety pause: ${latestBlockingIssue.message}` },
-            });
-            break;
-          }
-          const stillEligible = latestEvaluation.audience.some((item) =>
-            item.leadId === recipient.leadId && item.eligible
-          );
-          if (!stillEligible) {
-            await updateRuntimeCampaignRecipient(recipient.id, { status: "suppressed", exclusionReason: "Eligibility changed before send" });
-            suppressed += 1;
-            continue;
-          }
-          const lead = await getRuntimeLead(recipient.leadId);
-          if (!lead) {
-            await updateRuntimeCampaignRecipient(recipient.id, { status: "failed", exclusionReason: "Lead no longer exists" });
-            failed += 1;
-            continue;
-          }
-          try {
-            const unsubscribeUrl = createCampaignUnsubscribeUrl({
-              campaignId: campaign.id,
-              organisationId: campaign.organisationId,
-              leadId: lead.id,
-            });
-            const rendered = renderCampaignContent(evaluation.content, {
-              firstName: lead.contactFullName.split(/\s+/)[0] || "there",
-              unsubscribeUrl,
-            });
-            const result = getDataMode() === "demo"
-              ? { providerMessageId: `demo_${recipient.id}` }
-              : await sendCampaignEmail({
-                sendingIdentity: evaluation.sendingIdentity,
-                to: lead.contactEmail,
-                subject: rendered.subject,
-                html: rendered.htmlBody,
-                text: rendered.textBody,
-                unsubscribeUrl,
-                idempotencyKey: `campaign-${campaign.id}-${recipient.id}-${evaluation.content.version}`,
-                campaignId: campaign.id,
-              });
-            await updateRuntimeCampaignRecipient(recipient.id, {
-              status: "sent",
-              providerMessageId: result.providerMessageId,
-              sentAt: new Date().toISOString(),
-            });
-            await appendRuntimeCampaignEvent({
-              campaignId: campaign.id,
-              eventType: "recipient_sent",
-              actor: actor.label,
-              recipientId: recipient.id,
-              details: { providerMessageId: result.providerMessageId },
-            });
-            sent += 1;
-          } catch (error) {
-            await updateRuntimeCampaignRecipient(recipient.id, { status: "failed", exclusionReason: "Provider delivery failed" });
-            await appendRuntimeCampaignEvent({
-              campaignId: campaign.id,
-              eventType: "recipient_failed",
-              actor: actor.label,
-              recipientId: recipient.id,
-              details: { error: error instanceof Error ? error.message : "Provider delivery failed" },
-            });
-            failed += 1;
-          }
-        }
-
-        const latestRecipients = await listRuntimeCampaignRecipients(campaign.id);
-        const remaining = latestRecipients.filter((recipient) => recipient.status === "queued").length;
-        if (remaining === 0) {
-          await updateRuntimeCampaign(campaign.id, { status: sent > 0 ? "completed" : "failed" });
-          await appendRuntimeCampaignEvent({
-            campaignId: campaign.id,
-            eventType: "completed",
-            actor: actor.label,
-            details: { sent, failed, suppressed },
-          });
-        }
-        return campaignResult({ launched: true, simulated: getDataMode() === "demo", sent, failed, suppressed, remaining });
+        return campaignResult({
+          launched: true,
+          simulated: result.simulated,
+          sent: result.sent,
+          failed: result.failed,
+          suppressed: result.suppressed,
+          remaining: result.remaining,
+          paused: result.paused,
+          quota: {
+            remainingToday: result.quota.remainingToday,
+            remainingThisMonth: result.quota.remainingThisMonth,
+          },
+        });
       } catch (error) {
         return campaignResult({ launched: false, error: error instanceof Error ? error.message : "Unable to launch campaign" });
       }

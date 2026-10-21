@@ -40,7 +40,7 @@ export function CampaignApprovalForm({
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "The campaign could not be approved");
-      setNotice("Approved. Use the MCP tools to send a test message, then explicitly launch delivery to the eligible audience.");
+      setNotice("Approved. Send a test message through the MCP tools if needed, then schedule sending in the Sending panel.");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "The campaign could not be approved");
@@ -53,8 +53,8 @@ export function CampaignApprovalForm({
     <div className="rounded-lg border border-dashed border-slate-300 p-4" data-testid="campaign-approval-form">
       <h3 className="text-sm font-semibold text-slate-900">Approve for delivery</h3>
       <p className="mt-1 text-xs text-slate-500">
-        This is the one explicit human sign-off the pipeline requires before a launch can even be requested. It never schedules or
-        sends anything itself.
+        The explicit human sign-off on this content. It never sends anything itself; scheduling is a separate step in the Sending
+        panel.
       </p>
       {blocked ? (
         <p className="mt-3 text-xs text-amber-700" data-testid="campaign-approval-blocked">

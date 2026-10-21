@@ -203,3 +203,43 @@ export function saveMarketingSuppression(
   writeJson(SUPPRESSIONS_FILE, suppressions);
   return suppression;
 }
+
+// --- Scheduled sending and quotas (demo mode) --------------------------
+
+// Every recipient handed to the provider since the given instants, across
+// all of the tenant's campaigns - the demo counterpart of
+// campaign_send_usage() (migration 202610210002).
+export function getCampaignSendUsage(organisationId: string, sinceDay: Date, sinceMonth: Date) {
+  const campaignIds = new Set(getCampaigns(organisationId).map((campaign) => campaign.id));
+  const sent = readJson<CampaignRecipient[]>(RECIPIENTS_FILE, [])
+    .filter((recipient) => campaignIds.has(recipient.campaignId) && recipient.sentAt)
+    .map((recipient) => new Date(recipient.sentAt as string).getTime());
+  return {
+    sentToday: sent.filter((time) => time >= sinceDay.getTime()).length,
+    sentThisMonth: sent.filter((time) => time >= sinceMonth.getTime()).length,
+  };
+}
+
+export function getDueCampaigns(now: Date, limit: number) {
+  return getCampaigns()
+    .filter((campaign) =>
+      campaign.status === "sending"
+      || (campaign.status === "scheduled" && campaign.scheduledAt && new Date(campaign.scheduledAt) <= now))
+    .sort((a, b) => (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? ""))
+    .slice(0, limit);
+}
+
+// Demo mode runs in a single Node process, so an in-memory lease is
+// enough to stop overlapping scheduler runs within that process.
+const demoSendLeases = new Map<string, number>();
+
+export function claimDemoCampaignSendLease(campaignId: string, seconds: number, now = Date.now()) {
+  const until = demoSendLeases.get(campaignId);
+  if (until !== undefined && until > now) return false;
+  demoSendLeases.set(campaignId, now + seconds * 1000);
+  return true;
+}
+
+export function releaseDemoCampaignSendLease(campaignId: string) {
+  demoSendLeases.delete(campaignId);
+}

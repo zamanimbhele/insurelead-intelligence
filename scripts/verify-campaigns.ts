@@ -56,6 +56,8 @@ const buyer: Buyer = {
   contactSlaHours: 4,
   acceptsSharedLeads: false,
   acceptsCampaigns: true,
+  campaignDailySendLimit: 200,
+  campaignMonthlySendLimit: 3000,
   contactEmail: "broker@example.test",
 };
 const campaign: Campaign = {

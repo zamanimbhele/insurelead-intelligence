@@ -8,7 +8,11 @@ import {
   getCampaignRecipients,
   getCampaigns,
   getCurrentCampaignContent,
+  claimDemoCampaignSendLease,
+  getCampaignSendUsage,
+  getDueCampaigns,
   getMarketingSuppressions,
+  releaseDemoCampaignSendLease,
   replaceCampaignRecipients,
   saveMarketingSuppression,
   updateCampaign,
@@ -19,7 +23,8 @@ import {
   nextRecipientStatusForWebhookEvent,
   suppressionReasonForWebhookEvent,
 } from "./campaign-webhooks.ts";
-import { evaluateCampaignAudience, hashCampaignEmail } from "./campaign-policy.ts";
+import { evaluateCampaignAudience, hashCampaignEmail, validateCampaign } from "./campaign-policy.ts";
+import { quotaStatus, sastPeriodStarts } from "./campaign-quota.ts";
 import {
   getRuntimeConsent,
   getRuntimeLead,
@@ -31,7 +36,11 @@ import {
 import { createSupabaseAdminClient } from "./supabase/admin.ts";
 import {
   appendSupabaseCampaignEvent,
+  claimSupabaseCampaignSendLease,
   createSupabaseCampaign,
+  fetchSupabaseCampaignSendUsage,
+  fetchSupabaseDueCampaigns,
+  releaseSupabaseCampaignSendLease,
   fetchSupabaseCampaign,
   fetchSupabaseCampaignContent,
   fetchSupabaseCampaignEvents,
@@ -375,5 +384,80 @@ export async function getRuntimeCampaignPerformance(campaignId: string) {
     failed: byStatus.failed ?? 0,
     suppressed: byStatus.suppressed ?? 0,
     eventCount: events.length,
+  };
+}
+
+// --- Scheduled sending and quotas -------------------------------------
+
+export async function getRuntimeCampaignQuota(organisationId: string, now = new Date()) {
+  const buyer = (await listRuntimeBuyers()).find((candidate) => candidate.id === organisationId);
+  const { dayStart, monthStart } = sastPeriodStarts(now);
+  const usage = getDataMode() === "demo"
+    ? getCampaignSendUsage(organisationId, dayStart, monthStart)
+    : await fetchSupabaseCampaignSendUsage(requireAdminClient(), organisationId, dayStart, monthStart);
+  return quotaStatus(
+    {
+      dailyLimit: buyer?.campaignDailySendLimit ?? 0,
+      monthlyLimit: buyer?.campaignMonthlySendLimit ?? 0,
+    },
+    usage,
+  );
+}
+
+export async function claimRuntimeCampaignSendLease(campaignId: string, seconds: number) {
+  return getDataMode() === "demo"
+    ? claimDemoCampaignSendLease(campaignId, seconds)
+    : claimSupabaseCampaignSendLease(requireAdminClient(), campaignId, seconds);
+}
+
+export async function releaseRuntimeCampaignSendLease(campaignId: string) {
+  if (getDataMode() === "demo") return releaseDemoCampaignSendLease(campaignId);
+  return releaseSupabaseCampaignSendLease(requireAdminClient(), campaignId);
+}
+
+export async function listRuntimeDueCampaigns(now: Date, limit: number) {
+  return getDataMode() === "demo"
+    ? getDueCampaigns(now, limit)
+    : fetchSupabaseDueCampaigns(requireAdminClient(), now, limit);
+}
+
+// Send-time safety check for ONE recipient: the campaign-level validation
+// (broker still approved, sender still verified, content intact) plus the
+// same per-lead audience rules evaluateCampaignAudience() applies to the
+// whole audience - consent, Do Not Contact, suppression, allocation,
+// segment. Loads only that lead and its consent rather than re-evaluating
+// the full audience for every email, which used to cost O(audience)
+// queries per recipient.
+export async function getRuntimeRecipientSendCheck(campaign: Campaign, leadId: string) {
+  const [buyers, identities, lead, consent, allocations, suppressions, content] = await Promise.all([
+    listRuntimeBuyers(),
+    listRuntimeSendingIdentities(campaign.organisationId),
+    getRuntimeLead(leadId),
+    getRuntimeConsent(leadId),
+    listRuntimeAllocations(),
+    listRuntimeMarketingSuppressions(campaign.organisationId),
+    getRuntimeCampaignContent(campaign.id, campaign.currentContentVersion),
+  ]);
+  const buyer = buyers.find((item) => item.id === campaign.organisationId);
+  const sendingIdentity = identities.find((item) => item.id === campaign.sendingIdentityId);
+  const audience = lead
+    ? evaluateCampaignAudience({
+      campaign,
+      buyer,
+      leads: [lead],
+      consents: new Map([[lead.id, consent]]),
+      allocations,
+      suppressions,
+    })
+    : [];
+  const blockingIssue = validateCampaign({ campaign, buyer, sendingIdentity, content, audience })
+    .find((issue) => issue.severity === "error" && issue.code !== "audience_empty");
+  return {
+    lead,
+    content,
+    sendingIdentity,
+    blockingIssue,
+    eligible: audience[0]?.eligible ?? false,
+    reasons: audience[0]?.reasons ?? ["Lead no longer exists"],
   };
 }

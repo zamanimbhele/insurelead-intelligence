@@ -16,6 +16,9 @@ import { MONTH_NAMES } from "./aggregation-utils";
 import { filterAuditLog } from "./audit-log";
 import type { AuditLogFilters } from "./audit-log";
 import { createSupabaseServerClient } from "./supabase/server";
+import { appendRuntimeCampaignEvent, getRuntimeCampaignQuota, updateRuntimeCampaign } from "./campaign-runtime";
+import { getCampaignDeliveryMode } from "./campaign-delivery";
+import { validateScheduleTime } from "./campaign-quota";
 import { getDataMode } from "./supabase/config";
 import {
   createSupabaseDataSource,
@@ -527,6 +530,7 @@ export async function getDashboardCampaignDetail(identity: DashboardIdentity, ca
       issues,
       recipients: getCampaignRecipients(campaignId),
       events: getCampaignEvents(campaignId),
+      quota: await getRuntimeCampaignQuota(campaign.organisationId),
     };
   }
 
@@ -562,7 +566,95 @@ export async function getDashboardCampaignDetail(identity: DashboardIdentity, ca
     issues,
     recipients,
     events,
+    // Counted with the service-role client: the campaign itself was just
+    // loaded through RLS above, so the caller is entitled to see its
+    // tenant's send totals (counts only, no recipient data).
+    quota: await getRuntimeCampaignQuota(campaign.organisationId),
   };
+}
+
+// --- Scheduled sending (dashboard) -------------------------------------
+//
+// Scheduling is a second, separate human decision after approval: it
+// commits the approved content to actually being emailed. So it uses the
+// approval role gate (canApproveCampaigns - broker_admin or platform
+// admin), re-runs every validation check, and requires the exact
+// confirmation phrase. The actual sending is done later by the scheduled
+// sender (/api/cron/campaign-sends -> campaign-sender.ts), which re-checks
+// everything again per recipient at send time.
+export const SCHEDULE_CONFIRMATION = "I confirm this campaign may be emailed to its eligible audience";
+
+export async function scheduleDashboardCampaign(
+  identity: DashboardIdentity,
+  campaignId: string,
+  input: { sendAt: Date; confirmation: string },
+) {
+  const actorLabel = identity.displayName ?? identity.email ?? identity.organisationName;
+  if (input.confirmation !== SCHEDULE_CONFIRMATION) throw new Error("The exact scheduling confirmation is required");
+  const detail = await getDashboardCampaignDetail(identity, campaignId);
+  if (!detail) throw new Error("Campaign not found");
+  const { campaign } = detail;
+  if (!["approved", "paused"].includes(campaign.status)) {
+    throw new Error("Only an approved or paused campaign can be scheduled");
+  }
+  if (!campaign.currentContentVersion || campaign.approvedContentVersion !== campaign.currentContentVersion) {
+    throw new Error("The current content version does not have approval");
+  }
+  const errors = detail.issues.filter((issue) => issue.severity === "error");
+  if (errors.length) throw new Error(errors[0].message);
+  if (getDataMode() !== "demo" && getCampaignDeliveryMode() !== "live") {
+    throw new Error("Campaign delivery is not switched on for this environment");
+  }
+  const timeError = validateScheduleTime(input.sendAt, new Date());
+  if (timeError) throw new Error(timeError);
+
+  const resumed = campaign.status === "paused";
+  // A paused campaign that already started resumes as "sending" (the
+  // scheduler continues its queue); anything else waits for its time.
+  const nextStatus = resumed && campaign.launchedAt && input.sendAt.getTime() <= Date.now() + 60_000
+    ? "sending"
+    : "scheduled";
+  const updated = await updateRuntimeCampaign(campaign.id, {
+    status: nextStatus,
+    scheduledAt: input.sendAt.toISOString(),
+  });
+  await appendRuntimeCampaignEvent({
+    campaignId: campaign.id,
+    eventType: resumed ? "resumed" : "scheduled",
+    actor: actorLabel,
+    details: { scheduledAt: input.sendAt.toISOString(), eligibleRecipients: detail.audience.eligible },
+  });
+  return updated;
+}
+
+// Cancels a pending schedule (back to approved) or pauses one that is
+// already sending. Queued recipients stay queued either way.
+export async function stopDashboardCampaign(identity: DashboardIdentity, campaignId: string) {
+  const actorLabel = identity.displayName ?? identity.email ?? identity.organisationName;
+  const detail = await getDashboardCampaignDetail(identity, campaignId);
+  if (!detail) throw new Error("Campaign not found");
+  const { campaign } = detail;
+  if (campaign.status === "scheduled") {
+    const updated = await updateRuntimeCampaign(campaign.id, { status: "approved", scheduledAt: undefined });
+    await appendRuntimeCampaignEvent({
+      campaignId: campaign.id,
+      eventType: "schedule_cancelled",
+      actor: actorLabel,
+      details: { previouslyScheduledAt: campaign.scheduledAt },
+    });
+    return updated;
+  }
+  if (campaign.status === "sending") {
+    const updated = await updateRuntimeCampaign(campaign.id, { status: "paused", pausedAt: new Date().toISOString() });
+    await appendRuntimeCampaignEvent({
+      campaignId: campaign.id,
+      eventType: "paused",
+      actor: actorLabel,
+      details: { reason: `Paused from the dashboard by ${actorLabel}` },
+    });
+    return updated;
+  }
+  throw new Error("Only a scheduled or sending campaign can be stopped");
 }
 
 export async function getApplicationSettings(): Promise<ApplicationSettings> {

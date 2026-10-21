@@ -174,7 +174,75 @@ in favour of a fixed, clearly-labelled demo secret (the same convention
 local demo run can both sign a test webhook request deterministically without any real Resend
 account.
 
-## 7. Validate locally
+## 7. Sending limits and scheduled sending
+
+Migration `202610210002_campaign_sending_limits_and_scheduling.sql` adds:
+
+- **Per-broker quotas.** Every broker has a daily and a monthly campaign email limit (defaults
+  200 and 3 000), counted across all of its campaigns per South African calendar day and month.
+  Platform admins change them in **Broker Directory → Edit appetite & permissions**. A batch never
+  sends past the remaining quota; leftover recipients stay queued and go out after the limit resets.
+- **Scheduling from the dashboard.** On an approved campaign, a broker admin or platform admin
+  opens the **Sending** panel, picks "Start sending now" or a date and time (SAST), ticks the
+  confirmation and schedules it. **Cancel schedule** and **Pause sending** stop it again; queued
+  recipients are kept. Editing the content after approval resets the approval and automatically
+  pauses any scheduled or in-progress send.
+- **A scheduled sender** at `/api/cron/campaign-sends`. Each run sends at most one batch per due
+  campaign (`CAMPAIGN_MAX_BATCH_SIZE`, max 100), re-checks every recipient at send time, and stops
+  starting new work after 45 seconds. A campaign that can no longer pass validation is paused with
+  the reason in its activity log. A per-campaign send lease prevents two runs (or a run and an MCP
+  `launch_campaign`) from sending the same queue at once.
+
+The MCP `launch_campaign` tool uses the same engine, so it also respects the quotas.
+
+### Configure the scheduler
+
+1. Generate a secret and add it to the deployment's environment variables, then redeploy:
+
+   ```bash
+   openssl rand -hex 32   # -> CRON_SECRET
+   ```
+
+2. Call `GET` (or `POST`) `/api/cron/campaign-sends` every 5 minutes with the header
+   `Authorization: Bearer <CRON_SECRET>`. Pick one option:
+
+   **Vercel Cron (Vercel Pro).** Add a `vercel.json` at the repo root. Vercel sends the
+   `CRON_SECRET` header automatically. On the Hobby plan crons can only run once a day, and a
+   more frequent schedule fails the deployment, so use the Supabase option there.
+
+   ```json
+   { "crons": [{ "path": "/api/cron/campaign-sends", "schedule": "*/5 * * * *" }] }
+   ```
+
+   **Supabase pg_cron (any Vercel plan).** Enable the `pg_cron` and `pg_net` extensions
+   (Database → Extensions), store the secret in Vault, then schedule the call in the SQL editor:
+
+   ```sql
+   select vault.create_secret('<CRON_SECRET>', 'campaign_cron_secret');
+
+   select cron.schedule(
+     'campaign-sends',
+     '*/5 * * * *',
+     $$
+     select net.http_get(
+       url := 'https://insurelead.online/api/cron/campaign-sends',
+       headers := jsonb_build_object(
+         'Authorization',
+         'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'campaign_cron_secret')
+       ),
+       timeout_milliseconds := 60000
+     );
+     $$
+   );
+   ```
+
+3. Check it: `select * from cron.job_run_details order by start_time desc limit 5;` (pg_cron) or
+   the Vercel function logs, which print one `[campaign-scheduler] run complete` line per run.
+
+Without `CRON_SECRET` the endpoint returns 503 and nothing is sent; scheduled campaigns simply
+wait.
+
+## 8. Validate locally
 
 ```bash
 npm run typecheck

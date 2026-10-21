@@ -283,6 +283,10 @@ export interface Buyer {
   contactSlaHours: number;
   acceptsSharedLeads: boolean;
   acceptsCampaigns: boolean;
+  // Campaign email quotas across all of this tenant's campaigns, per SAST
+  // calendar day/month (see campaign-quota.ts).
+  campaignDailySendLimit: number;
+  campaignMonthlySendLimit: number;
   contactEmail: string;
 }
 
@@ -378,6 +382,11 @@ export type CampaignEventType =
   | "paused"
   | "completed"
   | "recipient_unsubscribed"
+  // Scheduled sending (campaign-sender.ts)
+  | "scheduled"
+  | "schedule_cancelled"
+  | "quota_deferred"
+  | "resumed"
   // Inbound provider delivery/engagement webhooks (see campaign-webhooks.ts) -
   // "delivered"/"bounced"/"complained" also move CampaignRecipientStatus;
   // "opened"/"clicked" are engagement signals recorded only as events, since
