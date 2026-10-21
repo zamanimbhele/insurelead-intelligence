@@ -206,12 +206,13 @@ The MCP `launch_campaign` tool uses the same engine, so it also respects the quo
 2. Call `GET` (or `POST`) `/api/cron/campaign-sends` every 5 minutes with the header
    `Authorization: Bearer <CRON_SECRET>`. Pick one option:
 
-   **Vercel Cron (Vercel Pro).** Add a `vercel.json` at the repo root. Vercel sends the
-   `CRON_SECRET` header automatically. On the Hobby plan crons can only run once a day, and a
-   more frequent schedule fails the deployment, so use the Supabase option there.
+   **Vercel Cron (Vercel Pro).** Add this entry to the `crons` array in `vercel.json` at the repo
+   root (create the file if it does not exist). Vercel sends the `CRON_SECRET` header
+   automatically. On the Hobby plan crons can only run once a day, and a more frequent schedule
+   fails the deployment, so use the Supabase option there.
 
    ```json
-   { "crons": [{ "path": "/api/cron/campaign-sends", "schedule": "*/5 * * * *" }] }
+   { "path": "/api/cron/campaign-sends", "schedule": "*/5 * * * *" }
    ```
 
    **Supabase pg_cron (any Vercel plan).** Enable the `pg_cron` and `pg_net` extensions

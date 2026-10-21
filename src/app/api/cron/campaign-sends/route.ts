@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { checkCronRequest } from "@/lib/cron-auth";
 import { runCampaignScheduler } from "@/lib/campaign-sender";
 import { listRuntimeDueCampaigns } from "@/lib/campaign-runtime";
 
@@ -13,19 +13,9 @@ export const maxDuration = 60;
 
 const TIME_BUDGET_MS = 45_000;
 
-function authorised(request: NextRequest, secret: string) {
-  const header = request.headers.get("authorization") ?? "";
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const actual = Buffer.from(header);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
-
 async function run(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || secret.length < 16) {
-    return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 503 });
-  }
-  if (!authorised(request, secret)) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const auth = checkCronRequest(request.headers.get("authorization"));
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const startedAt = new Date();
   const outcomes = await runCampaignScheduler({
