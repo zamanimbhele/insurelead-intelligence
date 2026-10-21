@@ -273,6 +273,26 @@ export function logLeadInteraction(
   });
 }
 
+export function getAllLeadTasks(): LeadTask[] {
+  return readJson<LeadTask[]>(LEAD_TASKS_FILE, []);
+}
+
+// Demo counterpart of profiles.task_digest_enabled, keyed by the demo
+// account's email (demo identities have no profile row).
+const NOTIFICATION_PREFERENCES_FILE = path.join(DATA_DIR, "notification-preferences.json");
+
+export function getDemoTaskDigestPreference(email: string): boolean {
+  const preferences = readJson<Record<string, { taskDigestEnabled?: boolean }>>(NOTIFICATION_PREFERENCES_FILE, {});
+  return preferences[email.toLowerCase()]?.taskDigestEnabled ?? true;
+}
+
+export function setDemoTaskDigestPreference(email: string, enabled: boolean) {
+  const preferences = readJson<Record<string, { taskDigestEnabled?: boolean }>>(NOTIFICATION_PREFERENCES_FILE, {});
+  preferences[email.toLowerCase()] = { ...preferences[email.toLowerCase()], taskDigestEnabled: enabled };
+  writeJson(NOTIFICATION_PREFERENCES_FILE, preferences);
+  return enabled;
+}
+
 export function getLeadTasks(leadId: string): LeadTask[] {
   return readJson<LeadTask[]>(LEAD_TASKS_FILE, []).filter((task) => task.leadId === leadId);
 }
@@ -930,6 +950,7 @@ export function resetDemoData(actorLabel: string): { leadCount: number; consentC
   writeJson(LEGAL_TEXT_DOCUMENTS_FILE, {});
   writeJson(LEGAL_TEXT_DOCUMENT_VERSIONS_FILE, []);
   writeJson(APPLICATION_SETTINGS_FILE, {});
+  writeJson(NOTIFICATION_PREFERENCES_FILE, {});
 
   // Audit log cleared last, then re-seeded with exactly one entry
   // recording the reset itself - an empty audit log after a reset would

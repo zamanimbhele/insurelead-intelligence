@@ -295,8 +295,14 @@ Priced in the accompanying quotation.
   loss-reason capture when a lead moves to Lost - all behind the same platform-admin-or-allocated-
   broker-operator SECURITY DEFINER checks as the Kanban board's update_lead_status(), reusing
   canUpdateLeadStatus() as the single write-gate across notes/tasks/interactions/status. "Follow-up
-  reminders" here means due-dated tasks surfaced on the lead profile; a separate notification/digest
-  mechanism that proactively alerts a broker when a task is due or overdue is still open.
+  reminders" here means due-dated tasks surfaced on the lead profile.
+- Daily task digest completed (2026-10-21): a 06:00 SAST email per broker user listing overdue and
+  due-today tasks (broker admins: whole organisation; agents: created by or assigned to them),
+  with a per-user on/off switch and a live preview on the Broker Profile page, at most one email
+  per person per day (`task_digest_deliveries`), and minimal lead identification (business name
+  or contact first name). Migration `202610210003_task_due_digest.sql`; trigger `vercel.json`
+  (daily, works on all Vercel plans); sender `NOTIFICATION_EMAIL_FROM` via Resend. See
+  docs/TASK_DIGEST.md.
 - Do Not Contact workflow enforcement completed: every outreach surface was audited and now
   excludes do-not-contact leads - campaign audience evaluation (both the demo-mode evaluator and
   the Supabase prepare_campaign_recipients() RPC), the MCP server's lead search/contact/follow-up
