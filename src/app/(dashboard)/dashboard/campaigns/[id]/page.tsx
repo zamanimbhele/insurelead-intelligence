@@ -7,6 +7,8 @@ import { getDashboardCampaignDetail } from "@/lib/dashboard-data";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
 import { CampaignContentForm } from "@/components/dashboard/CampaignContentForm";
 import { CampaignApprovalForm } from "@/components/dashboard/CampaignApprovalForm";
+import { CampaignSendingPanel } from "@/components/dashboard/CampaignSendingPanel";
+import { formatSast } from "@/lib/campaign-quota";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   const detail = await getDashboardCampaignDetail(identity, id);
   if (!detail) return notFound();
 
-  const { campaign, buyer, sendingIdentity, content, audience, issues, recipients, events } = detail;
+  const { campaign, buyer, sendingIdentity, content, audience, issues, recipients, events, quota } = detail;
   const canAuthor = canManageCampaigns(identity) && !["sending", "completed", "cancelled"].includes(campaign.status);
   const canApprove = canApproveCampaigns(identity) && ["draft", "pending_review"].includes(campaign.status);
   const errors = issues.filter((issue) => issue.severity === "error");
@@ -150,6 +152,19 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         </div>
 
         <div className="flex flex-col gap-6">
+          <CampaignSendingPanel
+            campaignId={campaign.id}
+            status={campaign.status}
+            scheduledAtLabel={campaign.scheduledAt ? formatSast(campaign.scheduledAt) : undefined}
+            eligibleCount={audience.eligible}
+            sentCount={recipients.filter((recipient) => recipient.sentAt).length}
+            queuedCount={recipients.filter((recipient) => recipient.status === "queued").length}
+            quota={quota}
+            canControl={canApproveCampaigns(identity)}
+            blockedReason={errors[0]?.message}
+            approvalCurrent={Boolean(campaign.currentContentVersion) && campaign.approvedContentVersion === campaign.currentContentVersion}
+          />
+
           <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-sm font-semibold text-slate-900">Audience</h2>
             <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">

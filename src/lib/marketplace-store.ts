@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { appendAuditLog, getConsentByLeadId, getLeadById } from "./demo-store.ts";
+import { DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT, DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT } from "./campaign-quota.ts";
 import type {
   BrokerSendingIdentity,
   Buyer,
@@ -30,6 +31,8 @@ export function getBuyers(): Buyer[] {
     contactSlaHours: buyer.contactSlaHours ?? 24,
     acceptsSharedLeads: buyer.acceptsSharedLeads ?? false,
     acceptsCampaigns: buyer.acceptsCampaigns ?? false,
+    campaignDailySendLimit: buyer.campaignDailySendLimit ?? DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT,
+    campaignMonthlySendLimit: buyer.campaignMonthlySendLimit ?? DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT,
   }));
 }
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }
@@ -196,14 +199,15 @@ export function updateBuyerPreferences(
   changes: Pick<
     Buyer,
     "insuranceProducts" | "provinces" | "minimumScore" | "dailyLeadCapacity" | "acceptsCampaigns" | "acceptsSharedLeads"
-  >,
+  > & Partial<Pick<Buyer, "campaignDailySendLimit" | "campaignMonthlySendLimit">>,
   actorLabel: string,
 ): Buyer {
   const buyers = readJson<Buyer[]>(BUYERS_FILE, []);
   const index = buyers.findIndex((buyer) => buyer.id === organisationId);
   if (index === -1) throw new Error("Broker organisation not found");
   const previous = getBuyers()[index];
-  buyers[index] = { ...buyers[index], ...changes };
+  const definedChanges = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
+  buyers[index] = { ...buyers[index], ...definedChanges };
   writeJson(BUYERS_FILE, buyers);
   appendAuditLog({
     entity: "organisation",

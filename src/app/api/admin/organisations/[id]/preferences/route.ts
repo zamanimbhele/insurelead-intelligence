@@ -19,6 +19,9 @@ const safeErrors = [
   "Minimum score must be between 0 and 100",
   "Daily lead capacity must be between 1 and 1000",
   "Campaigns require at least one approved insurance product",
+  "Daily campaign send limit must be between 1 and 50000",
+  "Monthly campaign send limit must be between 1 and 1000000",
+  "Daily campaign send limit cannot exceed the monthly limit",
 ];
 
 function safeError(error: unknown) {

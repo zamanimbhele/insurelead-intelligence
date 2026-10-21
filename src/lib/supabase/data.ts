@@ -39,6 +39,7 @@ import type {
   OptOutSource,
 } from "../types.ts";
 import { INSURANCE_PRODUCTS } from "../constants.ts";
+import { DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT, DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT } from "../campaign-quota.ts";
 
 type LeadRow = {
   id: string;
@@ -119,6 +120,8 @@ type PreferenceRow = {
   contact_sla_hours: number;
   accepts_shared_leads: boolean;
   accepts_campaigns: boolean;
+  campaign_daily_send_limit: number | null;
+  campaign_monthly_send_limit: number | null;
 };
 
 type AllocationRow = {
@@ -433,7 +436,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       .select("id, name, slug, organisation_type, status, onboarding_status, fsp_number, website_url, support_phone, contact_email")
       .in("organisation_type", ["broker", "insurer"]),
     client.from("buyer_preferences").select(
-      "organisation_id, provinces, cities, industries, insurance_products, minimum_score, daily_lead_capacity, contact_sla_hours, accepts_shared_leads, accepts_campaigns",
+      "organisation_id, provinces, cities, industries, insurance_products, minimum_score, daily_lead_capacity, contact_sla_hours, accepts_shared_leads, accepts_campaigns, campaign_daily_send_limit, campaign_monthly_send_limit",
     ),
   ]);
   fail("Unable to load buyer organisations", organisationResult.error);
@@ -464,6 +467,8 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       contactSlaHours: preference?.contact_sla_hours ?? 24,
       acceptsSharedLeads: preference?.accepts_shared_leads ?? false,
       acceptsCampaigns: preference?.accepts_campaigns ?? false,
+      campaignDailySendLimit: preference?.campaign_daily_send_limit ?? DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT,
+      campaignMonthlySendLimit: preference?.campaign_monthly_send_limit ?? DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT,
       contactEmail: organisation.contact_email,
     };
   });
@@ -1441,6 +1446,8 @@ export async function updateSupabaseBuyerPreferences(
     dailyLeadCapacity: number;
     acceptsCampaigns: boolean;
     acceptsSharedLeads: boolean;
+    campaignDailySendLimit?: number;
+    campaignMonthlySendLimit?: number;
   },
 ) {
   const { data, error } = await client.rpc("update_buyer_preferences", {
@@ -1451,6 +1458,8 @@ export async function updateSupabaseBuyerPreferences(
     p_daily_lead_capacity: input.dailyLeadCapacity,
     p_accepts_campaigns: input.acceptsCampaigns,
     p_accepts_shared_leads: input.acceptsSharedLeads,
+    p_campaign_daily_send_limit: input.campaignDailySendLimit ?? null,
+    p_campaign_monthly_send_limit: input.campaignMonthlySendLimit ?? null,
   });
   fail("Unable to update broker preferences", error);
   return data as { organisationId: string; insuranceProducts: string[] };

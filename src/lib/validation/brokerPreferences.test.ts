@@ -36,3 +36,24 @@ describe("broker preferences schema", () => {
     expect(brokerPreferencesSchema.safeParse({ ...valid, dailyLeadCapacity: 0 }).success).toBe(false);
   });
 });
+
+describe("campaign send limits", () => {
+  it("are optional, so older clients keep working", () => {
+    expect(brokerPreferencesSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accept whole numbers with daily not above monthly", () => {
+    expect(brokerPreferencesSchema.safeParse({ ...valid, campaignDailySendLimit: 300, campaignMonthlySendLimit: 5000 }).success).toBe(true);
+  });
+
+  it("reject a daily limit above the monthly limit", () => {
+    const result = brokerPreferencesSchema.safeParse({ ...valid, campaignDailySendLimit: 600, campaignMonthlySendLimit: 500 });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toMatch(/cannot exceed the monthly limit/);
+  });
+
+  it("reject zero and fractional limits", () => {
+    expect(brokerPreferencesSchema.safeParse({ ...valid, campaignDailySendLimit: 0 }).success).toBe(false);
+    expect(brokerPreferencesSchema.safeParse({ ...valid, campaignMonthlySendLimit: 10.5 }).success).toBe(false);
+  });
+});

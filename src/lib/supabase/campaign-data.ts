@@ -197,7 +197,9 @@ export async function updateSupabaseCampaign(
   if (changes.approvedContentVersion !== undefined) update.approved_content_version = changes.approvedContentVersion;
   if (changes.approvedBy !== undefined) update.approved_by_label = changes.approvedBy;
   if (changes.approvedAt !== undefined) update.approved_at = changes.approvedAt;
-  if (changes.scheduledAt !== undefined) update.scheduled_at = changes.scheduledAt;
+  // "in" rather than !== undefined so a caller can clear the schedule by
+  // passing scheduledAt: undefined explicitly (see clearCampaignSchedule).
+  if ("scheduledAt" in changes) update.scheduled_at = changes.scheduledAt ?? null;
   if (changes.launchedAt !== undefined) update.launched_at = changes.launchedAt;
   if (changes.pausedAt !== undefined) update.paused_at = changes.pausedAt;
   const { data, error } = await client.from("campaigns")
@@ -349,4 +351,48 @@ export async function saveSupabaseMarketingSuppression(
     .single();
   fail("Unable to load marketing suppression", loadError);
   return mapSuppression(existing as SuppressionRow);
+}
+
+// --- Scheduled sending and quotas (migration 202610210002) -------------
+
+export async function fetchSupabaseCampaignSendUsage(
+  client: SupabaseClient,
+  organisationId: string,
+  sinceDay: Date,
+  sinceMonth: Date,
+) {
+  const { data, error } = await client.rpc("campaign_send_usage", {
+    p_organisation_id: organisationId,
+    p_since_day: sinceDay.toISOString(),
+    p_since_month: sinceMonth.toISOString(),
+  });
+  fail("Unable to load campaign send usage", error);
+  const usage = (data ?? {}) as { sentToday?: number; sentThisMonth?: number };
+  return { sentToday: Number(usage.sentToday ?? 0), sentThisMonth: Number(usage.sentThisMonth ?? 0) };
+}
+
+export async function claimSupabaseCampaignSendLease(client: SupabaseClient, campaignId: string, seconds: number) {
+  const { data, error } = await client.rpc("claim_campaign_send_lease", {
+    p_campaign_id: campaignId,
+    p_seconds: seconds,
+  });
+  fail("Unable to claim campaign send lease", error);
+  return data === true;
+}
+
+export async function releaseSupabaseCampaignSendLease(client: SupabaseClient, campaignId: string) {
+  const { error } = await client.rpc("release_campaign_send_lease", { p_campaign_id: campaignId });
+  fail("Unable to release campaign send lease", error);
+}
+
+// Campaigns the scheduler should work on: scheduled ones whose time has
+// come, and ones already sending (more batches left), oldest first.
+export async function fetchSupabaseDueCampaigns(client: SupabaseClient, now: Date, limit: number) {
+  const { data, error } = await client.from("campaigns")
+    .select("*")
+    .or(`and(status.eq.scheduled,scheduled_at.lte."${now.toISOString()}"),status.eq.sending`)
+    .order("scheduled_at", { ascending: true, nullsFirst: false })
+    .limit(limit);
+  fail("Unable to load due campaigns", error);
+  return ((data ?? []) as CampaignRow[]).map(mapCampaign);
 }

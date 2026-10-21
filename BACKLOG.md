@@ -706,7 +706,20 @@ Priced in the accompanying quotation.
   recipient into `sent` status with a provider message id, and the dashboard deliberately has no
   launch action of its own (see the "Visual campaign authoring" entry above) - so that path is
   covered by the isolated runtime script above instead, not by Playwright.
-- Add scheduled-job execution and per-tenant daily/monthly delivery quotas beyond the bounded MCP batch.
+- Scheduled sending and per-tenant delivery quotas completed (2026-10-21): per-broker daily and
+  monthly campaign email limits (SAST calendar periods, set in the Broker Directory appetite
+  editor), dashboard scheduling/cancel/pause on approved campaigns (broker admin or platform
+  admin, exact confirmation phrase), and a CRON_SECRET-protected scheduled sender
+  (`/api/cron/campaign-sends`). The send loop moved out of the MCP `launch_campaign` tool into
+  `src/lib/campaign-sender.ts`, shared by both paths, with a database send lease against
+  overlapping runs, automatic pause when a campaign stops validating, and a per-recipient
+  send-time check that loads only that lead (previously the whole audience was re-evaluated
+  for every email). Fixed in passing: a final batch that sent nothing new used to mark a
+  campaign "failed" even when earlier batches had sent. Migration
+  `202610210002_campaign_sending_limits_and_scheduling.sql`; tested with unit tests
+  (`campaign-quota.test.ts`, `campaign-sender.test.ts`), `e2e/campaign-sending.spec.ts`, and
+  SQL scenarios against Postgres 16. Open: the scheduler trigger itself (Vercel Cron or
+  Supabase pg_cron, see docs/CAMPAIGN_MCP_SETUP.md section 7) is deployment configuration.
 - Add visual campaign authoring, approval, version comparison, and recipient-exclusion drill-down.
 
 ## Password reset, invite acceptance and broker appetite editor (2026-10-18)
