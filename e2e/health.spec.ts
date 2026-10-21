@@ -15,6 +15,7 @@ test("health endpoint reports demo mode as operational but not public-ready", as
       captcha: "disabled",
       notifications: "disabled",
       campaignDelivery: "disabled",
+      notificationEmail: "missing-api-key",
     },
   });
 });

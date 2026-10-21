@@ -7,6 +7,7 @@ import { getLeadNotificationStatus } from "@/lib/notifications";
 import { getCampaignDeliveryStatus } from "@/lib/campaign-delivery";
 import { getCampaignUnsubscribeStatus } from "@/lib/campaign-unsubscribe";
 import { getResendWebhookStatus } from "@/lib/campaign-webhooks";
+import { getTransactionalEmailStatus } from "@/lib/transactional-email";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,9 @@ export async function GET() {
         campaignDelivery,
         campaignUnsubscribe,
         campaignWebhooks,
+        // Staff notification email (daily task digest): "configured",
+        // "missing-api-key" or "missing-from". Informational only.
+        notificationEmail: getTransactionalEmailStatus(),
       },
     },
     {
