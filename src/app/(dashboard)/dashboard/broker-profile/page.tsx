@@ -3,6 +3,9 @@ import { getDashboardBrokerWorkspace } from "@/lib/dashboard-data";
 import { INSURANCE_PRODUCTS } from "@/lib/constants";
 import { SendingIdentityForm } from "@/components/dashboard/SendingIdentityForm";
 import { InviteTeamMemberForm } from "@/components/dashboard/InviteTeamMemberForm";
+import { TaskDigestCard } from "@/components/dashboard/TaskDigestCard";
+import { getTaskDigestPreview } from "@/lib/task-digest-runtime";
+import { formatDueSast } from "@/lib/task-digest";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +22,13 @@ export default async function BrokerProfilePage() {
     );
   }
 
-  const workspace = await getDashboardBrokerWorkspace(identity);
+  const [workspace, digestPreview] = await Promise.all([
+    getDashboardBrokerWorkspace(identity),
+    getTaskDigestPreview(identity),
+  ]);
   const buyer = workspace?.buyer;
+  const digestItems = [...(digestPreview.digest?.overdue ?? []), ...(digestPreview.digest?.dueToday ?? [])];
+  const formattedDue = Object.fromEntries(digestItems.map((item) => [item.taskId, formatDueSast(item.dueAt)]));
   if (!workspace || !buyer) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
@@ -84,6 +92,10 @@ export default async function BrokerProfilePage() {
           {canCreateSendingIdentity(identity) ? <SendingIdentityForm /> : null}
         </section>
       </div>
+
+      {digestPreview.eligible && (
+        <TaskDigestCard enabled={digestPreview.enabled} digest={digestPreview.digest} formattedDue={formattedDue} />
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="font-semibold text-slate-900">Organisation members</h2>
