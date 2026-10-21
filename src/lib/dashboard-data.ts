@@ -87,6 +87,7 @@ import type {
 import { getLeadDisplayName, isConsentValid } from "./lead-utils";
 import { DEFAULT_LEAD_RETENTION_DAYS } from "./constants";
 import {
+  getCampaignContentVersions,
   appendCampaignContent,
   appendCampaignEvent,
   createCampaign,
@@ -99,6 +100,7 @@ import {
   updateCampaign,
 } from "./campaign-store";
 import {
+  fetchSupabaseCampaignContentVersions,
   appendSupabaseCampaignEvent,
   createSupabaseCampaign,
   fetchSupabaseCampaign,
@@ -527,6 +529,8 @@ export async function getDashboardCampaignDetail(identity: DashboardIdentity, ca
       sendingIdentity,
       content,
       audience: summariseAudience(audienceDecisions),
+      audienceDecisions,
+      leads,
       issues,
       recipients: getCampaignRecipients(campaignId),
       events: getCampaignEvents(campaignId),
@@ -563,6 +567,8 @@ export async function getDashboardCampaignDetail(identity: DashboardIdentity, ca
     sendingIdentity,
     content,
     audience: summariseAudience(audienceDecisions),
+    audienceDecisions,
+    leads: marketplace.leads,
     issues,
     recipients,
     events,
@@ -655,6 +661,22 @@ export async function stopDashboardCampaign(identity: DashboardIdentity, campaig
     return updated;
   }
   throw new Error("Only a scheduled or sending campaign can be stopped");
+}
+
+// All content versions of one campaign, for the comparison page. Access is
+// checked by loading the campaign first through the same tenant-scoped
+// path as the detail page (RLS in Supabase mode).
+export async function getDashboardCampaignVersions(campaignId: string) {
+  if (getDataMode() === "demo") {
+    const campaign = getCampaignById(campaignId);
+    if (!campaign) return undefined;
+    const versions = [...getCampaignContentVersions(campaignId)].sort((a, b) => a.version - b.version);
+    return { campaign, versions };
+  }
+  const client = await requireServerClient();
+  const campaign = await fetchSupabaseCampaign(client, campaignId);
+  if (!campaign) return undefined;
+  return { campaign, versions: await fetchSupabaseCampaignContentVersions(client, campaignId) };
 }
 
 export async function getApplicationSettings(): Promise<ApplicationSettings> {

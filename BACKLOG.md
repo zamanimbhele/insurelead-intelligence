@@ -726,7 +726,15 @@ Priced in the accompanying quotation.
   (`campaign-quota.test.ts`, `campaign-sender.test.ts`), `e2e/campaign-sending.spec.ts`, and
   SQL scenarios against Postgres 16. Open: the scheduler trigger itself (Vercel Cron or
   Supabase pg_cron, see docs/CAMPAIGN_MCP_SETUP.md section 7) is deployment configuration.
-- Add visual campaign authoring, approval, version comparison, and recipient-exclusion drill-down.
+- Campaign transparency completed (2026-10-21), finishing the "visual campaign authoring, approval,
+  version comparison, and recipient-exclusion drill-down" item (authoring and approval shipped in
+  PR #26): `/dashboard/campaigns/[id]/versions` compares any two immutable content versions
+  (defaulting to approved vs current), with a line diff plus subject/preheader changes;
+  `/dashboard/campaigns/[id]/audience` lists every lead in the broker's book as eligible or
+  excluded with its reasons, filterable by reason, plus recipients removed at send time. Leads not
+  accepted by the broker are counted, never listed. Names and lead links show only to roles that
+  work leads (platform admin, broker admin, broker agent); analysts and auditors see anonymised
+  references. Logic in `src/lib/campaign-transparency.ts` (unit-tested), no migration.
 
 ## Password reset, invite acceptance and broker appetite editor (2026-10-18)
 
