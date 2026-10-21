@@ -396,3 +396,13 @@ export async function fetchSupabaseDueCampaigns(client: SupabaseClient, now: Dat
   fail("Unable to load due campaigns", error);
   return ((data ?? []) as CampaignRow[]).map(mapCampaign);
 }
+
+// Every content version of a campaign, oldest first (version comparison).
+export async function fetchSupabaseCampaignContentVersions(client: SupabaseClient, campaignId: string) {
+  const { data, error } = await client.from("campaign_content_versions")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("version_number", { ascending: true });
+  fail("Unable to load campaign content versions", error);
+  return ((data ?? []) as ContentRow[]).map(mapContent);
+}
