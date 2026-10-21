@@ -83,6 +83,9 @@ export type TaskDigestRunSummary = {
   failed: number;
   alreadySent: number;
   status: "sent" | "demo" | "email-not-configured";
+  // Which setting is missing when status is email-not-configured (names
+  // only, never values): "missing-api-key" or "missing-from".
+  emailStatus?: ReturnType<typeof getTransactionalEmailStatus>;
 };
 
 // One run per morning. Safe to repeat: each person is claimed in
@@ -94,8 +97,9 @@ export async function runTaskDigest(now = new Date()): Promise<TaskDigestRunSumm
     const digests = groupTaskDigests(demoDigestRows(now), now);
     return { date, recipients: digests.length, sent: 0, failed: 0, alreadySent: 0, status: "demo" };
   }
-  if (getTransactionalEmailStatus() !== "configured") {
-    return { date, recipients: 0, sent: 0, failed: 0, alreadySent: 0, status: "email-not-configured" };
+  const emailStatus = getTransactionalEmailStatus();
+  if (emailStatus !== "configured") {
+    return { date, recipients: 0, sent: 0, failed: 0, alreadySent: 0, status: "email-not-configured", emailStatus };
   }
 
   const client = requireAdminClient();
