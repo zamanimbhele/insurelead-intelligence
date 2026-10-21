@@ -97,7 +97,11 @@ branding, logos, policy wording, premiums, FSP details, or insurer integrations 
   chronological activity timeline covering creation, notes, logged interactions, task lifecycle, and
   status/Do Not Contact changes. Moving a lead to Lost now requires a loss reason, which is recorded
   on the lead and surfaced on the timeline. All writes share the Kanban board's authorisation model
-  (platform admin, or a broker operator with an accepted allocation on the lead).
+  (platform admin, or a broker operator with an accepted allocation on the lead). Do Not Contact is
+  enforced here too: once a lead is flagged, logging a new interaction or creating a new follow-up
+  task is blocked (in both the demo data store and the Supabase RPCs) with the same "Lead is marked
+  do not contact" reason used by the lead-marketplace allocation check; adding a note and resolving
+  an already-open task both remain available, since neither is new outbound contact.
 - An Audit Log Viewer (`/dashboard/audit-log`): browses the platform's existing `audit_logs` table -
   nearly every mutation across the app already writes to it - with filters by entity, action/actor
   text, and date range. Viewing is gated to platform admins, compliance admins, and (read-only)

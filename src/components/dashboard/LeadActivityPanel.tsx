@@ -187,13 +187,31 @@ function AddNoteForm({ leadId, canEdit, onAdded }: { leadId: string; canEdit: bo
   );
 }
 
-function LogInteractionForm({ leadId, canEdit, onAdded }: { leadId: string; canEdit: boolean; onAdded: () => void }) {
+function LogInteractionForm({
+  leadId,
+  canEdit,
+  leadDoNotContact,
+  onAdded,
+}: {
+  leadId: string;
+  canEdit: boolean;
+  leadDoNotContact: boolean;
+  onAdded: () => void;
+}) {
   const [channel, setChannel] = useState(LEAD_INTERACTION_CHANNELS[0].value);
   const [outcome, setOutcome] = useState(LEAD_INTERACTION_OUTCOMES[0].value);
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!canEdit) return null;
+  if (leadDoNotContact) {
+    return (
+      <p className="flex items-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+        <ShieldOff className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+        This lead is marked Do Not Contact, so new outbound interactions cannot be logged here.
+      </p>
+    );
+  }
 
   async function submit() {
     if (!summary.trim()) {
@@ -258,11 +276,13 @@ function LogInteractionForm({ leadId, canEdit, onAdded }: { leadId: string; canE
 function TasksSection({
   leadId,
   canEdit,
+  leadDoNotContact,
   tasks,
   onChanged,
 }: {
   leadId: string;
   canEdit: boolean;
+  leadDoNotContact: boolean;
   tasks: LeadTask[];
   onChanged: () => void;
 }) {
@@ -315,7 +335,13 @@ function TasksSection({
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-6">
       <h2 className="text-sm font-semibold text-slate-900">Follow-up Tasks</h2>
-      {canEdit && (
+      {canEdit && leadDoNotContact && (
+        <p className="mt-3 flex items-center gap-2 border-b border-slate-100 pb-4 text-xs text-slate-500">
+          <ShieldOff className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+          This lead is marked Do Not Contact, so new follow-up tasks cannot be created. Existing open tasks can still be completed or cancelled below.
+        </p>
+      )}
+      {canEdit && !leadDoNotContact && (
         <div className="mt-3 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-end">
           <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-slate-500">
             Task
@@ -403,12 +429,14 @@ function TasksSection({
 export function LeadActivityPanel({
   leadId,
   canEdit,
+  leadDoNotContact,
   notes,
   tasks,
   activities,
 }: {
   leadId: string;
   canEdit: boolean;
+  leadDoNotContact: boolean;
   notes: LeadNote[];
   tasks: LeadTask[];
   activities: LeadActivity[];
@@ -422,7 +450,7 @@ export function LeadActivityPanel({
         <h2 className="text-sm font-semibold text-slate-900">Notes &amp; Interactions</h2>
         <div className="mt-3 flex flex-col gap-4">
           <AddNoteForm leadId={leadId} canEdit={canEdit} onAdded={refresh} />
-          <LogInteractionForm leadId={leadId} canEdit={canEdit} onAdded={refresh} />
+          <LogInteractionForm leadId={leadId} canEdit={canEdit} leadDoNotContact={leadDoNotContact} onAdded={refresh} />
         </div>
         {notes.length > 0 && (
           <ul className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4">
@@ -436,7 +464,7 @@ export function LeadActivityPanel({
         )}
       </section>
 
-      <TasksSection leadId={leadId} canEdit={canEdit} tasks={tasks} onChanged={refresh} />
+      <TasksSection leadId={leadId} canEdit={canEdit} leadDoNotContact={leadDoNotContact} tasks={tasks} onChanged={refresh} />
 
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-sm font-semibold text-slate-900">Activity Timeline</h2>

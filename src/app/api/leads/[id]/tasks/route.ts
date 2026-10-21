@@ -17,6 +17,7 @@ const safeErrors = [
   "Only an active platform member may create a task",
   "Only a platform administrator or broker operator may create a task",
   "Lead is not allocated to your organisation",
+  "Lead is marked do not contact",
 ];
 
 function safeError(error: unknown) {

@@ -24,6 +24,7 @@ const safeErrors = [
   "Only an active platform member may log an interaction",
   "Only a platform administrator or broker operator may log an interaction",
   "Lead is not allocated to your organisation",
+  "Lead is marked do not contact",
 ];
 
 function safeError(error: unknown) {
