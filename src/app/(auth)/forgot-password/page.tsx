@@ -10,8 +10,9 @@ const ERRORS: Record<string, string> = {
 
 export const metadata = { title: "Reset your password | InsureLead Intelligence" };
 
-export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error: errorKey } = await searchParams;
+export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string; portal?: string }> }) {
+  const { error: errorKey, portal } = await searchParams;
+  const admin = portal === "admin";
   const error = errorKey ? ERRORS[errorKey] : null;
   const demoMode = getDataMode() === "demo";
 
@@ -36,6 +37,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
           </p>
         ) : (
           <form action={requestPasswordReset} className="mt-6 space-y-5">
+            <input type="hidden" name="portal" value={admin ? "admin" : ""} />
             <label className="block text-sm font-medium text-slate-700">
               Email address
               <input name="email" type="email" autoComplete="email" required className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2" />
@@ -46,7 +48,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
           </form>
         )}
         <p className="mt-6 text-center text-sm text-slate-600">
-          <Link href="/login" className="font-semibold text-primary-700 hover:text-primary-800">Back to sign in</Link>
+          <Link href={admin ? "/admin/login" : "/login"} className="font-semibold text-primary-700 hover:text-primary-800">Back to sign in</Link>
         </p>
       </div>
     </main>

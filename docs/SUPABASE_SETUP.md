@@ -66,6 +66,12 @@ the email template in the Supabase Dashboard:
 3. Under Authentication → URL Configuration, set **Site URL** to the deployment's public URL
    (matching `NEXT_PUBLIC_APP_URL`), and add that same URL (and any preview URLs) to
    **Redirect URLs**. `{{ .SiteURL }}` in the template above resolves from this setting.
+   Also add `https://<your-domain>/auth/confirm` (or `https://<your-domain>/**`) to **Redirect
+   URLs**. Password-reset requests ask Supabase to return to `/auth/confirm?next=/reset-password`,
+   which is what makes a reset work even with the default `{{ .ConfirmationURL }}` template. If
+   that URL is not allowed, Supabase falls back to the Site URL; the app then forwards the link
+   from the home page to `/auth/confirm`, but the custom template below is the most reliable
+   option because it also works when the link is opened in a different browser.
 4. Apply the same `token_hash`/`type` link pattern to the **Reset password** and **Invite user**
    templates. Both are required: `/auth/confirm` sends `type=recovery` to `/reset-password` and
    `type=invite` to `/reset-password?flow=invite`, where the person chooses a password. With the
