@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDataMode } from "@/lib/supabase/config";
 import { firstPasswordError } from "@/lib/validation/password";
 import { acceptSupabaseProfileInvitation } from "@/lib/supabase/data";
+import { homeForRole } from "@/lib/portal";
 
 const POLICY_ERRORS = new Map<string, string>([
   ["Use at least 12 characters", "too_short"],
@@ -58,5 +59,7 @@ export async function updatePassword(formData: FormData) {
     console.error("[auth] invitation acceptance failed", acceptError instanceof Error ? acceptError.message : acceptError);
   }
 
-  redirect("/dashboard");
+  // Admins land in the admin portal, brokers on their dashboard.
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", userData.user.id).maybeSingle();
+  redirect(homeForRole((profile as { role?: string } | null)?.role));
 }

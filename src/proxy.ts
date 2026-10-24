@@ -4,6 +4,19 @@ import { getDataMode, getSupabasePublicConfig } from "@/lib/supabase/config";
 import { ADMIN_HOME, homeForRole } from "@/lib/portal";
 
 export async function proxy(request: NextRequest) {
+  // A Supabase email link that fell back to the Site URL (the home page)
+  // because its redirect was not allowed: hand it to /auth/confirm, which
+  // finishes the sign-in and opens the password form.
+  if (request.nextUrl.pathname === "/") {
+    const params = request.nextUrl.searchParams;
+    if (params.has("code") || params.has("error_code")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/confirm";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   if (getDataMode() === "demo") return NextResponse.next();
 
   const config = getSupabasePublicConfig();
@@ -56,5 +69,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/signup"],
+  matcher: ["/", "/dashboard/:path*", "/login", "/signup"],
 };

@@ -10,13 +10,18 @@ const ERRORS: Record<string, string> = {
   configuration: "Supabase authentication is not configured for this environment.",
   missing_credentials: "Enter both your email address and password.",
   invalid_credentials: "The email address or password is incorrect.",
+  confirmation_failed: "That link is invalid or has expired. Request a new one.",
   not_staff: "This sign-in is for InsureLead platform administrators only. Brokers sign in at /login.",
 };
 
 // Deliberately not linked from the public site or the broker sign-in.
 export const metadata = { title: "Admin sign in | InsureLead Intelligence", robots: { index: false, follow: false } };
 
-export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
+const MESSAGES: Record<string, string> = {
+  reset_requested: "If that address has an InsureLead account, a password reset link is on its way. Check your inbox and spam folder.",
+};
+
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; next?: string }> }) {
   const params = await searchParams;
   const demoMode = getDataMode() === "demo";
   const configured = Boolean(getSupabasePublicConfig());
@@ -26,6 +31,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
     if (identity.authenticated && isPlatformStaffRole(identity.role)) redirect(ADMIN_HOME);
   }
   const error = params.error ? ERRORS[params.error] : null;
+  const message = params.message ? MESSAGES[params.message] : null;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4 py-12">
@@ -44,6 +50,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
             </div>
           </div>
 
+          {message && <p role="status" className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{message}</p>}
           {error && <p role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
           {demoMode ? (
@@ -67,7 +74,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
                 <input name="password" type="password" autoComplete="current-password" required className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2" />
               </label>
               <p className="-mt-3 text-right text-sm">
-                <Link href="/forgot-password" className="font-medium text-slate-700 hover:text-slate-900">Forgot password?</Link>
+                <Link href="/forgot-password?portal=admin" className="font-medium text-slate-700 hover:text-slate-900">Forgot password?</Link>
               </p>
               <button type="submit" className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
                 Sign in to the admin portal
