@@ -3,30 +3,70 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDataMode } from "@/lib/supabase/config";
+import { ADMIN_HOME, homeForRole, isPlatformStaffRole, safeDashboardPath } from "@/lib/portal";
 
-function safeNextPath(value: FormDataEntryValue | null) {
-  const path = typeof value === "string" ? value : "";
-  return path.startsWith("/dashboard") && !path.startsWith("//") ? path : "/dashboard";
+type ServerClient = NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
+
+async function signedInRole(supabase: ServerClient, userId: string): Promise<string | null> {
+  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  return (data as { role?: string } | null)?.role ?? null;
 }
 
+// Broker sign-in (/login). Platform staff who sign in here are still let
+// in, but land in the admin portal rather than a broker dashboard.
 export async function signIn(formData: FormData) {
   if (getDataMode() === "demo") redirect("/dashboard");
 
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const nextPath = safeNextPath(formData.get("next"));
+  const requested = safeDashboardPath(formData.get("next"));
+  const nextParam = requested ? `&next=${encodeURIComponent(requested)}` : "";
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) redirect("/login?error=configuration");
-  if (!email || !password) redirect(`/login?error=missing_credentials&next=${encodeURIComponent(nextPath)}`);
+  if (!email || !password) redirect(`/login?error=missing_credentials${nextParam}`);
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) redirect(`/login?error=invalid_credentials&next=${encodeURIComponent(nextPath)}`);
-  redirect(nextPath);
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user) redirect(`/login?error=invalid_credentials${nextParam}`);
+
+  const role = await signedInRole(supabase, data.user.id);
+  if (isPlatformStaffRole(role)) redirect(requested && requested !== "/dashboard" ? requested : ADMIN_HOME);
+  redirect(requested ?? homeForRole(role));
+}
+
+// Admin sign-in (/admin/login). Only platform staff get through; a broker
+// account is signed straight back out with a pointer to /login, so the
+// admin page can never become a second way into a broker workspace.
+export async function adminSignIn(formData: FormData) {
+  if (getDataMode() === "demo") redirect(ADMIN_HOME);
+
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const requested = safeDashboardPath(formData.get("next"));
+  const nextParam = requested ? `&next=${encodeURIComponent(requested)}` : "";
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) redirect("/admin/login?error=configuration");
+  if (!email || !password) redirect(`/admin/login?error=missing_credentials${nextParam}`);
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user) redirect(`/admin/login?error=invalid_credentials${nextParam}`);
+
+  const role = await signedInRole(supabase, data.user.id);
+  if (!isPlatformStaffRole(role)) {
+    await supabase.auth.signOut();
+    redirect("/admin/login?error=not_staff");
+  }
+  redirect(requested && requested !== "/dashboard" ? requested : ADMIN_HOME);
 }
 
 export async function signOut() {
   const supabase = await createSupabaseServerClient();
-  if (supabase) await supabase.auth.signOut();
-  redirect("/login");
+  let destination = "/login";
+  if (supabase) {
+    const { data } = await supabase.auth.getUser();
+    if (data.user && isPlatformStaffRole(await signedInRole(supabase, data.user.id))) destination = "/admin/login";
+    await supabase.auth.signOut();
+  }
+  redirect(destination);
 }

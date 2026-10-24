@@ -16,7 +16,7 @@ const MESSAGES: Record<string, string> = {
   reset_requested: "If that address has an InsureLead account, a password reset link is on its way. Check your inbox and spam folder.",
 };
 
-export const metadata = { title: "Sign in | InsureLead Intelligence" };
+export const metadata = { title: "Broker sign in | InsureLead Intelligence" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; next?: string }> }) {
   const resolvedSearchParams = await searchParams;
@@ -33,8 +33,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <ShieldCheck className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">InsureLead sign in</h1>
-            <p className="text-sm text-slate-500">Secure broker lead and campaign workspace</p>
+            <h1 className="text-xl font-bold text-slate-900">Broker sign in</h1>
+            <p className="text-sm text-slate-500">Your brokerage&apos;s leads, campaigns and team</p>
           </div>
         </div>
 
@@ -52,7 +52,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
         ) : configured ? (
           <form action={signIn} className="mt-6 space-y-5">
-            <input type="hidden" name="next" value={resolvedSearchParams.next ?? "/dashboard"} />
+            <input type="hidden" name="next" value={resolvedSearchParams.next ?? ""} />
             <label className="block text-sm font-medium text-slate-700">
               Email address
               <input name="email" type="email" autoComplete="email" required className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2" />
