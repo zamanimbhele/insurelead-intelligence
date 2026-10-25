@@ -26,6 +26,7 @@ const lead: Lead = {
 const buyer: Buyer = {
   id: "buyer_personal_lines",
   organisationName: "Synthetic Personal Lines Broker",
+  workspaceType: "brokerage",
   buyerType: "broker",
   status: "active",
   onboardingStatus: "approved",

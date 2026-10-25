@@ -2,7 +2,7 @@
 
 // Demo-mode-only "viewing as" control, rendered in the dashboard sidebar
 // (see dashboard/layout.tsx). Lets anyone exploring the prototype see
-// exactly what each of the 6 seeded DEMO_ROLE_ACCOUNTS (src/lib/
+// exactly what each of the seeded DEMO_ROLE_ACCOUNTS (src/lib/
 // constants.ts) can and cannot do - the RBAC matrix the project brief
 // defines in section 4 - without a real sign-in. Auto-submits on change
 // (via requestSubmit()) rather than needing a separate "Switch" button;
@@ -28,7 +28,7 @@ export function DemoRoleSwitcher({ currentRole }: { currentRole: string }) {
         className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 focus:border-primary-500 focus:outline-none"
       >
         {DEMO_ROLE_ACCOUNTS.map((account) => (
-          <option key={account.role} value={account.role}>
+          <option key={account.key} value={account.key}>
             {account.label}
           </option>
         ))}

@@ -8,7 +8,7 @@ describe("buildAdminOverview", () => {
       buyers: [
         { status: "pending", onboardingStatus: "pending" },
         { status: "pending", onboardingStatus: "in_review" },
-        { status: "active", onboardingStatus: "approved" },
+        { status: "active", onboardingStatus: "approved", workspaceType: "individual" },
         { status: "suspended", onboardingStatus: "rejected" },
       ] as Buyer[],
       sendingIdentities: [{ status: "pending" }, { status: "verified" }] as BrokerSendingIdentity[],
@@ -19,6 +19,7 @@ describe("buildAdminOverview", () => {
     expect(result).toEqual({
       brokersAwaitingReview: 2,
       activeBrokers: 1,
+      activeByWorkspace: { individual: 1, practice: 0, brokerage: 0 },
       identitiesAwaitingVerification: 1,
       invitedMembers: 2,
       liveLeads: 3,

@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
-import { DEFAULT_DEMO_ROLE, DEMO_ROLE_ACCOUNTS, DEMO_ROLE_COOKIE_NAME } from "./constants";
+import { DEFAULT_DEMO_ACCOUNT, DEMO_ROLE_ACCOUNTS, DEMO_ROLE_COOKIE_NAME } from "./constants";
+import { normaliseWorkspaceType, type WorkspaceType } from "./workspace.ts";
 
 export const ADMIN_ROLES = ["platform_admin", "compliance_admin"] as const;
 export const AUDIT_ROLES = ["compliance_auditor"] as const;
@@ -15,7 +16,7 @@ export const BROKER_OPERATOR_ROLES = ["broker_admin", "broker_agent"] as const;
 // broker_agent (an ordinary Broker only ever works assigned leads).
 export const CAMPAIGN_PLANNING_ROLES = ["broker_admin", "campaign_manager"] as const;
 
-// The 6 DEMO_ROLE_ACCOUNTS roles (constants.ts) are already a subset of
+// The DEMO_ROLE_ACCOUNTS roles (constants.ts) are already a subset of
 // ADMIN_ROLES | AUDIT_ROLES | BROKER_ROLES, so no separate demo-only role
 // literal is needed here - a demo identity's role is always one of these
 // same real role strings now, never a "demo_"-prefixed one.
@@ -38,6 +39,10 @@ export type DashboardIdentity = {
   organisationId?: string;
   organisationType?: "platform" | "broker" | "insurer";
   organisationName: string;
+  // Broker organisations only: individual | practice | brokerage.
+  workspaceType?: WorkspaceType;
+  // Demo mode: which seeded demo account is "signed in".
+  demoAccountKey?: string;
   reason?: "configuration" | "profile_missing" | "profile_suspended" | "organisation_inactive";
 };
 
@@ -51,10 +56,10 @@ export async function getDashboardIdentity(): Promise<DashboardIdentity> {
     // an unset or invalid cookie, so every pre-existing e2e test that
     // never selects a role keeps seeing full admin access unchanged.
     const cookieStore = await cookies();
-    const requestedRole = cookieStore.get(DEMO_ROLE_COOKIE_NAME)?.value;
+    const requestedAccount = cookieStore.get(DEMO_ROLE_COOKIE_NAME)?.value;
     const account =
-      DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.role === requestedRole) ??
-      DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.role === DEFAULT_DEMO_ROLE)!;
+      DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.key === requestedAccount) ??
+      DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.key === DEFAULT_DEMO_ACCOUNT)!;
     return {
       mode: "demo",
       authenticated: true,
@@ -62,7 +67,11 @@ export async function getDashboardIdentity(): Promise<DashboardIdentity> {
       displayName: account.displayName,
       email: account.email,
       role: account.role,
-      organisationName: "Synthetic demo workspace",
+      organisationId: account.organisationId,
+      organisationType: account.organisationId ? "broker" : undefined,
+      organisationName: account.organisationName ?? "Synthetic demo workspace",
+      workspaceType: account.organisationId ? account.workspaceType ?? "brokerage" : undefined,
+      demoAccountKey: account.key,
     };
   }
 
@@ -139,7 +148,7 @@ export async function getDashboardIdentity(): Promise<DashboardIdentity> {
 
   const { data: organisation } = await supabase
     .from("organisations")
-    .select("name, status, organisation_type")
+    .select("name, status, organisation_type, workspace_type")
     .eq("id", profile.organisation_id)
     .maybeSingle();
 
@@ -169,6 +178,7 @@ export async function getDashboardIdentity(): Promise<DashboardIdentity> {
     organisationId: profile.organisation_id,
     organisationType: organisation.organisation_type,
     organisationName: organisation.name,
+    workspaceType: organisation.organisation_type === "platform" ? undefined : normaliseWorkspaceType(organisation.workspace_type),
   };
 }
 

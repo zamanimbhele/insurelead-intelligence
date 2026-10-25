@@ -404,14 +404,26 @@ export type DemoRoleKey =
 
 export const DEMO_ROLE_COOKIE_NAME = "demo_role";
 
+// The demo "signed-in user" is chosen by account key (the demo_role
+// cookie). Most keys are the role itself; "solo_advisor" is a second
+// broker_admin account in an individual workspace, so the solo
+// experience can be explored in demo mode.
+export type DemoAccountKey = DemoRoleKey | "solo_advisor";
+
 export const DEMO_ROLE_ACCOUNTS: {
+  key: DemoAccountKey;
   role: DemoRoleKey;
+  // The demo organisation a broker account belongs to (data/buyers.json).
+  organisationId?: string;
+  organisationName?: string;
+  workspaceType?: "individual" | "practice" | "brokerage";
   label: string;
   displayName: string;
   email: string;
   summary: string;
 }[] = [
   {
+    key: "platform_admin",
     role: "platform_admin",
     label: "Super Admin",
     displayName: "Thandiwe Mokoena",
@@ -420,6 +432,7 @@ export const DEMO_ROLE_ACCOUNTS: {
       "Full platform access: users, broker teams, compliance settings, consent wording, lead sources, retention rules, reporting, campaigns, audit logs, and approved brand configuration.",
   },
   {
+    key: "compliance_admin",
     role: "compliance_admin",
     label: "Compliance Admin",
     displayName: "Naledi Dlamini",
@@ -428,6 +441,7 @@ export const DEMO_ROLE_ACCOUNTS: {
       "Manages consent wording, privacy notices, marketing permissions, data sources, data retention policy, opt-outs, and data deletion requests. Cannot delete audit logs.",
   },
   {
+    key: "compliance_auditor",
     role: "compliance_auditor",
     label: "Compliance Auditor",
     displayName: "Zinhle Mahlangu",
@@ -436,7 +450,9 @@ export const DEMO_ROLE_ACCOUNTS: {
       "Read-only oversight: Compliance dashboard, Data Source Registry, Legal Content, the Broker Directory, and the Audit Log. Cannot edit, export, or reset anything.",
   },
   {
+    key: "broker_admin",
     role: "broker_admin",
+    organisationId: "buyer_gauteng_commercial",
     label: "Broker Manager",
     displayName: "Johan van der Merwe",
     email: "demo.brokermanager@example-synthetic.co.za",
@@ -444,7 +460,9 @@ export const DEMO_ROLE_ACCOUNTS: {
       "Views team leads, assigns or reassigns them, manages team dashboards, creates campaigns, and reviews conversion performance.",
   },
   {
+    key: "campaign_manager",
     role: "campaign_manager",
+    organisationId: "buyer_gauteng_commercial",
     label: "Marketing Analyst",
     displayName: "Aisha Patel",
     email: "demo.marketinganalyst@example-synthetic.co.za",
@@ -452,13 +470,28 @@ export const DEMO_ROLE_ACCOUNTS: {
       "Views anonymised or aggregated campaign results and market intelligence dashboards, creates campaign records, and reviews attribution performance - not individual lead detail.",
   },
   {
+    key: "broker_agent",
     role: "broker_agent",
+    organisationId: "buyer_gauteng_commercial",
     label: "Broker",
     displayName: "Sipho Khumalo",
     email: "demo.broker@example-synthetic.co.za",
     summary:
       "Updates lead status, adds notes, logs calls/emails/meetings, creates follow-up tasks, and marks leads won, lost, or do-not-contact.",
   },
+  {
+    key: "solo_advisor",
+    role: "broker_admin",
+    organisationId: "buyer_solo_advisor",
+    organisationName: "Lerato Ndlovu Financial Planning",
+    workspaceType: "individual",
+    label: "Solo Advisor",
+    displayName: "Lerato Ndlovu",
+    email: "demo.soloadvisor@example-synthetic.co.za",
+    summary:
+      "An independent advisor working alone: their own practice, leads, campaigns and authorisations, with no team pages until they invite someone.",
+  },
 ];
 
 export const DEFAULT_DEMO_ROLE: DemoRoleKey = DEMO_ROLE_ACCOUNTS[0].role;
+export const DEFAULT_DEMO_ACCOUNT: DemoAccountKey = DEMO_ROLE_ACCOUNTS[0].key;

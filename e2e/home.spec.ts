@@ -22,7 +22,7 @@ test.describe("Public site - home page", () => {
     await page.getByRole("link", { name: "Create Broker Account" }).first().click();
 
     await expect(page).toHaveURL(/\/signup$/);
-    await expect(page.getByRole("heading", { name: "Create a broker account" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
   });
 
   test("legal pages render configurable placeholder text", async ({ page }) => {

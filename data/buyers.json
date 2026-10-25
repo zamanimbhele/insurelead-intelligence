@@ -2,6 +2,7 @@
   {
     "id": "buyer_gauteng_commercial",
     "organisationName": "Gauteng Commercial Broker Pilot",
+    "workspaceType": "brokerage",
     "slug": "gauteng-commercial-pilot",
     "buyerType": "broker",
     "status": "active",
@@ -21,6 +22,7 @@
   {
     "id": "buyer_sme_national",
     "organisationName": "National SME Insurance Pilot",
+    "workspaceType": "brokerage",
     "slug": "national-sme-insurance-pilot",
     "buyerType": "insurer",
     "status": "active",
@@ -40,6 +42,7 @@
   {
     "id": "buyer_personal_lines",
     "organisationName": "Personal Lines Broker Pilot",
+    "workspaceType": "brokerage",
     "slug": "personal-lines-broker-pilot",
     "buyerType": "broker",
     "status": "active",
@@ -60,5 +63,25 @@
     "acceptsSharedLeads": true,
     "acceptsCampaigns": true,
     "contactEmail": "personal-lines@example-synthetic.co.za"
+  },
+  {
+    "id": "buyer_solo_advisor",
+    "organisationName": "Lerato Ndlovu Financial Planning",
+    "workspaceType": "individual",
+    "slug": "lerato-ndlovu-financial-planning",
+    "buyerType": "broker",
+    "status": "active",
+    "onboardingStatus": "approved",
+    "fspNumber": "FSP-DEMO-004",
+    "provinces": ["Gauteng"],
+    "cities": [],
+    "industries": [],
+    "insuranceProducts": ["life_insurance", "funeral_cover"],
+    "minimumScore": 0,
+    "dailyLeadCapacity": 10,
+    "contactSlaHours": 24,
+    "acceptsSharedLeads": false,
+    "acceptsCampaigns": true,
+    "contactEmail": "lerato@example-synthetic.co.za"
   }
 ]

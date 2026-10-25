@@ -39,6 +39,7 @@ import type {
   OptOutSource,
 } from "../types.ts";
 import { BUSINESS_COVER_OPTIONS } from "../constants.ts";
+import { normaliseWorkspaceType } from "../workspace.ts";
 
 const BUSINESS_COVER_IDS = new Set<string>(BUSINESS_COVER_OPTIONS.map((option) => option.value));
 import { DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT, DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT } from "../campaign-quota.ts";
@@ -109,6 +110,7 @@ type OrganisationRow = {
   website_url: string | null;
   support_phone: string | null;
   contact_email: string;
+  workspace_type?: string | null;
 };
 
 type PreferenceRow = {
@@ -439,7 +441,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
   const [organisationResult, preferenceResult] = await Promise.all([
     client
       .from("organisations")
-      .select("id, name, slug, organisation_type, status, onboarding_status, fsp_number, website_url, support_phone, contact_email")
+      .select("id, name, slug, organisation_type, status, onboarding_status, fsp_number, website_url, support_phone, contact_email, workspace_type")
       .in("organisation_type", ["broker", "insurer"]),
     client.from("buyer_preferences").select(
       "organisation_id, provinces, cities, industries, insurance_products, minimum_score, daily_lead_capacity, contact_sla_hours, accepts_shared_leads, accepts_campaigns, campaign_daily_send_limit, campaign_monthly_send_limit",
@@ -457,6 +459,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
     return {
       id: organisation.id,
       organisationName: organisation.name,
+      workspaceType: normaliseWorkspaceType(organisation.workspace_type),
       slug: organisation.slug,
       buyerType: organisation.organisation_type,
       status: organisation.status,
@@ -565,6 +568,18 @@ export async function reviewSupabaseOrganisation(
   });
   fail("Unable to review organisation", error);
   return data as { id: string; onboardingStatus: string; status: string };
+}
+
+export async function setSupabaseWorkspaceType(
+  client: SupabaseClient,
+  input: { organisationId: string; workspaceType: string },
+) {
+  const { data, error } = await client.rpc("set_workspace_type", {
+    p_organisation_id: input.organisationId,
+    p_workspace_type: input.workspaceType,
+  });
+  fail("Unable to change the workspace type", error);
+  return data as { id: string; workspaceType: string; changed: boolean };
 }
 
 export async function updateSupabaseProfileMembership(

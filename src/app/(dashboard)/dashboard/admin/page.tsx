@@ -75,7 +75,10 @@ export default async function AdminHomePage() {
     { label: "Brokers awaiting review", value: overview.brokersAwaitingReview, href: "/dashboard/brokers", icon: Building2, attention: overview.brokersAwaitingReview > 0 },
     { label: "Sending identities to verify", value: overview.identitiesAwaitingVerification, href: "/dashboard/brokers", icon: MailCheck, attention: overview.identitiesAwaitingVerification > 0 },
     { label: "Invited members not yet active", value: overview.invitedMembers, href: "/dashboard/brokers", icon: UserPlus, attention: false },
-    { label: "Active brokers", value: overview.activeBrokers, href: "/dashboard/brokers", icon: ShieldCheck, attention: false },
+    {
+      label: "Active brokers and advisors", value: overview.activeBrokers, href: "/dashboard/brokers", icon: ShieldCheck, attention: false,
+      detail: `${overview.activeByWorkspace.individual} individual · ${overview.activeByWorkspace.practice} practice · ${overview.activeByWorkspace.brokerage} brokerage`,
+    },
     { label: "Leads on the platform", value: overview.liveLeads, href: "/dashboard/marketplace", icon: Inbox, attention: false },
     { label: "Unassigned leads", value: overview.unassignedLeads, href: "/dashboard/marketplace", icon: Store, attention: overview.unassignedLeads > 0 },
   ];
@@ -104,6 +107,7 @@ export default async function AdminHomePage() {
                 <p className="text-sm font-medium text-slate-600">{card.label}</p>
                 <p className="mt-2 text-3xl font-bold text-slate-900">{card.value}</p>
                 {card.attention && <p className="mt-1 text-xs font-semibold text-amber-700">Needs attention</p>}
+                {"detail" in card && card.detail && <p className="mt-1 text-xs text-slate-500">{card.detail}</p>}
               </div>
               <span className="flex flex-col items-end gap-3 text-slate-400">
                 <card.icon className="h-5 w-5" />
