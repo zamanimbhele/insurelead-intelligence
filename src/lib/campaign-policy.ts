@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { productLabel } from "./products.ts";
+import { missingDisclosureDetails } from "./brand.ts";
 import type {
   BrokerSendingIdentity,
   Buyer,
@@ -114,6 +115,17 @@ export function validateCampaign(input: {
     if (buyer.authorisedProducts && campaign.insuranceProducts.some((product) => !buyer.authorisedProducts!.includes(product))) {
       add("product_authorisation", "error", "Nobody in this organisation holds a verified authorisation for one or more of the campaign's products.");
     }
+    if (buyer.brand?.mode === "personal") {
+      const missing = missingDisclosureDetails(buyer.brand);
+      if (missing.length) {
+        add("brand_details_missing", "error", `A personal brand needs ${missing.join(", ")} for the disclosure. Add them under branding.`);
+      } else if (buyer.requiredDisclosure && content && !content.textBody.includes(buyer.requiredDisclosure)) {
+        add("disclosure_outdated", "error", "The disclosure in this content is missing or out of date. Generate the content again.");
+      }
+      if (buyer.disclosureIsPlaceholder) {
+        add("disclosure_placeholder", "warning", "The representative disclosure wording is still a placeholder until a compliance officer confirms it.");
+      }
+    }
   }
   if (campaign.insuranceProducts.length === 0) {
     add("products_missing", "error", "Select at least one insurance product.");
@@ -167,6 +179,9 @@ export function generateCampaignCopy(input: {
   callToActionUrl: string;
   // Live catalogue names (productLabelMap); built-in names otherwise.
   productLabels?: ReadonlyMap<string, string>;
+  // Phase 4: the representative disclosure a personal brand must carry.
+  // Written into the content so what is approved is what is sent.
+  disclosure?: string;
 }): Omit<CampaignContentVersion, "id" | "campaignId" | "version" | "generatedBy" | "createdAt"> {
   const productList = input.campaign.insuranceProducts.map((id) =>
     input.productLabels?.get(id) ?? productLabel(id)
@@ -194,6 +209,7 @@ export function generateCampaignCopy(input: {
     `${input.callToActionLabel}: ${input.callToActionUrl}`,
     "",
     "Insurance information only. This message is not advice, a quote, or confirmation of cover.",
+    ...(input.disclosure ? [input.disclosure] : []),
     `Sent by ${input.brokerName}.`,
     "Unsubscribe: {{unsubscribe_url}}",
   ].join("\n");
@@ -203,6 +219,7 @@ export function generateCampaignCopy(input: {
     `<p><strong>Products:</strong> ${products}</p>`,
     `<p><a href="${ctaUrl}" style="display:inline-block;background:#2848e8;color:white;padding:12px 18px;border-radius:6px;text-decoration:none">${cta}</a></p>`,
     '<p style="font-size:12px;color:#64748b">Insurance information only. This message is not advice, a quote, or confirmation of cover.</p>',
+    ...(input.disclosure ? [`<p style="font-size:12px;color:#64748b" data-disclosure="representative">${escapeHtml(input.disclosure)}</p>`] : []),
     `<p style="font-size:12px;color:#64748b">Sent by ${broker}. <a href="{{unsubscribe_url}}">Unsubscribe</a></p>`,
     "</div>",
   ].join("");

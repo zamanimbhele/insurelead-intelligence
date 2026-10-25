@@ -22,6 +22,8 @@ const safeErrors = [
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
+  // Phase 4: tells a personal-brand advisor which details are missing.
+  if (/^Add .+ under branding before generating content$/.test(message)) return message;
   return safeErrors.find((candidate) => message.includes(candidate)) ?? "The campaign content could not be generated";
 }
 

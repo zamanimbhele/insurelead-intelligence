@@ -28,6 +28,7 @@ import { getDataMode } from "../lib/supabase/config.ts";
 import type { Campaign, InsuranceProduct } from "../lib/types.ts";
 import { getProductCatalogue } from "../lib/product-catalogue.ts";
 import { productLabelMap } from "../lib/products.ts";
+import { brandedCopyInput } from "../lib/brand.ts";
 
 const productSchema = z.enum([
   "motor_insurance",
@@ -281,14 +282,13 @@ export function registerCampaignTools(server: McpServer) {
         }
         const buyer = (await listRuntimeBuyers()).find((item) => item.id === campaign.organisationId);
         if (!buyer) throw new Error("Campaign broker not found");
-        const generated = generateCampaignCopy({
+        const generated = generateCampaignCopy(brandedCopyInput(buyer, {
           campaign,
-          brokerName: buyer.organisationName,
           keyMessage: input.keyMessage,
           callToActionLabel: input.callToActionLabel,
           callToActionUrl: input.callToActionUrl,
           productLabels: productLabelMap(await getProductCatalogue()),
-        });
+        }));
         const content = await saveRuntimeCampaignContent(campaign.id, { ...generated, generatedBy: actor.label });
         return campaignResult({ generated: true, campaignId: campaign.id, contentVersion: content.version, requiresHumanApproval: true, sent: false });
       } catch (error) {

@@ -120,6 +120,8 @@ import {
 } from "./campaign-policy";
 import { getProductCatalogue } from "./product-catalogue.ts";
 import { productLabelMap } from "./products.ts";
+import { withRequiredDisclosure } from "./brand-runtime.ts";
+import { brandedCopyInput } from "./brand.ts";
 
 async function requireServerClient() {
   const client = await createSupabaseServerClient();
@@ -424,9 +426,9 @@ export async function generateDashboardCampaignContent(
     if (["sending", "completed", "cancelled"].includes(campaign.status)) {
       throw new Error("Campaign content can no longer be changed");
     }
-    const buyer = getBuyers().find((buyer) => buyer.id === campaign.organisationId);
+    const buyer = await withRequiredDisclosure(getBuyers().find((buyer) => buyer.id === campaign.organisationId));
     if (!buyer) throw new Error("Campaign broker not found");
-    const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input, productLabels: productLabelMap(await getProductCatalogue()) });
+    const generated = generateCampaignCopy(brandedCopyInput(buyer, { campaign, ...input, productLabels: productLabelMap(await getProductCatalogue()) }));
     const content = appendCampaignContent(campaignId, { ...generated, generatedBy: actorLabel });
     appendCampaignEvent({
       campaignId,
@@ -444,9 +446,9 @@ export async function generateDashboardCampaignContent(
     throw new Error("Campaign content can no longer be changed");
   }
   const buyers = await fetchSupabaseBuyers(client);
-  const buyer = buyers.find((buyer) => buyer.id === campaign.organisationId);
+  const buyer = await withRequiredDisclosure(buyers.find((buyer) => buyer.id === campaign.organisationId));
   if (!buyer) throw new Error("Campaign broker not found");
-  const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input, productLabels: productLabelMap(await getProductCatalogue()) });
+  const generated = generateCampaignCopy(brandedCopyInput(buyer, { campaign, ...input, productLabels: productLabelMap(await getProductCatalogue()) }));
   const content = await saveSupabaseCampaignContent(client, campaignId, { ...generated, generatedBy: actorLabel });
   await appendSupabaseCampaignEvent(client, {
     campaignId,
@@ -527,7 +529,7 @@ export async function getDashboardCampaignDetail(identity: DashboardIdentity, ca
   if (getDataMode() === "demo") {
     const campaign = getCampaignById(campaignId);
     if (!campaign) return undefined;
-    const buyer = getBuyers().find((candidate) => candidate.id === campaign.organisationId);
+    const buyer = await withRequiredDisclosure(getBuyers().find((candidate) => candidate.id === campaign.organisationId));
     const sendingIdentity = getSendingIdentities(campaign.organisationId)
       .find((candidate) => candidate.id === campaign.sendingIdentityId);
     const content = getCurrentCampaignContent(campaignId);
@@ -562,7 +564,7 @@ export async function getDashboardCampaignDetail(identity: DashboardIdentity, ca
     fetchSupabaseCampaignRecipients(client, campaignId),
     fetchSupabaseCampaignEvents(client, campaignId),
   ]);
-  const buyer = buyers.find((candidate) => candidate.id === campaign.organisationId);
+  const buyer = await withRequiredDisclosure(buyers.find((candidate) => candidate.id === campaign.organisationId));
   const sendingIdentity = sendingIdentities.find((candidate) => candidate.id === campaign.sendingIdentityId);
   const audienceDecisions = evaluateCampaignAudience({
     campaign,

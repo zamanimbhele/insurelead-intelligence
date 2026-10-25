@@ -289,6 +289,13 @@ export interface Buyer {
   // Products someone in the organisation is verified to sell (phase 3).
   // Undefined when not loaded; the database still enforces.
   authorisedProducts?: string[];
+  // Phase 4: company or personal brand, with the disclosure details.
+  brand?: import("./brand.ts").OrganisationBrand;
+  // Filled in server-side (brand-runtime.ts) for a personal brand: the
+  // exact disclosure its campaign content must carry. Undefined while
+  // details are missing.
+  requiredDisclosure?: string;
+  disclosureIsPlaceholder?: boolean;
 }
 
 export interface LeadAllocation {

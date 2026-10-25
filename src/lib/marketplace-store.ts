@@ -6,6 +6,7 @@ import { normaliseWorkspaceType } from "./workspace.ts";
 import { authorisedProductIds } from "./authorisations.ts";
 import { getDemoAuthorisations } from "./demo-authorisations.ts";
 import { FALLBACK_CATALOGUE } from "./products.ts";
+import { COMPANY_BRAND, missingDisclosureDetails, type OrganisationBrand } from "./brand.ts";
 import type {
   BrokerSendingIdentity,
   Buyer,
@@ -40,6 +41,7 @@ export function getBuyers(): Buyer[] {
     campaignDailySendLimit: buyer.campaignDailySendLimit ?? DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT,
     campaignMonthlySendLimit: buyer.campaignMonthlySendLimit ?? DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT,
     authorisedProducts: authorisedProductIds(FALLBACK_CATALOGUE, authorisations, buyer.id),
+    brand: buyer.brand ?? COMPANY_BRAND,
   }));
 }
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }
@@ -218,6 +220,28 @@ export function setBuyerWorkspaceType(organisationId: string, workspaceType: Buy
       details: `${previous.organisationName}: ${previous.workspaceType} -> ${workspaceType}`,
     });
   }
+  return getBuyers()[index];
+}
+
+// Demo-mode counterpart to update_brand_settings() (migration
+// 202610260001_personal_brand.sql); same rules.
+export function setBuyerBrand(organisationId: string, brand: OrganisationBrand, actorLabel: string): Buyer {
+  if (brand.mode === "personal" && missingDisclosureDetails(brand).length) {
+    throw new Error("A personal brand needs your name, capacity, FSP name and FSP number");
+  }
+  const buyers = readJson<Buyer[]>(BUYERS_FILE, []);
+  const index = buyers.findIndex((buyer) => buyer.id === organisationId);
+  if (index === -1) throw new Error("Broker organisation not found");
+  const clean = (value?: string) => value?.trim() || undefined;
+  buyers[index] = {
+    ...buyers[index],
+    brand: { mode: brand.mode, displayName: clean(brand.displayName), capacity: brand.capacity, fspName: clean(brand.fspName), fspNumber: clean(brand.fspNumber) },
+  };
+  writeJson(BUYERS_FILE, buyers);
+  appendAuditLog({
+    entity: "organisation", entityId: organisationId, action: "brand_settings_updated", actor: actorLabel,
+    details: `${buyers[index].organisationName}: ${brand.mode} brand`,
+  });
   return getBuyers()[index];
 }
 

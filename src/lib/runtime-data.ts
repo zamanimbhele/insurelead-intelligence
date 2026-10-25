@@ -123,7 +123,10 @@ export async function captureRuntimeLead(lead: Omit<Lead, "id" | "createdAt">, c
 }
 
 export async function listRuntimeBuyers() {
-  return getDataMode() === "demo" ? getBuyers() : fetchSupabaseBuyers(requireAdminClient());
+  const buyers = getDataMode() === "demo" ? getBuyers() : await fetchSupabaseBuyers(requireAdminClient());
+  // Late import: brand-runtime reads legal text through this module.
+  const { withRequiredDisclosures } = await import("./brand-runtime.ts");
+  return withRequiredDisclosures(buyers);
 }
 
 export async function listRuntimeAllocations() {

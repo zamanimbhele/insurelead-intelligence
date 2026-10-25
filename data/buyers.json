@@ -82,6 +82,13 @@
     "contactSlaHours": 24,
     "acceptsSharedLeads": false,
     "acceptsCampaigns": true,
-    "contactEmail": "lerato@example-synthetic.co.za"
+    "contactEmail": "lerato@example-synthetic.co.za",
+    "brand": {
+      "mode": "personal",
+      "displayName": "Lerato Ndlovu",
+      "capacity": "representative",
+      "fspName": "Example Life Financial Services (demo)",
+      "fspNumber": "FSP-DEMO-104"
+    }
   }
 ]
