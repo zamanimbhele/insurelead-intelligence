@@ -30,6 +30,7 @@ const safeErrors = [
   "Campaign broker must be active and approved",
   "Campaign permission is disabled for this broker",
   "Campaign includes products outside the broker's approved appetite",
+  "Broker is not authorised for one or more of this campaign's products",
   "Sending identity belongs to another tenant or does not exist",
 ];
 

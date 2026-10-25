@@ -245,11 +245,15 @@ export function BrokerAppetiteEditor({
   organisationName,
   initial,
   productOptions,
+  authorisedProducts,
 }: {
   organisationId: string;
   organisationName: string;
   // Products offered today, from the catalogue.
   productOptions: { value: string; label: string }[];
+  // Products the organisation is authorised to sell (phase 3); undefined
+  // when unknown, in which case the database alone decides.
+  authorisedProducts?: string[];
   initial: {
     insuranceProducts: InsuranceProduct[];
     provinces: string[];
@@ -263,11 +267,13 @@ export function BrokerAppetiteEditor({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const offeredIds = productOptions.map((product) => product.value);
+  const isAuthorised = (id: string) => !authorisedProducts || authorisedProducts.includes(id);
+  const offeredIds = productOptions.map((product) => product.value).filter(isAuthorised);
   // A product that has since been hidden or retired can't stay in the
   // appetite (update_buyer_preferences() refuses it), so it drops out here
   // and the editor says so.
-  const withdrawn = initial.insuranceProducts.filter((product) => !offeredIds.includes(product));
+  const withdrawn = initial.insuranceProducts.filter((product) => !productOptions.some((option) => option.value === product));
+  const unauthorised = initial.insuranceProducts.filter((product) => productOptions.some((option) => option.value === product) && !isAuthorised(product));
   const [products, setProducts] = useState<InsuranceProduct[]>(initial.insuranceProducts.filter((product) => offeredIds.includes(product)));
   const [provinces, setProvinces] = useState<string[]>(initial.provinces);
   const [minimumScore, setMinimumScore] = useState(String(initial.minimumScore));
@@ -340,17 +346,24 @@ export function BrokerAppetiteEditor({
         <legend className="text-xs font-medium text-slate-500">Approved insurance products</legend>
         <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
           {productOptions.map((product) => (
-            <label key={product.value} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700">
+            <label key={product.value} className={`flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs ${isAuthorised(product.value) ? "bg-white text-slate-700" : "bg-slate-100 text-slate-400"}`}>
               <input
                 type="checkbox"
                 checked={products.includes(product.value)}
+                disabled={!isAuthorised(product.value)}
                 onChange={() => setProducts((prev) => toggle(prev, product.value))}
                 className="h-3.5 w-3.5 rounded border-slate-300"
               />
               {product.label}
+              {!isAuthorised(product.value) && <span className="ml-auto text-[10px] font-medium uppercase">Not authorised</span>}
             </label>
           ))}
         </div>
+        {unauthorised.length > 0 && (
+          <p className="mt-1.5 text-xs text-amber-700">
+            No longer authorised, and removed when you save: {unauthorised.join(", ")}.
+          </p>
+        )}
         {withdrawn.length > 0 && (
           <p className="mt-1.5 text-xs text-amber-700">
             No longer offered, and removed when you save: {withdrawn.join(", ")}.

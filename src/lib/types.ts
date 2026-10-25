@@ -187,7 +187,8 @@ export type LegalTextDocumentKey =
   | "marketing_wording"
   | "fsp_disclosures"
   | "terms_of_use"
-  | "data_retention_policy";
+  | "data_retention_policy"
+  | "representative_disclosure";
 
 export interface LegalTextDocument {
   documentKey: LegalTextDocumentKey;
@@ -285,6 +286,9 @@ export interface Buyer {
   campaignDailySendLimit: number;
   campaignMonthlySendLimit: number;
   contactEmail: string;
+  // Products someone in the organisation is verified to sell (phase 3).
+  // Undefined when not loaded; the database still enforces.
+  authorisedProducts?: string[];
 }
 
 export interface LeadAllocation {

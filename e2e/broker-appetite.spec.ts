@@ -26,12 +26,15 @@ test.describe("Broker appetite editor (synthetic demo data)", () => {
     const card = await openBrokerCard(page, PERSONAL);
     await card.getByRole("button", { name: "Edit appetite & permissions" }).click();
     const editor = card.getByTestId("broker-appetite-editor");
-    await editor.getByLabel("Funeral Cover").check();
+    // Personal Lines is authorised for short-term insurance only, so a
+    // long-term product such as Funeral Cover cannot be chosen.
+    await expect(editor.getByLabel(/Funeral Cover/)).toBeDisabled();
+    await editor.getByLabel(/^Insurance Review/).check();
     await editor.getByRole("button", { name: "Save" }).click();
     await expect(editor.getByText("Appetite and permissions saved.")).toBeVisible();
-    await expect(card.getByText("Funeral Cover", { exact: true }).first()).toBeVisible();
+    await expect(card.getByText("Insurance Review", { exact: true }).first()).toBeVisible();
 
-    await editor.getByLabel("Funeral Cover").uncheck();
+    await editor.getByLabel(/^Insurance Review/).uncheck();
     await editor.getByRole("button", { name: "Save" }).click();
     await expect(editor.getByText("Appetite and permissions saved.")).toBeVisible();
   });

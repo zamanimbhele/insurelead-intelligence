@@ -63,7 +63,8 @@ test.describe("Legal Content manager (synthetic demo data)", () => {
     await page.goto("/dashboard/legal-content");
 
     const cards = page.getByTestId("legal-text-card");
-    await expect(cards).toHaveCount(7);
+    // Seven documents plus the placeholder representative disclosure.
+    await expect(cards).toHaveCount(8);
     for (const key of [
       "Privacy Notice",
       "Consent Wording",
@@ -72,6 +73,7 @@ test.describe("Legal Content manager (synthetic demo data)", () => {
       "Financial Services Provider Disclosures",
       "Terms of Use",
       "Data Retention Policy",
+      "Representative Disclosure",
     ]) {
       await expect(cards.filter({ hasText: key }).first().getByRole("button", { name: "Edit" })).toBeVisible();
     }

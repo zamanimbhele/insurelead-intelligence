@@ -31,6 +31,9 @@ export default async function BrokerDirectoryPage({ searchParams }: { searchPara
   const [{ buyers, sendingIdentities, members }, catalogue] = await Promise.all([getDashboardBrokerDirectory(), getProductCatalogue()]);
   const productLabels = productLabelMap(catalogue);
   const productOptions = activeProducts(catalogue).map(({ value, label }) => ({ value, label }));
+  const categoryNames = (productIds: string[]) => catalogue.categories
+    .filter((category) => catalogue.products.some((product) => product.categoryId === category.id && productIds.includes(product.value)))
+    .map((category) => category.name);
   const filter = (WORKSPACE_TYPES as readonly string[]).includes(workspaceFilter ?? "") ? (workspaceFilter as WorkspaceType) : null;
   const shown = filter ? buyers.filter((buyer) => buyer.workspaceType === filter) : buyers;
   const countByType = Object.fromEntries(WORKSPACE_TYPES.map((type) => [type, buyers.filter((buyer) => buyer.workspaceType === type).length]));
@@ -88,6 +91,21 @@ export default async function BrokerDirectoryPage({ searchParams }: { searchPara
                 <div><dt className="text-slate-400">Campaigns</dt><dd className="font-semibold text-slate-800">{buyer.acceptsCampaigns ? `${buyer.campaignDailySendLimit}/day · ${buyer.campaignMonthlySendLimit}/mo` : "Disabled"}</dd></div>
               </dl>
 
+              {buyer.authorisedProducts && (
+                <div className="mt-5" data-testid="authorised-categories">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Authorised to sell</p>
+                  {categoryNames(buyer.authorisedProducts).length === 0 ? (
+                    <p className="mt-2 text-sm text-amber-700">No verified authorisations yet - see Authorisations.</p>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {categoryNames(buyer.authorisedProducts).map((name) => (
+                        <span key={name} className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">{name}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-5">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Approved products</p>
                 {buyer.insuranceProducts.length === 0 && (
@@ -107,6 +125,7 @@ export default async function BrokerDirectoryPage({ searchParams }: { searchPara
                   organisationId={buyer.id}
                   organisationName={buyer.organisationName}
                   productOptions={productOptions}
+                  authorisedProducts={buyer.authorisedProducts}
                   initial={{
                     insuranceProducts: buyer.insuranceProducts,
                     provinces: buyer.provinces,

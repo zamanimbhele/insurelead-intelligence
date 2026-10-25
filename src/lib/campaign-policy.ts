@@ -111,6 +111,9 @@ export function validateCampaign(input: {
     if (unapprovedProducts.length) {
       add("product_permission", "error", "The campaign includes products outside the broker's approved appetite.");
     }
+    if (buyer.authorisedProducts && campaign.insuranceProducts.some((product) => !buyer.authorisedProducts!.includes(product))) {
+      add("product_authorisation", "error", "Nobody in this organisation holds a verified authorisation for one or more of the campaign's products.");
+    }
   }
   if (campaign.insuranceProducts.length === 0) {
     add("products_missing", "error", "Select at least one insurance product.");

@@ -17,6 +17,7 @@ const safeErrors = [
   "Only a platform administrator may change a broker's appetite",
   "Broker organisation not found",
   "Insurance product is not recognised",
+  "The broker is not authorised for one or more of these products",
   "Province is not recognised",
   "Minimum score must be between 0 and 100",
   "Daily lead capacity must be between 1 and 1000",

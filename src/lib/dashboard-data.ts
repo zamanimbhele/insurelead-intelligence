@@ -367,6 +367,9 @@ export async function createDashboardCampaignDraft(
   if (!buyer.acceptsCampaigns) throw new Error("Campaign permission is disabled for this broker");
   const unapprovedProducts = input.insuranceProducts.filter((product) => !buyer.insuranceProducts.includes(product));
   if (unapprovedProducts.length) throw new Error("Campaign includes products outside the broker's approved appetite");
+  if (buyer.authorisedProducts && input.insuranceProducts.some((product) => !buyer.authorisedProducts!.includes(product))) {
+    throw new Error("Broker is not authorised for one or more of this campaign's products");
+  }
   const sendingIdentity = context.sendingIdentities.find((candidate) => candidate.id === input.sendingIdentityId);
   if (!sendingIdentity) throw new Error("Sending identity belongs to another tenant or does not exist");
 

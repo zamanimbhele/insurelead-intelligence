@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone, Database, History, FileText, Wrench, KeyRound, Home } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone, Database, History, FileText, Wrench, KeyRound, Home, BadgeCheck } from "lucide-react";
 import { canViewCompliance, getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
 import { DemoRoleSwitcher } from "@/components/dashboard/DemoRoleSwitcher";
@@ -30,6 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ...(isPlatformAdmin(identity) || isComplianceAuditor(identity)
       ? [{ href: "/dashboard/brokers", label: "Broker Directory", icon: Building2 }]
       : []),
+    ...(admin ? [{ href: "/dashboard/authorisations", label: "Authorisations", icon: BadgeCheck }] : []),
     { href: "/dashboard/allocations", label: "Allocations", icon: ClipboardList },
     { href: "/dashboard/campaigns", label: "Campaigns", icon: Megaphone },
     ...(isBrokerUser(identity)
