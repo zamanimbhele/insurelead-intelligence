@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BrokerMember, InsuranceProduct } from "@/lib/types";
-import { INSURANCE_PRODUCTS, PROVINCES } from "@/lib/constants";
-import { brokerPreferencesSchema } from "@/lib/validation/brokerPreferences";
+import { PROVINCES } from "@/lib/constants";
+import { createBrokerPreferencesSchema } from "@/lib/validation/brokerPreferences";
 
 const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "broker_admin", label: "Broker Admin" },
@@ -244,9 +244,12 @@ export function BrokerAppetiteEditor({
   organisationId,
   organisationName,
   initial,
+  productOptions,
 }: {
   organisationId: string;
   organisationName: string;
+  // Products offered today, from the catalogue.
+  productOptions: { value: string; label: string }[];
   initial: {
     insuranceProducts: InsuranceProduct[];
     provinces: string[];
@@ -260,7 +263,12 @@ export function BrokerAppetiteEditor({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [products, setProducts] = useState<InsuranceProduct[]>(initial.insuranceProducts);
+  const offeredIds = productOptions.map((product) => product.value);
+  // A product that has since been hidden or retired can't stay in the
+  // appetite (update_buyer_preferences() refuses it), so it drops out here
+  // and the editor says so.
+  const withdrawn = initial.insuranceProducts.filter((product) => !offeredIds.includes(product));
+  const [products, setProducts] = useState<InsuranceProduct[]>(initial.insuranceProducts.filter((product) => offeredIds.includes(product)));
   const [provinces, setProvinces] = useState<string[]>(initial.provinces);
   const [minimumScore, setMinimumScore] = useState(String(initial.minimumScore));
   const [dailyLeadCapacity, setDailyLeadCapacity] = useState(String(initial.dailyLeadCapacity));
@@ -289,7 +297,7 @@ export function BrokerAppetiteEditor({
       campaignDailySendLimit: Number(campaignDailySendLimit),
       campaignMonthlySendLimit: Number(campaignMonthlySendLimit),
     };
-    const parsed = brokerPreferencesSchema.safeParse(payload);
+    const parsed = createBrokerPreferencesSchema(offeredIds).safeParse(payload);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Check the values and try again");
       return;
@@ -331,7 +339,7 @@ export function BrokerAppetiteEditor({
       <fieldset className="mt-3">
         <legend className="text-xs font-medium text-slate-500">Approved insurance products</legend>
         <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
-          {INSURANCE_PRODUCTS.map((product) => (
+          {productOptions.map((product) => (
             <label key={product.value} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700">
               <input
                 type="checkbox"
@@ -343,6 +351,11 @@ export function BrokerAppetiteEditor({
             </label>
           ))}
         </div>
+        {withdrawn.length > 0 && (
+          <p className="mt-1.5 text-xs text-amber-700">
+            No longer offered, and removed when you save: {withdrawn.join(", ")}.
+          </p>
+        )}
       </fieldset>
 
       <fieldset className="mt-3">

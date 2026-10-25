@@ -3,6 +3,8 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { ConsultationForm } from "@/components/forms/ConsultationForm";
 import { getCaptchaMode } from "@/lib/security/captcha";
 import { getRuntimeLegalTextDocuments } from "@/lib/runtime-data";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { offeredCatalogue } from "@/lib/products";
 import type { LegalTextDocumentKey } from "@/lib/types";
 
 export const metadata = { title: "Find Insurance Options | InsureLead Intelligence" };
@@ -16,7 +18,7 @@ export default async function ConsultationPage() {
   // The 3 consent-step wordings are configurable legal text (project brief
   // section 2), edited with version history at /dashboard/legal-content -
   // see StepConsent.tsx for where each is rendered.
-  const documents = await getRuntimeLegalTextDocuments();
+  const [documents, catalogue] = await Promise.all([getRuntimeLegalTextDocuments(), getProductCatalogue()]);
   const wording = (key: LegalTextDocumentKey) => documents.find((document) => document.documentKey === key)?.content ?? "";
 
   return (
@@ -34,6 +36,7 @@ export default async function ConsultationPage() {
             contactConsentWording={wording("contact_permission_wording")}
             partnerSharingConsentWording={wording("consent_wording")}
             marketingConsentWording={wording("marketing_wording")}
+            catalogue={offeredCatalogue(catalogue)}
           />
         </Suspense>
       </div>

@@ -17,22 +17,17 @@ import type {
   OptOutChannel,
   OptOutSource,
 } from "./types";
+import { FALLBACK_CATALOGUE, activeProducts } from "./products.ts";
 
+// Products offered today according to the built-in catalogue. Demo mode
+// and seed data only: live pages read getProductCatalogue()
+// (src/lib/product-catalogue.ts) so products can change without a deploy.
 export const INSURANCE_PRODUCTS: {
   value: InsuranceProduct;
   label: string;
   description: string;
   applicantTypes: ApplicantType[];
-}[] = [
-  { value: "motor_insurance", label: "Motor Insurance", description: "Cover options for personal vehicles.", applicantTypes: ["individual"] },
-  { value: "home_contents_insurance", label: "Home & Contents", description: "Protection for a home and its contents.", applicantTypes: ["individual"] },
-  { value: "life_insurance", label: "Life Insurance", description: "Financial protection for the people who depend on you.", applicantTypes: ["individual"] },
-  { value: "funeral_cover", label: "Funeral Cover", description: "Cover intended to help with funeral expenses.", applicantTypes: ["individual"] },
-  { value: "travel_insurance", label: "Travel Insurance", description: "Cover options for domestic and international travel.", applicantTypes: ["individual"] },
-  { value: "personal_accident", label: "Personal Accident", description: "Cover options following specified accidental injury events.", applicantTypes: ["individual"] },
-  { value: "business_insurance", label: "Business Insurance", description: "Commercial cover options shaped around business risks.", applicantTypes: ["business"] },
-  { value: "general_insurance_review", label: "Insurance Review", description: "A general review when you are unsure which product fits.", applicantTypes: ["individual", "business"] },
-];
+}[] = activeProducts(FALLBACK_CATALOGUE).map(({ value, label, description, applicantTypes }) => ({ value, label, description, applicantTypes }));
 
 export const BUSINESS_COVER_OPTIONS: { value: BusinessCoverInterest; label: string }[] = [
   { value: "commercial_motor", label: "Commercial Motor Insurance" },

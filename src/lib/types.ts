@@ -3,15 +3,10 @@
 
 export type ApplicantType = "individual" | "business";
 
-export type InsuranceProduct =
-  | "motor_insurance"
-  | "home_contents_insurance"
-  | "life_insurance"
-  | "funeral_cover"
-  | "travel_insurance"
-  | "personal_accident"
-  | "business_insurance"
-  | "general_insurance_review";
+// A product id from the catalogue (public.insurance_products; see
+// src/lib/products.ts). Products are data, not code, so this is a string;
+// validity is checked against the catalogue at runtime and in the database.
+export type InsuranceProduct = string;
 
 export type BusinessCoverInterest =
   | "commercial_motor"

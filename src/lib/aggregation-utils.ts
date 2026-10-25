@@ -1,5 +1,6 @@
 import type { Lead } from "./types";
-import { BUSINESS_COVER_OPTIONS, HOTSPOT_PRIOR_WINDOW_DAYS, HOTSPOT_RECENT_WINDOW_DAYS, INSURANCE_PRODUCTS } from "./constants";
+import { BUSINESS_COVER_OPTIONS, HOTSPOT_PRIOR_WINDOW_DAYS, HOTSPOT_RECENT_WINDOW_DAYS } from "./constants";
+import { FALLBACK_CATALOGUE } from "./products";
 
 /**
  * Shared, grouping-agnostic helpers for the Market Intelligence aggregate
@@ -10,7 +11,7 @@ import { BUSINESS_COVER_OPTIONS, HOTSPOT_PRIOR_WINDOW_DAYS, HOTSPOT_RECENT_WINDO
 
 export const INSURANCE_NEED_LABELS: Record<string, string> = {
   ...Object.fromEntries(BUSINESS_COVER_OPTIONS.map((option) => [option.value, option.label])),
-  ...Object.fromEntries(INSURANCE_PRODUCTS.map((product) => [product.value, product.label])),
+  ...Object.fromEntries(FALLBACK_CATALOGUE.products.map((product) => [product.value, product.label])),
 };
 
 export function mostFrequent(values: (string | undefined)[]): string | undefined {

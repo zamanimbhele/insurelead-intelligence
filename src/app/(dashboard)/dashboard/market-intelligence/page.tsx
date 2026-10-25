@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getDashboardLeads } from "@/lib/dashboard-data";
 import { BarChartCard } from "@/components/dashboard/BarChartCard";
 import { Building2, CalendarClock, MapPin, Info } from "lucide-react";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productCounts } from "@/lib/products";
 
 export const metadata = { title: "Market Intelligence | InsureLead Intelligence" };
 
@@ -23,16 +24,15 @@ function countBy<T>(items: T[], key: keyof T) {
 }
 
 export default async function MarketIntelligencePage() {
-  const leads = await getDashboardLeads();
+  const [leads, catalogue] = await Promise.all([getDashboardLeads(), getProductCatalogue()]);
 
   const byIndustry = countBy(leads, "industry").filter((d) => d.count >= MIN_AGGREGATION_THRESHOLD).slice(0, 8);
   const byProvince = countBy(leads, "province").filter((d) => d.count >= MIN_AGGREGATION_THRESHOLD).slice(0, 8);
   const byCampaign = countBy(leads, "campaignSource").slice(0, 6);
 
-  const byProduct = INSURANCE_PRODUCTS.map((product) => ({
-    name: product.label,
-    count: leads.filter((lead) => lead.insuranceProducts.includes(product.value)).length,
-  })).filter((item) => item.count > 0).sort((a, b) => b.count - a.count);
+  const byProduct = productCounts(catalogue, leads)
+    .map((product) => ({ name: product.label, count: product.count }))
+    .sort((a, b) => b.count - a.count);
 
   const fyeMonths = countBy(leads, "financialYearEndMonth").sort((a, b) => b.count - a.count).slice(0, 4);
 

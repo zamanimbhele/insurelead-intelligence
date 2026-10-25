@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  consultationFormSchema,
+  createConsultationFormSchema,
   ConsultationFormInput,
   ConsultationFormValues,
 } from "@/lib/validation/consultationSchema";
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { CheckCircle2 } from "lucide-react";
 import { TurnstileWidget } from "./TurnstileWidget";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { activeProducts, type ProductCatalogue } from "@/lib/products";
 
 const STEPS = [
   { key: "applicant", label: "About You", fields: ["applicantType", "businessName", "industry", "businessType", "employeeBand", "turnoverBand", "yearsInOperation", "province", "city", "postalCode", "website"] },
@@ -31,8 +31,10 @@ export function ConsultationForm({
   contactConsentWording,
   partnerSharingConsentWording,
   marketingConsentWording,
+  catalogue,
 }: {
   turnstileSiteKey?: string;
+  catalogue: ProductCatalogue;
   contactConsentWording: string;
   partnerSharingConsentWording: string;
   marketingConsentWording: string;
@@ -69,13 +71,15 @@ export function ConsultationForm({
     [searchParams]
   );
 
+  const products = useMemo(() => activeProducts(catalogue), [catalogue]);
+  const schema = useMemo(() => createConsultationFormSchema(catalogue), [catalogue]);
   const requestedProduct = useMemo(
-    () => INSURANCE_PRODUCTS.find((product) => product.value === searchParams.get("product")),
-    [searchParams],
+    () => products.find((product) => product.value === searchParams.get("product")),
+    [products, searchParams],
   );
 
   const form = useForm<ConsultationFormInput, unknown, ConsultationFormValues>({
-    resolver: zodResolver(consultationFormSchema),
+    resolver: zodResolver(schema),
     mode: "onBlur",
     defaultValues: {
       applicantType: requestedProduct?.applicantTypes.length === 1
@@ -177,8 +181,8 @@ export function ConsultationForm({
           {STEPS[step].label}
         </h2>
         <div className="mt-6">
-          {step === 0 && <StepApplicantDetails form={form} />}
-          {step === 1 && <StepInsuranceNeeds form={form} />}
+          {step === 0 && <StepApplicantDetails form={form} products={products} />}
+          {step === 1 && <StepInsuranceNeeds form={form} products={products} />}
           {step === 2 && <StepContactPerson form={form} />}
           {step === 3 && (
             <StepConsent

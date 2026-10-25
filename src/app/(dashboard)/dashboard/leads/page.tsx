@@ -2,12 +2,14 @@ import { getDashboardIdentity, canUpdateLeadStatus } from "@/lib/auth";
 import { getDashboardLeads } from "@/lib/dashboard-data";
 import { getDataMode } from "@/lib/supabase/config";
 import { LeadsWorkspace } from "@/components/dashboard/LeadsWorkspace";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productFilterOptions } from "@/lib/products";
 
 export const metadata = { title: "Leads | InsureLead Intelligence" };
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
-  const [identity, leads] = await Promise.all([getDashboardIdentity(), getDashboardLeads()]);
+  const [identity, leads, catalogue] = await Promise.all([getDashboardIdentity(), getDashboardLeads(), getProductCatalogue()]);
   const demoMode = getDataMode() === "demo";
   return (
     <div className="flex flex-col gap-6">
@@ -18,7 +20,7 @@ export default async function LeadsPage() {
           {!demoMode && " Row Level Security limits this list to records available to your organisation and role."}
         </p>
       </div>
-      <LeadsWorkspace leads={leads} demoMode={demoMode} canEdit={canUpdateLeadStatus(identity)} />
+      <LeadsWorkspace leads={leads} demoMode={demoMode} canEdit={canUpdateLeadStatus(identity)} productOptions={productFilterOptions(catalogue, leads)} />
     </div>
   );
 }

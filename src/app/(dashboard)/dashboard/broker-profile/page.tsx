@@ -1,6 +1,7 @@
 import { canCreateSendingIdentity, canInviteTeamMember, getDashboardIdentity, isBrokerUser } from "@/lib/auth";
 import { getDashboardBrokerWorkspace } from "@/lib/dashboard-data";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productLabelMap } from "@/lib/products";
 import { SendingIdentityForm } from "@/components/dashboard/SendingIdentityForm";
 import { InviteTeamMemberForm } from "@/components/dashboard/InviteTeamMemberForm";
 import { TaskDigestCard } from "@/components/dashboard/TaskDigestCard";
@@ -9,10 +10,10 @@ import { formatDueSast } from "@/lib/task-digest";
 
 export const dynamic = "force-dynamic";
 
-const productLabels = new Map(INSURANCE_PRODUCTS.map((product) => [product.value, product.label]));
 
 export default async function BrokerProfilePage() {
   const identity = await getDashboardIdentity();
+  const productLabels = productLabelMap(await getProductCatalogue());
   if (identity.mode === "supabase" && !isBrokerUser(identity)) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">

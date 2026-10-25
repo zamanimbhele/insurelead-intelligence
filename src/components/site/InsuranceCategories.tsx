@@ -1,5 +1,6 @@
 import { Section, SectionHeading } from "@/components/ui/Section";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { activeProducts } from "@/lib/products";
 import { ArrowRight, Car, ShieldAlert, Briefcase, Plane, HeartPulse, House, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
@@ -26,7 +27,8 @@ const LEAD_DESCRIPTIONS: Record<string, string> = {
   general_insurance_review: "Receive broader review enquiries that may span more than one insurance product.",
 };
 
-export function InsuranceCategories() {
+export async function InsuranceCategories() {
+  const products = activeProducts(await getProductCatalogue());
   return (
     <Section id="lead-categories">
       <SectionHeading
@@ -35,7 +37,7 @@ export function InsuranceCategories() {
         description="Choose the product categories that match your broker appetite. Each campaign can be aligned to your market, location, and lead-volume requirements."
       />
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {INSURANCE_PRODUCTS.map((p) => {
+        {products.map((p) => {
           const Icon = ICONS[p.value] ?? ShieldAlert;
           return (
             <Link key={p.value} href="/dashboard/campaigns" className="group rounded-xl border border-slate-200 p-5 transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md">

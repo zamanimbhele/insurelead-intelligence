@@ -7,6 +7,9 @@ import { FAQSection } from "@/components/site/FAQSection";
 import { ComplianceReassurance } from "@/components/site/ComplianceReassurance";
 import { BrokerCTA } from "@/components/site/BrokerCTA";
 
+// Product cards come from the catalogue; refresh them every five minutes.
+export const revalidate = 300;
+
 export default function HomePage() {
   return (
     <>

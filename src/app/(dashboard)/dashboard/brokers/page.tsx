@@ -1,6 +1,7 @@
 import { getDashboardIdentity, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { getDashboardBrokerDirectory } from "@/lib/dashboard-data";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { activeProducts, productLabelMap } from "@/lib/products";
 import {
   BrokerAppetiteEditor,
   MemberMembershipControls,
@@ -10,7 +11,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const productLabels = new Map(INSURANCE_PRODUCTS.map((product) => [product.value, product.label]));
 
 export default async function BrokerDirectoryPage() {
   const identity = await getDashboardIdentity();
@@ -24,7 +24,9 @@ export default async function BrokerDirectoryPage() {
   }
 
   const canManage = isPlatformAdmin(identity);
-  const { buyers, sendingIdentities, members } = await getDashboardBrokerDirectory();
+  const [{ buyers, sendingIdentities, members }, catalogue] = await Promise.all([getDashboardBrokerDirectory(), getProductCatalogue()]);
+  const productLabels = productLabelMap(catalogue);
+  const productOptions = activeProducts(catalogue).map(({ value, label }) => ({ value, label }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,6 +83,7 @@ export default async function BrokerDirectoryPage() {
                 <BrokerAppetiteEditor
                   organisationId={buyer.id}
                   organisationName={buyer.organisationName}
+                  productOptions={productOptions}
                   initial={{
                     insuranceProducts: buyer.insuranceProducts,
                     provinces: buyer.provinces,

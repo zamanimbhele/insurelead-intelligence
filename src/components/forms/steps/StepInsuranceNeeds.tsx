@@ -1,14 +1,15 @@
 import { ConsultationFormHandle } from "@/lib/validation/consultationSchema";
 import { Field, FieldGroup, inputClass } from "../FormField";
-import { BUSINESS_COVER_OPTIONS, INSURANCE_PRODUCTS, CURRENT_INSURANCE_STATUS, MONTHS } from "@/lib/constants";
+import { BUSINESS_COVER_OPTIONS, CURRENT_INSURANCE_STATUS, MONTHS } from "@/lib/constants";
+import type { CatalogueProduct } from "@/lib/products";
 import type { BusinessCoverInterest, InsuranceProduct } from "@/lib/types";
 
-export function StepInsuranceNeeds({ form }: { form: ConsultationFormHandle }) {
+export function StepInsuranceNeeds({ form, products }: { form: ConsultationFormHandle; products: CatalogueProduct[] }) {
   const { register, watch, setValue, formState: { errors } } = form;
   const selected = watch("insuranceProducts") ?? [];
   const selectedBusinessCovers = watch("businessCoverInterests") ?? [];
   const applicantType = watch("applicantType");
-  const availableProducts = INSURANCE_PRODUCTS.filter(
+  const availableProducts = products.filter(
     (product) => !applicantType || product.applicantTypes.includes(applicantType),
   );
 

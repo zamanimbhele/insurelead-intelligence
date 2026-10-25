@@ -8,7 +8,12 @@ import { LeadKanbanBoard } from "./LeadKanbanBoard";
 
 type View = "table" | "kanban";
 
-export function LeadsWorkspace({ leads, demoMode, canEdit }: { leads: Lead[]; demoMode: boolean; canEdit: boolean }) {
+export function LeadsWorkspace({ leads, demoMode, canEdit, productOptions }: {
+  leads: Lead[];
+  demoMode: boolean;
+  canEdit: boolean;
+  productOptions: { value: string; label: string }[];
+}) {
   const [view, setView] = useState<View>("table");
 
   return (
@@ -23,7 +28,7 @@ export function LeadsWorkspace({ leads, demoMode, canEdit }: { leads: Lead[]; de
       </div>
 
       {view === "table" ? (
-        <LeadsTable leads={leads} demoMode={demoMode} />
+        <LeadsTable leads={leads} demoMode={demoMode} productOptions={productOptions} />
       ) : (
         <LeadKanbanBoard leads={leads} canEdit={canEdit} />
       )}
