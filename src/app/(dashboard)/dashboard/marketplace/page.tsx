@@ -1,3 +1,5 @@
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productLabelMap } from "@/lib/products";
 import { AllocateLeadButton } from "@/components/dashboard/AllocateLeadButton";
 import { getDashboardIdentity, isPlatformAdmin } from "@/lib/auth";
 import { getDashboardMarketplaceData } from "@/lib/dashboard-data";
@@ -19,7 +21,8 @@ export default async function MarketplacePage() {
     );
   }
 
-  const { leads, buyers, allocations, consents } = await getDashboardMarketplaceData();
+  const [{ leads, buyers, allocations, consents }, catalogue] = await Promise.all([getDashboardMarketplaceData(), getProductCatalogue()]);
+  const productLabels = productLabelMap(catalogue);
   const inventory = leads
     .filter((lead) => getAllocationEligibility(lead, consents.get(lead.id), allocations).allowed)
     .map((lead) => ({
@@ -58,7 +61,7 @@ export default async function MarketplacePage() {
               <article key={lead.id} className="grid gap-4 px-6 py-5 lg:grid-cols-[1.4fr_1fr_auto] lg:items-center">
                 <div>
                   <p className="font-semibold text-slate-900">{getLeadDisplayName(lead)}</p>
-                  <p className="text-sm text-slate-500">{getInsuranceProductLabels(lead).join(", ")} · {lead.city}, {lead.province}</p>
+                  <p className="text-sm text-slate-500">{getInsuranceProductLabels(lead, productLabels).join(", ")} · {lead.city}, {lead.province}</p>
                   <p className="mt-1 text-xs text-slate-400">Score {lead.score}/100 · Recipient limit {consent?.maxPartnerRecipients ?? 1}</p>
                 </div>
                 <p className="text-sm text-slate-700">{matches[0]?.organisationName ?? "No matching buyer appetite"}</p>

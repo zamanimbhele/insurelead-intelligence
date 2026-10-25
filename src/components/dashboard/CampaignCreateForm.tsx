@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { INSURANCE_PRODUCTS, PROVINCES } from "@/lib/constants";
+import { PROVINCES } from "@/lib/constants";
 import type { BrokerSendingIdentity, InsuranceProduct } from "@/lib/types";
 
 // Broker-side "new campaign draft" form, shown on /dashboard/campaigns to
@@ -27,7 +27,8 @@ export function CampaignCreateForm({
   sendingIdentities,
   campaignsEnabled = true,
 }: {
-  approvedProducts: InsuranceProduct[];
+  // The broker's approved products that are offered today (with labels).
+  approvedProducts: { value: InsuranceProduct; label: string }[];
   sendingIdentities: BrokerSendingIdentity[];
   campaignsEnabled?: boolean;
 }) {
@@ -42,7 +43,7 @@ export function CampaignCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const availableProducts = INSURANCE_PRODUCTS.filter((product) => approvedProducts.includes(product.value));
+  const availableProducts = approvedProducts;
 
   function toggleProduct(value: InsuranceProduct) {
     setProducts((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));

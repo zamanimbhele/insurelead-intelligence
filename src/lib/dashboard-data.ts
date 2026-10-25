@@ -118,6 +118,8 @@ import {
   summariseAudience,
   validateCampaign,
 } from "./campaign-policy";
+import { getProductCatalogue } from "./product-catalogue.ts";
+import { productLabelMap } from "./products.ts";
 
 async function requireServerClient() {
   const client = await createSupabaseServerClient();
@@ -414,7 +416,7 @@ export async function generateDashboardCampaignContent(
     }
     const buyer = getBuyers().find((buyer) => buyer.id === campaign.organisationId);
     if (!buyer) throw new Error("Campaign broker not found");
-    const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input });
+    const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input, productLabels: productLabelMap(await getProductCatalogue()) });
     const content = appendCampaignContent(campaignId, { ...generated, generatedBy: actorLabel });
     appendCampaignEvent({
       campaignId,
@@ -434,7 +436,7 @@ export async function generateDashboardCampaignContent(
   const buyers = await fetchSupabaseBuyers(client);
   const buyer = buyers.find((buyer) => buyer.id === campaign.organisationId);
   if (!buyer) throw new Error("Campaign broker not found");
-  const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input });
+  const generated = generateCampaignCopy({ campaign, brokerName: buyer.organisationName, ...input, productLabels: productLabelMap(await getProductCatalogue()) });
   const content = await saveSupabaseCampaignContent(client, campaignId, { ...generated, generatedBy: actorLabel });
   await appendSupabaseCampaignEvent(client, {
     campaignId,

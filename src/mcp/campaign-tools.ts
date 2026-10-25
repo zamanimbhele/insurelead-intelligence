@@ -26,6 +26,8 @@ import {
 } from "../lib/runtime-data.ts";
 import { getDataMode } from "../lib/supabase/config.ts";
 import type { Campaign, InsuranceProduct } from "../lib/types.ts";
+import { getProductCatalogue } from "../lib/product-catalogue.ts";
+import { productLabelMap } from "../lib/products.ts";
 
 const productSchema = z.enum([
   "motor_insurance",
@@ -285,6 +287,7 @@ export function registerCampaignTools(server: McpServer) {
           keyMessage: input.keyMessage,
           callToActionLabel: input.callToActionLabel,
           callToActionUrl: input.callToActionUrl,
+          productLabels: productLabelMap(await getProductCatalogue()),
         });
         const content = await saveRuntimeCampaignContent(campaign.id, { ...generated, generatedBy: actor.label });
         return campaignResult({ generated: true, campaignId: campaign.id, contentVersion: content.version, requiresHumanApproval: true, sent: false });

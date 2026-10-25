@@ -38,7 +38,9 @@ import type {
   OptOutRequestStatus,
   OptOutSource,
 } from "../types.ts";
-import { INSURANCE_PRODUCTS } from "../constants.ts";
+import { BUSINESS_COVER_OPTIONS } from "../constants.ts";
+
+const BUSINESS_COVER_IDS = new Set<string>(BUSINESS_COVER_OPTIONS.map((option) => option.value));
 import { DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT, DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT } from "../campaign-quota.ts";
 
 type LeadRow = {
@@ -272,8 +274,12 @@ function optional(value: string | null | undefined) {
 }
 
 export function mapLead(row: LeadRow): Lead {
-  const productIds = new Set(INSURANCE_PRODUCTS.map((product) => product.value));
-  const usesProductCatalogue = row.insurance_products.some((product) => productIds.has(product as Lead["insuranceProducts"][number]));
+  // Leads captured before the multi-product catalogue stored business
+  // cover areas in insurance_products. Detected by that shape (only cover
+  // area ids), not by matching known product ids, so a product added to
+  // the catalogue later is never mistaken for a legacy row.
+  const usesProductCatalogue = !(row.insurance_products.length > 0
+    && row.insurance_products.every((value) => BUSINESS_COVER_IDS.has(value)));
   return {
     id: row.id,
     applicantType: row.applicant_type ?? "business",

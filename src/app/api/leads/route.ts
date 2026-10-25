@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { consultationFormSchema } from "@/lib/validation/consultationSchema";
+import { createConsultationFormSchema } from "@/lib/validation/consultationSchema";
+import { getProductCatalogue } from "@/lib/product-catalogue";
 import { appendRuntimeAuditLog, captureRuntimeLead, getRuntimeLegalTextDocument, hasRuntimeDuplicate } from "@/lib/runtime-data";
 import { scoreLead } from "@/lib/scoring";
 import { CONSENT_WORDING_VERSION } from "@/lib/constants";
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const parsed = consultationFormSchema.safeParse(body);
+    const parsed = createConsultationFormSchema(await getProductCatalogue()).safeParse(body);
 
     if (!parsed.success) {
       // Sanitised validation error only - never echo raw request bodies into

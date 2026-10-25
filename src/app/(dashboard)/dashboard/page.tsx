@@ -2,7 +2,9 @@ import { getActiveAllocationLeadIds, getDashboardLeads, isLeadUnassigned } from 
 import { getDataMode } from "@/lib/supabase/config";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { LeadsTable } from "@/components/dashboard/LeadsTable";
-import { INSURANCE_PRODUCTS, LEAD_STATUS_LABELS } from "@/lib/constants";
+import { LEAD_STATUS_LABELS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productCounts, productFilterOptions } from "@/lib/products";
 import { Users, Clock, AlertTriangle, TrendingUp, ShieldOff, UserCheck } from "lucide-react";
 import { isToday, isThisWeek } from "date-fns";
 import { getDashboardIdentity, isBrokerUser } from "@/lib/auth";
@@ -10,10 +12,11 @@ import { getDashboardIdentity, isBrokerUser } from "@/lib/auth";
 export const metadata = { title: "Dashboard | InsureLead Intelligence" };
 
 export default async function DashboardPage() {
-  const [leads, identity, assignedLeadIds] = await Promise.all([
+  const [leads, identity, assignedLeadIds, catalogue] = await Promise.all([
     getDashboardLeads(),
     getDashboardIdentity(),
     getActiveAllocationLeadIds(),
+    getProductCatalogue(),
   ]);
   const demoMode = getDataMode() === "demo";
 
@@ -36,10 +39,7 @@ export default async function DashboardPage() {
     count: leads.filter((l) => l.status === status).length,
   })).filter((s) => s.count > 0);
 
-  const byProduct = INSURANCE_PRODUCTS.map((product) => ({
-    ...product,
-    count: leads.filter((lead) => lead.insuranceProducts.includes(product.value)).length,
-  })).filter((product) => product.count > 0);
+  const byProduct = productCounts(catalogue, leads);
 
   return (
     <div className="flex flex-col gap-8">
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Recent Leads</h2>
-        <LeadsTable leads={leads} demoMode={demoMode} />
+        <LeadsTable leads={leads} demoMode={demoMode} productOptions={productFilterOptions(catalogue, leads)} />
       </div>
     </div>
   );

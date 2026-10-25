@@ -7,12 +7,12 @@ import {
   TURNOVER_BANDS,
   YEARS_IN_OPERATION,
   PROVINCES,
-  INSURANCE_PRODUCTS,
 } from "@/lib/constants";
+import type { CatalogueProduct } from "@/lib/products";
 import type { ChangeEvent } from "react";
 import type { ApplicantType } from "@/lib/types";
 
-export function StepApplicantDetails({ form }: { form: ConsultationFormHandle }) {
+export function StepApplicantDetails({ form, products }: { form: ConsultationFormHandle; products: CatalogueProduct[] }) {
   const {
     register,
     watch,
@@ -25,7 +25,7 @@ export function StepApplicantDetails({ form }: { form: ConsultationFormHandle })
     void applicantTypeField.onChange(event);
     const nextType = event.target.value as ApplicantType;
     const compatibleProducts = form.getValues("insuranceProducts").filter((selected) =>
-      INSURANCE_PRODUCTS.find((product) => product.value === selected)?.applicantTypes.includes(nextType),
+      products.find((product) => product.value === selected)?.applicantTypes.includes(nextType),
     );
     form.setValue("insuranceProducts", compatibleProducts, { shouldValidate: false });
     if (nextType === "individual") {

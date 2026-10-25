@@ -2,13 +2,13 @@ import { format } from "date-fns";
 import Link from "next/link";
 
 import { canManageCampaigns, getDashboardIdentity } from "@/lib/auth";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { activeProducts, productLabelMap } from "@/lib/products";
 import { getDashboardCampaignAuthoringContext, getDashboardCampaignData } from "@/lib/dashboard-data";
 import { CampaignCreateForm } from "@/components/dashboard/CampaignCreateForm";
 
 export const dynamic = "force-dynamic";
 
-const productLabels = new Map(INSURANCE_PRODUCTS.map((product) => [product.value, product.label]));
 
 const statusStyles: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700",
@@ -24,10 +24,18 @@ const statusStyles: Record<string, string> = {
 
 export default async function CampaignsPage() {
   const identity = await getDashboardIdentity();
-  const [{ campaigns, buyers, recipients }, authoring] = await Promise.all([
+  const [{ campaigns, buyers, recipients }, authoring, catalogue] = await Promise.all([
     getDashboardCampaignData(identity),
     canManageCampaigns(identity) ? getDashboardCampaignAuthoringContext(identity) : Promise.resolve(null),
+    getProductCatalogue(),
   ]);
+  const productLabels = productLabelMap(catalogue);
+  // What this broker may campaign on: its approved appetite, limited to
+  // products still offered.
+  const approved = new Set(authoring?.buyer?.insuranceProducts ?? []);
+  const campaignProducts = activeProducts(catalogue)
+    .filter((product) => approved.has(product.value))
+    .map(({ value, label }) => ({ value, label }));
   const buyersById = new Map(buyers.map((buyer) => [buyer.id, buyer]));
   const active = campaigns.filter((campaign) => ["approved", "scheduled", "sending"].includes(campaign.status)).length;
   const awaitingApproval = campaigns.filter((campaign) => campaign.status === "pending_review").length;
@@ -69,7 +77,7 @@ export default async function CampaignsPage() {
           // campaign on its own detail page instead.
           <div className="border-b border-slate-200 px-6 py-4">
             <CampaignCreateForm
-              approvedProducts={authoring.buyer?.insuranceProducts ?? []}
+              approvedProducts={campaignProducts}
               sendingIdentities={authoring.sendingIdentities}
               campaignsEnabled={authoring.buyer?.acceptsCampaigns ?? false}
             />

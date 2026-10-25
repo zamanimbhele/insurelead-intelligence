@@ -4,7 +4,8 @@ import { format } from "date-fns";
 import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { canApproveCampaigns, canManageCampaigns, getDashboardIdentity } from "@/lib/auth";
 import { getDashboardCampaignDetail } from "@/lib/dashboard-data";
-import { INSURANCE_PRODUCTS } from "@/lib/constants";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productLabelMap } from "@/lib/products";
 import { CampaignContentForm } from "@/components/dashboard/CampaignContentForm";
 import { CampaignApprovalForm } from "@/components/dashboard/CampaignApprovalForm";
 import { CampaignSendingPanel } from "@/components/dashboard/CampaignSendingPanel";
@@ -12,7 +13,6 @@ import { formatSast } from "@/lib/campaign-quota";
 
 export const dynamic = "force-dynamic";
 
-const productLabels = new Map(INSURANCE_PRODUCTS.map((product) => [product.value, product.label]));
 
 const statusStyles: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700",
@@ -38,6 +38,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   const { id } = await params;
   const identity = await getDashboardIdentity();
   const detail = await getDashboardCampaignDetail(identity, id);
+  const productLabels = productLabelMap(await getProductCatalogue());
   if (!detail) return notFound();
 
   const { campaign, buyer, sendingIdentity, content, audience, issues, recipients, events, quota } = detail;

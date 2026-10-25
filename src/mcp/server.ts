@@ -16,7 +16,8 @@ import {
 import type { Lead, LeadStatus } from "../lib/types.ts";
 import { getAllocationEligibility, getEligibleBuyersForLead } from "../lib/marketplace-store.ts";
 import { getDataMode } from "../lib/supabase/config.ts";
-import { INSURANCE_PRODUCTS } from "../lib/constants.ts";
+import { getProductCatalogue } from "../lib/product-catalogue.ts";
+import { activeProducts } from "../lib/products.ts";
 import { getInsuranceProductLabels } from "../lib/lead-utils.ts";
 import { registerCampaignTools } from "./campaign-tools.ts";
 
@@ -78,9 +79,8 @@ server.registerTool(
     annotations: { readOnlyHint: true },
   },
   async ({ applicantType }) => {
-    const products = INSURANCE_PRODUCTS.filter(
-      (product) => !applicantType || product.applicantTypes.includes(applicantType),
-    );
+    const products = activeProducts(await getProductCatalogue(), applicantType)
+      .map(({ value, label, description, applicantTypes, categoryId }) => ({ value, label, description, applicantTypes, categoryId }));
     return result({ count: products.length, products });
   },
 );

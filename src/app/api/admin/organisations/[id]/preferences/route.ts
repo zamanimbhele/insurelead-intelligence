@@ -4,7 +4,9 @@ import { getDataMode } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateSupabaseBuyerPreferences } from "@/lib/supabase/data";
 import { updateBuyerPreferences } from "@/lib/marketplace-store";
-import { brokerPreferencesSchema } from "@/lib/validation/brokerPreferences";
+import { createBrokerPreferencesSchema } from "@/lib/validation/brokerPreferences";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { activeProductIds } from "@/lib/products";
 
 // Platform-admin-only: sets a broker/insurer tenant's approved product
 // appetite, territory, score floor, capacity and campaign/shared-lead
@@ -30,7 +32,8 @@ function safeError(error: unknown) {
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const parsed = brokerPreferencesSchema.safeParse(await request.json().catch(() => null));
+  const schema = createBrokerPreferencesSchema(activeProductIds(await getProductCatalogue()));
+  const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid broker preferences" }, { status: 400 });
   }

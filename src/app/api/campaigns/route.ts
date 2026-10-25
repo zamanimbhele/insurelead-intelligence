@@ -2,22 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { canManageCampaigns, getDashboardIdentity } from "@/lib/auth";
 import { createDashboardCampaignDraft } from "@/lib/dashboard-data";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { PRODUCT_ID_PATTERN, unavailableProductIds } from "@/lib/products";
 
 // Dashboard counterpart to the Campaign Orchestration MCP server's
 // create_campaign_draft tool (src/mcp/campaign-tools.ts) - same input
 // shape, same pre-checks (via createDashboardCampaignDraft() in
 // dashboard-data.ts), same "draft" starting status. This never
 // generates content, approves, or sends anything.
-const productSchema = z.enum([
-  "motor_insurance",
-  "home_contents_insurance",
-  "life_insurance",
-  "funeral_cover",
-  "travel_insurance",
-  "personal_accident",
-  "business_insurance",
-  "general_insurance_review",
-]);
+const productSchema = z.string().regex(PRODUCT_ID_PATTERN);
 
 const schema = z.object({
   name: z.string().trim().min(3).max(120),
@@ -49,6 +42,9 @@ export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "A valid campaign name, objective, products, and sending identity are required" }, { status: 400 });
+  }
+  if (unavailableProductIds(parsed.data.insuranceProducts, await getProductCatalogue()).length > 0) {
+    return NextResponse.json({ error: "One or more products are not offered" }, { status: 400 });
   }
 
   const identity = await getDashboardIdentity();

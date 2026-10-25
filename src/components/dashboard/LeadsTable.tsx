@@ -3,13 +3,19 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Lead } from "@/lib/types";
-import { INSURANCE_PRODUCTS, LEAD_STATUS_LABELS } from "@/lib/constants";
+import { LEAD_STATUS_LABELS } from "@/lib/constants";
 import { getInsuranceProductLabels, getLeadDisplayName } from "@/lib/lead-utils";
 import { ScoreBadge, StatusBadge } from "./ScoreBadge";
 import { Search } from "lucide-react";
 import { format } from "date-fns";
 
-export function LeadsTable({ leads, demoMode = false }: { leads: Lead[]; demoMode?: boolean }) {
+export function LeadsTable({ leads, demoMode = false, productOptions }: {
+  leads: Lead[];
+  demoMode?: boolean;
+  // Every catalogue product (retired ones too, so old leads can be found).
+  productOptions: { value: string; label: string }[];
+}) {
+  const productLabels = useMemo(() => new Map(productOptions.map((option) => [option.value, option.label])), [productOptions]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
@@ -47,7 +53,7 @@ export function LeadsTable({ leads, demoMode = false }: { leads: Lead[]; demoMod
             className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           >
             <option value="all">All products</option>
-            {INSURANCE_PRODUCTS.map((product) => (
+            {productOptions.map((product) => (
               <option key={product.value} value={product.value}>{product.label}</option>
             ))}
           </select>
@@ -89,7 +95,7 @@ export function LeadsTable({ leads, demoMode = false }: { leads: Lead[]; demoMod
                     <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">DNC</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{getInsuranceProductLabels(lead).join(", ")}</td>
+                <td className="px-4 py-3 text-slate-600">{getInsuranceProductLabels(lead, productLabels).join(", ")}</td>
                 <td className="px-4 py-3 text-slate-600">{lead.province}</td>
                 <td className="px-4 py-3"><StatusBadge status={lead.status} label={LEAD_STATUS_LABELS[lead.status] ?? lead.status} /></td>
                 <td className="px-4 py-3"><ScoreBadge band={lead.scoreBand} score={lead.score} /></td>

@@ -1,4 +1,7 @@
-import { BUSINESS_COVER_OPTIONS, INSURANCE_PRODUCTS } from "./constants";
+import { BUSINESS_COVER_OPTIONS } from "./constants";
+import { FALLBACK_CATALOGUE, productLabelMap } from "./products";
+
+const BUILT_IN_PRODUCT_LABELS = productLabelMap(FALLBACK_CATALOGUE);
 import type { ConsentRecord, Lead, LeadStatus } from "./types";
 
 export function getLeadDisplayName(lead: Lead) {
@@ -7,9 +10,11 @@ export function getLeadDisplayName(lead: Lead) {
     : lead.contactFullName;
 }
 
-export function getInsuranceProductLabels(lead: Lead) {
+// `labels` comes from the live catalogue (productLabelMap); without it the
+// built-in names are used.
+export function getInsuranceProductLabels(lead: Lead, labels: ReadonlyMap<string, string> = BUILT_IN_PRODUCT_LABELS) {
   return lead.insuranceProducts.map(
-    (value) => INSURANCE_PRODUCTS.find((product) => product.value === value)?.label ?? value.replace(/_/g, " "),
+    (value) => labels.get(value) ?? value.replace(/_/g, " "),
   );
 }
 

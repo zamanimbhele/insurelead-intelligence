@@ -1,16 +1,11 @@
 import { z } from "zod";
 import type { UseFormReturn } from "react-hook-form";
+import { FALLBACK_CATALOGUE, PRODUCT_ID_PATTERN, unavailableProductIds, type ProductCatalogue } from "../products.ts";
 
-const insuranceProductSchema = z.enum([
-  "motor_insurance",
-  "home_contents_insurance",
-  "life_insurance",
-  "funeral_cover",
-  "travel_insurance",
-  "personal_accident",
-  "business_insurance",
-  "general_insurance_review",
-]);
+// Product ids are catalogue data (src/lib/products.ts). The shape is
+// checked here; whether a product is offered, and to which applicant
+// type, is checked against the catalogue the schema is built with.
+const insuranceProductSchema = z.string().regex(PRODUCT_ID_PATTERN, "Select a product from the list");
 
 const businessCoverSchema = z.enum([
   "commercial_motor",
@@ -95,18 +90,19 @@ export const consentSchema = z.object({
   website_url: z.string().max(0).optional(),
 });
 
-export const consultationFormSchema = applicantDetailsSchema
+// Built from a catalogue so the browser form and the API agree on which
+// products are offered. The database checks the same thing again.
+export function createConsultationFormSchema(catalogue: ProductCatalogue) {
+  return consultationFormBase(catalogue);
+}
+
+function consultationFormBase(catalogue: ProductCatalogue) {
+  return applicantDetailsSchema
   .merge(insuranceNeedsSchema)
   .merge(contactPersonSchema)
   .merge(consentSchema)
   .superRefine((data, ctx) => {
-    const incompatibleProduct = data.insuranceProducts.find((product) => {
-      if (product === "general_insurance_review") return false;
-      return data.applicantType === "business"
-        ? product !== "business_insurance"
-        : product === "business_insurance";
-    });
-    if (incompatibleProduct) {
+    if (unavailableProductIds(data.insuranceProducts, catalogue, data.applicantType).length > 0) {
       ctx.addIssue({
         code: "custom",
         path: ["insuranceProducts"],
@@ -136,6 +132,10 @@ export const consultationFormSchema = applicantDetailsSchema
       }
     }
   });
+}
+
+// Built from the built-in catalogue; kept for the form types and tests.
+export const consultationFormSchema = createConsultationFormSchema(FALLBACK_CATALOGUE);
 
 export type ConsultationFormInput = z.input<typeof consultationFormSchema>;
 export type ConsultationFormValues = z.output<typeof consultationFormSchema>;

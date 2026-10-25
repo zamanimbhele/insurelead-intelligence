@@ -2,6 +2,9 @@ import { Section, SectionHeading } from "@/components/ui/Section";
 import { InsuranceCategories } from "@/components/site/InsuranceCategories";
 import { LinkButton } from "@/components/ui/Button";
 
+// Product cards come from the catalogue; refresh them every five minutes.
+export const revalidate = 300;
+
 export const metadata = { title: "Insurance Lead Categories | InsureLead Intelligence" };
 
 export default function SolutionsPage() {

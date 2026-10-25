@@ -1,4 +1,6 @@
 import { getDashboardLead, getDashboardLeadWorkspace } from "@/lib/dashboard-data";
+import { getProductCatalogue } from "@/lib/product-catalogue";
+import { productLabelMap } from "@/lib/products";
 import { canUpdateLeadStatus, getDashboardIdentity } from "@/lib/auth";
 import { LEAD_STATUS_LABELS } from "@/lib/constants";
 import { getBusinessCoverLabels, getInsuranceProductLabels, getLeadDisplayName } from "@/lib/lead-utils";
@@ -15,10 +17,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const lead = await getDashboardLead(id);
   if (!lead) return notFound();
 
-  const [identity, workspace] = await Promise.all([getDashboardIdentity(), getDashboardLeadWorkspace(lead)]);
+  const [identity, workspace, catalogue] = await Promise.all([getDashboardIdentity(), getDashboardLeadWorkspace(lead), getProductCatalogue()]);
   const canEdit = canUpdateLeadStatus(identity);
 
-  const productLabels = getInsuranceProductLabels(lead);
+  const productLabels = getInsuranceProductLabels(lead, productLabelMap(catalogue));
   const businessCoverLabels = getBusinessCoverLabels(lead);
   const ApplicantIcon = lead.applicantType === "business" ? Building2 : User;
 

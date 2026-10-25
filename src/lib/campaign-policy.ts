@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { INSURANCE_PRODUCTS } from "./constants.ts";
+import { productLabel } from "./products.ts";
 import type {
   BrokerSendingIdentity,
   Buyer,
@@ -162,9 +162,11 @@ export function generateCampaignCopy(input: {
   keyMessage: string;
   callToActionLabel: string;
   callToActionUrl: string;
+  // Live catalogue names (productLabelMap); built-in names otherwise.
+  productLabels?: ReadonlyMap<string, string>;
 }): Omit<CampaignContentVersion, "id" | "campaignId" | "version" | "generatedBy" | "createdAt"> {
   const productList = input.campaign.insuranceProducts.map((id) =>
-    INSURANCE_PRODUCTS.find((product) => product.value === id)?.label ?? id.replaceAll("_", " ")
+    input.productLabels?.get(id) ?? productLabel(id)
   ).join(", ");
   const objectiveLead: Record<Campaign["objective"], string> = {
     awareness: "Explore insurance options aligned with your needs",
