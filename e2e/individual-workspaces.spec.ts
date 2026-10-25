@@ -39,11 +39,18 @@ test.describe("Individual workspaces (synthetic demo data)", () => {
     await expect(cards.first().getByTestId("workspace-type-badge")).toHaveText("Individual");
 
     // Change it and back again (the directory data is shared by the suite).
-    const control = cards.first().getByLabel("Workspace");
-    await control.selectOption("practice");
+    // Each change saves in the background, so wait for the save to finish
+    // before moving on; otherwise a slow runner navigates away first.
+    const changeTo = async (type: string) => {
+      const saved = page.waitForResponse((response) =>
+        response.url().includes("/workspace-type") && response.request().method() === "POST");
+      await page.getByTestId("broker-card").first().getByLabel("Workspace").selectOption(type);
+      expect((await saved).ok()).toBeTruthy();
+    };
+    await changeTo("practice");
     await page.goto("/dashboard/brokers?workspace=practice");
     await expect(page.getByTestId("broker-card").first()).toContainText("Lerato Ndlovu Financial Planning");
-    await page.getByTestId("broker-card").first().getByLabel("Workspace").selectOption("individual");
+    await changeTo("individual");
     await page.goto("/dashboard/brokers?workspace=individual");
     await expect(page.getByTestId("broker-card")).toHaveCount(1);
   });
