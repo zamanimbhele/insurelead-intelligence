@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { WorkspaceTypeControl } from "@/components/dashboard/WorkspaceTypeControl";
+import { WORKSPACE_TYPES, WORKSPACE_TYPE_LABELS, type WorkspaceType } from "@/lib/workspace";
 import { getDashboardIdentity, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { getDashboardBrokerDirectory } from "@/lib/dashboard-data";
 import { getProductCatalogue } from "@/lib/product-catalogue";
@@ -12,7 +15,8 @@ import {
 export const dynamic = "force-dynamic";
 
 
-export default async function BrokerDirectoryPage() {
+export default async function BrokerDirectoryPage({ searchParams }: { searchParams: Promise<{ workspace?: string }> }) {
+  const { workspace: workspaceFilter } = await searchParams;
   const identity = await getDashboardIdentity();
   if (!isPlatformAdmin(identity) && !isComplianceAuditor(identity)) {
     return (
@@ -27,6 +31,9 @@ export default async function BrokerDirectoryPage() {
   const [{ buyers, sendingIdentities, members }, catalogue] = await Promise.all([getDashboardBrokerDirectory(), getProductCatalogue()]);
   const productLabels = productLabelMap(catalogue);
   const productOptions = activeProducts(catalogue).map(({ value, label }) => ({ value, label }));
+  const filter = (WORKSPACE_TYPES as readonly string[]).includes(workspaceFilter ?? "") ? (workspaceFilter as WorkspaceType) : null;
+  const shown = filter ? buyers.filter((buyer) => buyer.workspaceType === filter) : buyers;
+  const countByType = Object.fromEntries(WORKSPACE_TYPES.map((type) => [type, buyers.filter((buyer) => buyer.workspaceType === type).length]));
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,8 +46,20 @@ export default async function BrokerDirectoryPage() {
         </p>
       </div>
 
+      <nav aria-label="Filter by workspace type" className="flex flex-wrap gap-2 text-xs">
+        <Link href="/dashboard/brokers" className={`rounded-full border px-3 py-1 font-medium ${filter ? "border-slate-200 text-slate-600" : "border-primary-600 bg-primary-50 text-primary-700"}`}>
+          All ({buyers.length})
+        </Link>
+        {WORKSPACE_TYPES.map((type) => (
+          <Link key={type} href={`/dashboard/brokers?workspace=${type}`} className={`rounded-full border px-3 py-1 font-medium ${filter === type ? "border-primary-600 bg-primary-50 text-primary-700" : "border-slate-200 text-slate-600"}`}>
+            {WORKSPACE_TYPE_LABELS[type]} ({countByType[type]})
+          </Link>
+        ))}
+      </nav>
+
       <div className="grid gap-5 xl:grid-cols-2">
-        {buyers.map((buyer) => {
+        {shown.length === 0 && <p className="text-sm text-slate-500">No organisations of this type yet.</p>}
+        {shown.map((buyer) => {
           const identities = sendingIdentities.filter((item) => item.organisationId === buyer.id);
           const roster = members.filter((item) => item.organisationId === buyer.id);
           const pendingApproval = buyer.onboardingStatus === "pending" || buyer.onboardingStatus === "in_review";
@@ -49,7 +68,11 @@ export default async function BrokerDirectoryPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-semibold text-slate-900">{buyer.organisationName}</h2>
-                  <p className="mt-1 text-xs text-slate-500">{buyer.buyerType} · {buyer.fspNumber ?? "FSP number pending"}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    <span data-testid="workspace-type-badge" className="mr-1 rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">{WORKSPACE_TYPE_LABELS[buyer.workspaceType]}</span>
+                    {buyer.buyerType} · {buyer.fspNumber ?? "FSP number pending"}
+                  </p>
+                  {canManage && <div className="mt-2"><WorkspaceTypeControl organisationId={buyer.id} current={buyer.workspaceType} /></div>}
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${buyer.status === "active" && buyer.onboardingStatus === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                   {buyer.onboardingStatus} · {buyer.status}

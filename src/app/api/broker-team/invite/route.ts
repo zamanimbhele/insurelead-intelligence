@@ -3,7 +3,7 @@ import { z } from "zod";
 import { canInviteTeamMember, getDashboardIdentity } from "@/lib/auth";
 import { getDataMode } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { attachSupabaseInvitedProfile } from "@/lib/supabase/data";
+import { attachSupabaseInvitedProfile, setSupabaseWorkspaceType } from "@/lib/supabase/data";
 import { inviteSupabaseAuthUser } from "@/lib/supabase/admin";
 
 // Broker self-service team invitations - the fix for the gap flagged
@@ -64,7 +64,17 @@ export async function POST(request: NextRequest) {
       role: parsed.data.role,
       displayName: parsed.data.displayName || undefined,
     });
-    return NextResponse.json({ ok: true, member });
+    // A solo advisor who invites a colleague now works as a practice:
+    // the team pages appear for them from here on.
+    let workspaceType = identity.workspaceType;
+    if (identity.workspaceType === "individual" && identity.organisationId) {
+      try {
+        workspaceType = (await setSupabaseWorkspaceType(client, { organisationId: identity.organisationId, workspaceType: "practice" })).workspaceType as typeof workspaceType;
+      } catch (error) {
+        console.error("[workspace] could not switch to a practice after an invite", error instanceof Error ? error.message : error);
+      }
+    }
+    return NextResponse.json({ ok: true, member, workspaceType });
   } catch (error) {
     return NextResponse.json({ error: safeError(error) }, { status: 409 });
   }

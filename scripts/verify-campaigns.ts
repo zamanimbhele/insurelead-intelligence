@@ -44,6 +44,7 @@ const lead: Lead = {
 const buyer: Buyer = {
   id: organisationId,
   organisationName: "Synthetic Campaign Broker",
+  workspaceType: "brokerage",
   buyerType: "broker",
   status: "active",
   onboardingStatus: "approved",

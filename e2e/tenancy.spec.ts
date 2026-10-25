@@ -5,7 +5,9 @@ test.describe("Multi-broker tenancy workspace", () => {
     await page.goto("/dashboard/brokers");
 
     await expect(page.getByRole("heading", { name: "Broker Directory" })).toBeVisible();
-    await expect(page.getByTestId("broker-card")).toHaveCount(3);
+    // Three brokerages plus the solo advisor's individual practice.
+    await expect(page.getByTestId("broker-card")).toHaveCount(4);
+    await expect(page.getByText("Lerato Ndlovu Financial Planning", { exact: true })).toBeVisible();
     await expect(page.getByText("Gauteng Commercial Broker Pilot", { exact: true })).toBeVisible();
     await expect(page.getByText("Personal Lines Broker Pilot", { exact: true })).toBeVisible();
     await expect(page.getByText("15 leads/day", { exact: true })).toBeVisible();

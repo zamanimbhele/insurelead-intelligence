@@ -76,7 +76,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <p className="mt-6 text-center text-sm text-slate-600">
           New to InsureLead?{" "}
           <Link href="/signup" className="font-semibold text-primary-700 hover:text-primary-800">
-            Create a broker account
+            Create an account
           </Link>
         </p>
       </div>

@@ -262,6 +262,8 @@ export interface CampaignAudienceRules {
 export interface Buyer {
   id: string;
   organisationName: string;
+  // individual | practice | brokerage (src/lib/workspace.ts)
+  workspaceType: "individual" | "practice" | "brokerage";
   slug?: string;
   buyerType: "broker" | "insurer";
   status: BuyerStatus;

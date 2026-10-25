@@ -6,6 +6,7 @@ import { signOut } from "@/app/(auth)/login/actions";
 import { DemoRoleSwitcher } from "@/components/dashboard/DemoRoleSwitcher";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardMobileNav";
 import { ADMIN_HOME, isPlatformStaffRole, portalBadge } from "@/lib/portal";
+import { workspaceTerms } from "@/lib/workspace";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const identity = await getDashboardIdentity();
@@ -32,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/allocations", label: "Allocations", icon: ClipboardList },
     { href: "/dashboard/campaigns", label: "Campaigns", icon: Megaphone },
     ...(isBrokerUser(identity)
-      ? [{ href: "/dashboard/broker-profile", label: "Broker Profile", icon: Settings }]
+      ? [{ href: "/dashboard/broker-profile", label: workspaceTerms(identity.workspaceType).profileTitle, icon: Settings }]
       : []),
     { href: "/dashboard/market-intelligence", label: "Market Intelligence", icon: BarChart3 },
     ...(canViewCompliance(identity)
@@ -108,7 +109,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           ) : (
             <>
               <p className="mt-2 text-xs font-medium text-amber-600">Synthetic data only</p>
-              <DemoRoleSwitcher currentRole={identity.role} />
+              <DemoRoleSwitcher currentRole={identity.demoAccountKey ?? identity.role} />
             </>
           )}
         </div>

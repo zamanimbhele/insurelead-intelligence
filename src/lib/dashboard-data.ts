@@ -230,9 +230,16 @@ export async function getDashboardBrokerDirectory() {
   return { buyers, sendingIdentities, members: membersByOrg.flat() };
 }
 
+// Demo mode: the demo account's own organisation (DEMO_ROLE_ACCOUNTS in
+// constants.ts), else the first seeded broker as before.
+function demoBuyerFor(identity: DashboardIdentity) {
+  const buyers = getBuyers();
+  return buyers.find((buyer) => buyer.id === identity.organisationId) ?? buyers[0];
+}
+
 export async function getDashboardBrokerWorkspace(identity: DashboardIdentity) {
   if (getDataMode() === "demo") {
-    const buyer = getBuyers()[0];
+    const buyer = demoBuyerFor(identity);
     return {
       buyer,
       members: [],
@@ -290,7 +297,7 @@ export async function getDashboardCampaignData(identity: DashboardIdentity) {
 // independently re-verify server-side regardless of what this resolves
 // to - this is a UX convenience, not the authority boundary.
 function resolveCampaignOrganisationId(identity: DashboardIdentity): string | undefined {
-  if (getDataMode() === "demo") return getBuyers()[0]?.id;
+  if (getDataMode() === "demo") return demoBuyerFor(identity)?.id;
   return identity.organisationType === "broker" || identity.organisationType === "insurer"
     ? identity.organisationId
     : undefined;
@@ -753,7 +760,7 @@ export async function createDashboardSendingIdentity(
 ) {
   const actorLabel = identity.displayName ?? identity.organisationName;
   if (getDataMode() === "demo") {
-    const buyer = getBuyers()[0];
+    const buyer = demoBuyerFor(identity);
     if (!buyer) throw new Error("No demo broker organisation is available");
     return createSendingIdentity({ organisationId: buyer.id, ...input }, actorLabel);
   }

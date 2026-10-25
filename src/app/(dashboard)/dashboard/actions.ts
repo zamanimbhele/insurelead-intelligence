@@ -18,7 +18,7 @@ function safeNextPath(value: FormDataEntryValue | null) {
   return path.startsWith("/dashboard") && !path.startsWith("//") ? path : "/dashboard";
 }
 
-// Switches which of the 6 seeded DEMO_ROLE_ACCOUNTS (constants.ts)
+// Switches which of the seeded DEMO_ROLE_ACCOUNTS (constants.ts)
 // getDashboardIdentity() returns, by setting the cookie it reads. Ignores
 // an unrecognised role value rather than trusting arbitrary client input
 // - the cookie is simply left unchanged in that case, so the identity
@@ -27,12 +27,12 @@ function safeNextPath(value: FormDataEntryValue | null) {
 export async function setDemoRole(formData: FormData) {
   if (getDataMode() !== "demo") redirect("/dashboard");
 
-  const requestedRole = String(formData.get("role") ?? "");
+  const requestedAccount = String(formData.get("role") ?? "");
   const nextPath = safeNextPath(formData.get("next"));
-  const account = DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.role === requestedRole);
+  const account = DEMO_ROLE_ACCOUNTS.find((candidate) => candidate.key === requestedAccount);
   if (account) {
     const cookieStore = await cookies();
-    cookieStore.set(DEMO_ROLE_COOKIE_NAME, account.role, {
+    cookieStore.set(DEMO_ROLE_COOKIE_NAME, account.key, {
       httpOnly: true,
       sameSite: "lax",
       path: "/",

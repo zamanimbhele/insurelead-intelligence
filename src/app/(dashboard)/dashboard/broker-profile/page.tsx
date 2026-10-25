@@ -7,6 +7,7 @@ import { InviteTeamMemberForm } from "@/components/dashboard/InviteTeamMemberFor
 import { TaskDigestCard } from "@/components/dashboard/TaskDigestCard";
 import { getTaskDigestPreview } from "@/lib/task-digest-runtime";
 import { formatDueSast } from "@/lib/task-digest";
+import { workspaceTerms } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,11 @@ export const dynamic = "force-dynamic";
 export default async function BrokerProfilePage() {
   const identity = await getDashboardIdentity();
   const productLabels = productLabelMap(await getProductCatalogue());
+  const terms = workspaceTerms(identity.workspaceType);
   if (identity.mode === "supabase" && !isBrokerUser(identity)) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-        <h1 className="text-xl font-bold text-slate-900">Broker Profile</h1>
+        <h1 className="text-xl font-bold text-slate-900">{terms.profileTitle}</h1>
         <p className="mt-2 text-sm text-amber-900">This workspace is available to broker and insurer organisation members.</p>
       </div>
     );
@@ -33,7 +35,7 @@ export default async function BrokerProfilePage() {
   if (!workspace || !buyer) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-        <h1 className="text-xl font-bold text-slate-900">Broker Profile</h1>
+        <h1 className="text-xl font-bold text-slate-900">{terms.profileTitle}</h1>
         <p className="mt-2 text-sm text-amber-900">No buyer profile is associated with this organisation.</p>
       </div>
     );
@@ -42,8 +44,12 @@ export default async function BrokerProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Broker Profile</h1>
-        <p className="mt-1 text-sm text-slate-500">Tenant configuration for {buyer.organisationName}.</p>
+        <h1 className="text-2xl font-bold text-slate-900">{terms.profileTitle}</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {identity.workspaceType === "individual"
+            ? `Settings, approved products and sending details for ${buyer.organisationName}.`
+            : `Tenant configuration for ${buyer.organisationName}.`}
+        </p>
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6">
@@ -98,18 +104,31 @@ export default async function BrokerProfilePage() {
         <TaskDigestCard enabled={digestPreview.enabled} digest={digestPreview.digest} formattedDue={formattedDue} />
       )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="font-semibold text-slate-900">Organisation members</h2>
-        <div className="mt-4 divide-y divide-slate-100">
-          {workspace.members.length === 0 ? <p className="text-sm text-slate-500">No demo members are listed.</p> : workspace.members.map((member) => (
-            <div key={member.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-              <div><p className="font-medium text-slate-800">{member.displayName ?? "Broker user"}</p><p className="text-xs text-slate-400">{member.jobTitle ?? member.role.replaceAll("_", " ")}</p></div>
-              <span className="capitalize text-slate-500">{member.status}</span>
-            </div>
-          ))}
-        </div>
-        {canInviteTeamMember(identity) ? <InviteTeamMemberForm /> : null}
-      </section>
+      {terms.showTeam ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-6">
+          <h2 className="font-semibold text-slate-900">Organisation members</h2>
+          <div className="mt-4 divide-y divide-slate-100">
+            {workspace.members.length === 0 ? <p className="text-sm text-slate-500">No demo members are listed.</p> : workspace.members.map((member) => (
+              <div key={member.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                <div><p className="font-medium text-slate-800">{member.displayName ?? "Broker user"}</p><p className="text-xs text-slate-400">{member.jobTitle ?? member.role.replaceAll("_", " ")}</p></div>
+                <span className="capitalize text-slate-500">{member.status}</span>
+              </div>
+            ))}
+          </div>
+          {canInviteTeamMember(identity) ? <InviteTeamMemberForm /> : null}
+        </section>
+      ) : (
+        <section className="rounded-xl border border-slate-200 bg-white p-6" data-testid="solo-team-invite">
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-900">Working with someone? Invite a colleague</summary>
+            <p className="mt-2 text-sm text-slate-500">
+              You work on your own, so team pages are hidden. Inviting a colleague turns your workspace into a practice,
+              and the team pages appear for you both.
+            </p>
+            {canInviteTeamMember(identity) ? <InviteTeamMemberForm /> : null}
+          </details>
+        </section>
+      )}
     </div>
   );
 }

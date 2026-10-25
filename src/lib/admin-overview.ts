@@ -9,6 +9,8 @@ export type AdminOverview = {
   invitedMembers: number;
   liveLeads: number;
   unassignedLeads: number;
+  // Approved and active organisations, by how they work.
+  activeByWorkspace: { individual: number; practice: number; brokerage: number };
 };
 
 export function buildAdminOverview(input: {
@@ -28,6 +30,11 @@ export function buildAdminOverview(input: {
     activeBrokers: input.buyers.filter((buyer) => buyer.status === "active").length,
     identitiesAwaitingVerification: input.sendingIdentities.filter((identity) => identity.status === "pending").length,
     invitedMembers: input.members.filter((member) => member.status === "invited").length,
+    activeByWorkspace: {
+      individual: input.buyers.filter((buyer) => buyer.status === "active" && buyer.workspaceType === "individual").length,
+      practice: input.buyers.filter((buyer) => buyer.status === "active" && buyer.workspaceType === "practice").length,
+      brokerage: input.buyers.filter((buyer) => buyer.status === "active" && (buyer.workspaceType ?? "brokerage") === "brokerage").length,
+    },
     liveLeads: liveLeads.length,
     unassignedLeads: liveLeads.filter(input.isUnassigned).length,
   };

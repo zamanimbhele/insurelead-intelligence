@@ -69,7 +69,7 @@ export default async function DemoToolsPage({
           <h2 className="text-lg font-semibold text-slate-900">Demo accounts, one per role</h2>
         </div>
         <p className="mt-1 max-w-3xl text-sm text-slate-500">
-          Demo mode has no real sign-in, so these 6 seeded, 100% synthetic accounts stand in for the roles the brief
+          Demo mode has no real sign-in, so these seeded, 100% synthetic accounts stand in for the roles the brief
           defines (section 4). Switch between them from the &quot;Viewing as&quot; control in the sidebar to see exactly
           what each role can and cannot do - the switch changes what navigation items, edit controls, and pages are
           reachable, the same role checks Supabase (production-pilot) mode enforces for real.
@@ -86,10 +86,10 @@ export default async function DemoToolsPage({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {DEMO_ROLE_ACCOUNTS.map((account) => (
-                <tr key={account.role} className={account.role === identity.role ? "bg-primary-50/60" : undefined}>
+                <tr key={account.key} className={account.key === identity.demoAccountKey ? "bg-primary-50/60" : undefined}>
                   <td className="py-3 pr-4 align-top font-semibold text-slate-900">
                     {account.label}
-                    {account.role === identity.role && (
+                    {account.key === identity.demoAccountKey && (
                       <span className="ml-2 rounded-full bg-primary-100 px-2 py-0.5 text-[11px] font-medium text-primary-700">
                         Current
                       </span>

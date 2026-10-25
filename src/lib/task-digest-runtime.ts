@@ -41,7 +41,7 @@ function demoDigestRows(now: Date): TaskDigestRow[] {
       const lead = getLeadById(task.leadId);
       if (!lead || lead.deletedAt) continue;
       rows.push({
-        profileId: `demo:${account.role}`,
+        profileId: `demo:${account.key}`,
         email: account.email,
         displayName: account.displayName,
         taskId: task.id,
