@@ -6,7 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 // Single landing route for every Supabase email link. Two link formats
 // are accepted:
 //
-// 1. token_hash links from the custom templates in docs/SUPABASE_SETUP.md:
+// 1. token_hash links from the custom templates in docs/SUPABASE_SETUP.md,
+//    handed to /auth/continue (see below) which verifies them on a button press:
 //      type=signup | email_change -> /login?message=email_confirmed
 //      type=recovery              -> /reset-password (choose a new password)
 //      type=invite                -> /reset-password?flow=invite
@@ -17,10 +18,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 //
 // Either way the session cookie set here is what lets /reset-password
 // call updateUser() for the right account.
-const PASSWORD_FLOWS: Partial<Record<EmailOtpType, string>> = {
-  recovery: "/reset-password",
-  invite: "/reset-password?flow=invite",
-};
 
 function to(request: NextRequest, path: string) {
   return NextResponse.redirect(new URL(path, request.url));
@@ -34,11 +31,16 @@ export async function GET(request: NextRequest) {
   const next = safeAuthNext(params.get("next"));
   const supabase = await createSupabaseServerClient();
 
-  if (tokenHash && type && supabase) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return to(request, PASSWORD_FLOWS[type] ?? "/login?message=email_confirmed");
-    if (type in PASSWORD_FLOWS) return to(request, "/forgot-password?error=link_expired");
-    return to(request, "/login?error=confirmation_failed");
+  // token_hash links are NOT verified on this GET. Mail security scanners
+  // (Microsoft Safe Links, Mimecast and others) open every link in an
+  // email to check it, which used up the one-time token before the person
+  // clicked. The link now opens /auth/continue, and the token is only used
+  // when the person presses its button (a POST no scanner sends).
+  if (tokenHash && type) {
+    const url = new URL("/auth/continue", request.url);
+    url.searchParams.set("token_hash", tokenHash);
+    url.searchParams.set("type", type);
+    return NextResponse.redirect(url);
   }
 
   if (code && supabase) {

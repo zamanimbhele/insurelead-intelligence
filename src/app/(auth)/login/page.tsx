@@ -7,7 +7,7 @@ const ERRORS: Record<string, string> = {
   configuration: "Supabase authentication is not configured for this environment.",
   missing_credentials: "Enter both your email address and password.",
   invalid_credentials: "The email address or password is incorrect.",
-  confirmation_failed: "This confirmation link is invalid or has expired. Register again or request a new confirmation email.",
+  confirmation_failed: "This link has already been used or has expired. If you already confirmed your email, sign in below; otherwise register again for a new link.",
 };
 
 const MESSAGES: Record<string, string> = {
