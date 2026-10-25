@@ -378,6 +378,15 @@ export const LEGAL_TEXT_DOCUMENT_DEFINITIONS: {
     defaultContent:
       "[Configure retention periods per data category - to be set by Compliance Admin before go-live.] The platform-wide lead retention threshold itself is configured separately under Compliance > Retention threshold.",
   },
+  {
+    key: "representative_disclosure",
+    title: "Representative Disclosure (campaign footer)",
+    shownOn: "Footer of campaign emails sent under a personal brand (individual advisors plan, phase 4). Not shown anywhere yet.",
+    defaultContent: [
+      "PLACEHOLDER - confirm this wording with a compliance officer before go-live.",
+      "{{advisor_name}} is a {{capacity}} of {{fsp_name}}, an authorised financial services provider (FSP {{fsp_number}}). Products are provided by the relevant product suppliers. This message is not financial advice; advice is given only after a needs analysis.",
+    ].join("\n\n"),
+  },
 ];
 
 // --- Demo-mode role switcher ---------------------------------------------

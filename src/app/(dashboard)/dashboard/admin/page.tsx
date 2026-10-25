@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Inbox, MailCheck, ShieldCheck, Store, UserPlus } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Inbox, MailCheck, ShieldCheck, Store, UserPlus } from "lucide-react";
 import { getDashboardIdentity } from "@/lib/auth";
 import { buildAdminOverview } from "@/lib/admin-overview";
 import { getCampaignDeliveryStatus } from "@/lib/campaign-delivery";
@@ -7,6 +7,8 @@ import { getResendWebhookStatus } from "@/lib/campaign-webhooks";
 import { getActiveAllocationLeadIds, getDashboardBrokerDirectory, getDashboardMarketplaceData, isLeadUnassigned } from "@/lib/dashboard-data";
 import { isPlatformStaffRole, portalBadge } from "@/lib/portal";
 import { getTransactionalEmailStatus } from "@/lib/transactional-email";
+import { listAuthorisations } from "@/lib/authorisation-service";
+import { expiringSoon } from "@/lib/authorisations";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin home | InsureLead Intelligence" };
@@ -60,11 +62,14 @@ export default async function AdminHomePage() {
   // Each source is read with the viewer's own permissions; if one is not
   // readable for this role, its counts show as zero rather than failing
   // the whole page.
-  const [directory, marketplace, assignedLeadIds] = await Promise.all([
+  const [directory, marketplace, assignedLeadIds, authorisations] = await Promise.all([
     getDashboardBrokerDirectory().catch(() => ({ buyers: [], sendingIdentities: [], members: [] })),
     getDashboardMarketplaceData().catch(() => ({ leads: [] })),
     getActiveAllocationLeadIds().catch(() => new Set<string>()),
+    listAuthorisations(identity).catch(() => []),
   ]);
+  const pendingAuthorisations = authorisations.filter((item) => item.status === "pending").length;
+  const expiringAuthorisations = expiringSoon(authorisations, 30).length;
   const overview = buildAdminOverview({
     ...directory,
     leads: marketplace.leads,
@@ -73,6 +78,11 @@ export default async function AdminHomePage() {
 
   const cards = [
     { label: "Brokers awaiting review", value: overview.brokersAwaitingReview, href: "/dashboard/brokers", icon: Building2, attention: overview.brokersAwaitingReview > 0 },
+    {
+      label: "Authorisations to review", value: pendingAuthorisations, href: "/dashboard/authorisations", icon: BadgeCheck,
+      attention: pendingAuthorisations > 0 || expiringAuthorisations > 0,
+      detail: expiringAuthorisations > 0 ? `${expiringAuthorisations} expiring within 30 days` : undefined,
+    },
     { label: "Sending identities to verify", value: overview.identitiesAwaitingVerification, href: "/dashboard/brokers", icon: MailCheck, attention: overview.identitiesAwaitingVerification > 0 },
     { label: "Invited members not yet active", value: overview.invitedMembers, href: "/dashboard/brokers", icon: UserPlus, attention: false },
     {

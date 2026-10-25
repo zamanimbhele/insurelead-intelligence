@@ -18,6 +18,7 @@ let memo: { catalogue: ProductCatalogue; expiresAt: number } | null = null;
 type CategoryRow = {
   id: string; name: string; description: string | null; required_authorisation: string;
   status: ProductStatus; display_order: number;
+  accepted_evidence?: string[] | null; evidence_guidance?: string | null; guidance_is_placeholder?: boolean | null;
 };
 type ProductRow = {
   id: string; name: string; description: string | null; applicant_types: string[] | null;
@@ -33,6 +34,9 @@ export function mapCatalogueRows(categories: CategoryRow[], products: ProductRow
       requiredAuthorisation: row.required_authorisation,
       status: row.status,
       displayOrder: row.display_order,
+      acceptedEvidence: row.accepted_evidence ?? [],
+      evidenceGuidance: row.evidence_guidance ?? "",
+      guidanceIsPlaceholder: row.guidance_is_placeholder ?? true,
     })),
     products: products.map((row) => ({
       value: row.id,
@@ -50,7 +54,7 @@ async function readCatalogue(): Promise<ProductCatalogue> {
   const client = createSupabaseAdminClient();
   if (!client) throw new Error("The product catalogue requires the server-only Supabase secret key");
   const [categories, products] = await Promise.all([
-    client.from("product_categories").select("id, name, description, required_authorisation, status, display_order"),
+    client.from("product_categories").select("id, name, description, required_authorisation, status, display_order, accepted_evidence, evidence_guidance, guidance_is_placeholder"),
     client.from("insurance_products").select("id, name, description, applicant_types, category_id, status, display_order"),
   ]);
   if (categories.error) throw new Error(`Read product categories: ${categories.error.message}`);

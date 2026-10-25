@@ -8,13 +8,16 @@ import { TaskDigestCard } from "@/components/dashboard/TaskDigestCard";
 import { getTaskDigestPreview } from "@/lib/task-digest-runtime";
 import { formatDueSast } from "@/lib/task-digest";
 import { workspaceTerms } from "@/lib/workspace";
+import { AuthorisationsSection } from "@/components/dashboard/AuthorisationsSection";
+import { currentProfileId, listAuthorisations } from "@/lib/authorisation-service";
 
 export const dynamic = "force-dynamic";
 
 
 export default async function BrokerProfilePage() {
   const identity = await getDashboardIdentity();
-  const productLabels = productLabelMap(await getProductCatalogue());
+  const catalogue = await getProductCatalogue();
+  const productLabels = productLabelMap(catalogue);
   const terms = workspaceTerms(identity.workspaceType);
   if (identity.mode === "supabase" && !isBrokerUser(identity)) {
     return (
@@ -25,9 +28,10 @@ export default async function BrokerProfilePage() {
     );
   }
 
-  const [workspace, digestPreview] = await Promise.all([
+  const [workspace, digestPreview, authorisations] = await Promise.all([
     getDashboardBrokerWorkspace(identity),
     getTaskDigestPreview(identity),
+    listAuthorisations(identity).catch(() => []),
   ]);
   const buyer = workspace?.buyer;
   const digestItems = [...(digestPreview.digest?.overdue ?? []), ...(digestPreview.digest?.dueToday ?? [])];
@@ -68,6 +72,16 @@ export default async function BrokerProfilePage() {
           <div><dt className="text-slate-400">Campaigns</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.acceptsCampaigns ? "Enabled" : "Disabled"}</dd></div>
         </dl>
       </section>
+
+      <AuthorisationsSection
+        catalogue={catalogue}
+        authorisations={authorisations}
+        profileId={currentProfileId(identity)}
+        organisationId={buyer.id}
+        organisationNoun={terms.organisationNoun}
+        canSubmit={isBrokerUser(identity)}
+        showTeam={terms.showTeam}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-slate-200 bg-white p-6">

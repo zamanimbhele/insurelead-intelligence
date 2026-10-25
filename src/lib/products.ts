@@ -19,6 +19,12 @@ export type ProductCategory = {
   requiredAuthorisation: string;
   status: ProductStatus;
   displayOrder: number;
+  // Phase 3: evidence a person may give to be authorised for this
+  // category, and guidance shown with the form. The guidance is demo
+  // placeholder text until a compliance officer confirms it.
+  acceptedEvidence: string[];
+  evidenceGuidance: string;
+  guidanceIsPlaceholder: boolean;
 };
 
 export type CatalogueProduct = {
@@ -41,11 +47,16 @@ export const PRODUCT_ID_PATTERN = /^[a-z][a-z0-9_]{1,63}$/;
 
 export const FALLBACK_CATALOGUE: ProductCatalogue = {
   categories: [
-    { id: "short_term_insurance", name: "Short-term insurance", description: "Cover for vehicles, property, businesses, travel and accidents.", requiredAuthorisation: "fais_short_term", status: "active", displayOrder: 10 },
-    { id: "long_term_insurance", name: "Life and funeral cover", description: "Life, funeral and other long-term cover.", requiredAuthorisation: "fais_long_term", status: "active", displayOrder: 20 },
-    { id: "investments", name: "Investments and retirement", description: "Investment and retirement planning advice.", requiredAuthorisation: "fais_investments", status: "hidden", displayOrder: 30 },
-    { id: "medical_schemes", name: "Medical aid", description: "Medical scheme membership and gap cover.", requiredAuthorisation: "cms_accreditation", status: "hidden", displayOrder: 40 },
-    { id: "banking_credit", name: "Banking and credit", description: "Banking and credit products.", requiredAuthorisation: "banking_or_credit_mandate", status: "hidden", displayOrder: 50 },
+    { id: "short_term_insurance", name: "Short-term insurance", description: "Cover for vehicles, property, businesses, travel and accidents.", requiredAuthorisation: "fais_short_term", status: "active", displayOrder: 10,
+      acceptedEvidence: ["fsp_licence", "representative_appointment"], evidenceGuidance: "Your own FSP licence number if you are licensed for short-term insurance, or the name and FSP number of the financial services provider that appointed you as its representative. Representatives should appear on the FSCA register under that FSP.", guidanceIsPlaceholder: true },
+    { id: "long_term_insurance", name: "Life and funeral cover", description: "Life, funeral and other long-term cover.", requiredAuthorisation: "fais_long_term", status: "active", displayOrder: 20,
+      acceptedEvidence: ["fsp_licence", "representative_appointment"], evidenceGuidance: "Your own FSP licence number if you are licensed for long-term insurance (life, funeral and disability cover), or the name and FSP number of the financial services provider that appointed you as its representative.", guidanceIsPlaceholder: true },
+    { id: "investments", name: "Investments and retirement", description: "Investment and retirement planning advice.", requiredAuthorisation: "fais_investments", status: "hidden", displayOrder: 30,
+      acceptedEvidence: ["fsp_licence", "representative_appointment"], evidenceGuidance: "Your FSP licence number, or the FSP you represent, showing authorisation for investment products such as unit trusts and retirement annuities. Investment categories usually carry extra experience and qualification requirements.", guidanceIsPlaceholder: true },
+    { id: "medical_schemes", name: "Medical aid", description: "Medical scheme membership and gap cover.", requiredAuthorisation: "cms_accreditation", status: "hidden", displayOrder: 40,
+      acceptedEvidence: ["cms_accreditation"], evidenceGuidance: "Your broker accreditation number from the Council for Medical Schemes, and the FSP you act for. Medical aid also requires FAIS authorisation for health service benefits.", guidanceIsPlaceholder: true },
+    { id: "banking_credit", name: "Banking and credit", description: "Banking and credit products.", requiredAuthorisation: "banking_or_credit_mandate", status: "hidden", displayOrder: 50,
+      acceptedEvidence: ["ncr_registration", "bank_mandate"], evidenceGuidance: "Your National Credit Regulator registration number, or the bank or credit provider that mandated you to offer its products.", guidanceIsPlaceholder: true },
   ],
   products: [
     { value: "motor_insurance", label: "Motor Insurance", description: "Cover options for personal vehicles.", applicantTypes: ["individual"], categoryId: "short_term_insurance", status: "active", displayOrder: 10 },

@@ -3,6 +3,9 @@ import path from "path";
 import { appendAuditLog, getConsentByLeadId, getLeadById } from "./demo-store.ts";
 import { DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT, DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT } from "./campaign-quota.ts";
 import { normaliseWorkspaceType } from "./workspace.ts";
+import { authorisedProductIds } from "./authorisations.ts";
+import { getDemoAuthorisations } from "./demo-authorisations.ts";
+import { FALLBACK_CATALOGUE } from "./products.ts";
 import type {
   BrokerSendingIdentity,
   Buyer,
@@ -23,6 +26,7 @@ function readJson<T>(file: string, fallback: T): T {
 }
 function writeJson(file: string, value: unknown) { fs.writeFileSync(file, JSON.stringify(value, null, 2)); }
 export function getBuyers(): Buyer[] {
+  const authorisations = getDemoAuthorisations();
   return readJson<Buyer[]>(BUYERS_FILE, []).map((buyer) => ({
     ...buyer,
     workspaceType: normaliseWorkspaceType(buyer.workspaceType),
@@ -35,6 +39,7 @@ export function getBuyers(): Buyer[] {
     acceptsCampaigns: buyer.acceptsCampaigns ?? false,
     campaignDailySendLimit: buyer.campaignDailySendLimit ?? DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT,
     campaignMonthlySendLimit: buyer.campaignMonthlySendLimit ?? DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT,
+    authorisedProducts: authorisedProductIds(FALLBACK_CATALOGUE, authorisations, buyer.id),
   }));
 }
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }
@@ -124,6 +129,9 @@ export function getBuyerMatchDecision(
     && !lead.insuranceProducts.some((product) => buyer.insuranceProducts.includes(product))
   ) {
     reasons.push("No selected insurance product matches the approved appetite");
+  }
+  if (buyer.authorisedProducts && !lead.insuranceProducts.some((product) => buyer.authorisedProducts!.includes(product))) {
+    reasons.push("Broker is not authorised for the lead's products");
   }
 
   const startOfDay = new Date(now);
@@ -229,6 +237,9 @@ export function updateBuyerPreferences(
   const index = buyers.findIndex((buyer) => buyer.id === organisationId);
   if (index === -1) throw new Error("Broker organisation not found");
   const previous = getBuyers()[index];
+  if (previous.authorisedProducts && changes.insuranceProducts.some((product) => !previous.authorisedProducts!.includes(product))) {
+    throw new Error("The broker is not authorised for one or more of these products");
+  }
   const definedChanges = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
   buyers[index] = { ...buyers[index], ...definedChanges };
   writeJson(BUYERS_FILE, buyers);

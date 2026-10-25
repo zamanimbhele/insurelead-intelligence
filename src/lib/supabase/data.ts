@@ -454,6 +454,15 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
     ((preferenceResult.data ?? []) as PreferenceRow[]).map((row) => [row.organisation_id, row]),
   );
 
+  // What each organisation may sell (phase 3). Optional: before migration
+  // 202610250003 runs this is unavailable and the database alone decides.
+  const authorised = new Map<string, string[] | undefined>(await Promise.all(
+    ((organisationResult.data ?? []) as OrganisationRow[]).map(async (organisation) => {
+      const { data, error } = await client.rpc("organisation_authorised_products", { p_organisation_id: organisation.id });
+      return [organisation.id, error ? undefined : (data as string[] | null) ?? []] as const;
+    }),
+  ));
+
   return ((organisationResult.data ?? []) as OrganisationRow[]).map((organisation) => {
     const preference = preferences.get(organisation.id);
     return {
@@ -479,6 +488,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       campaignDailySendLimit: preference?.campaign_daily_send_limit ?? DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT,
       campaignMonthlySendLimit: preference?.campaign_monthly_send_limit ?? DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT,
       contactEmail: organisation.contact_email,
+      authorisedProducts: authorised.get(organisation.id),
     };
   });
 }
