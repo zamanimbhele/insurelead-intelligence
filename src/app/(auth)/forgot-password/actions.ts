@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { guardPublicForm, HONEYPOT_FIELD } from "@/lib/security/public-forms";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { AUTH_CONFIRM_PATH, appOrigin } from "@/lib/auth-links";
@@ -21,6 +22,25 @@ export async function requestPasswordReset(formData: FormData) {
 
   const parsed = emailSchema.safeParse(formData.get("email"));
   if (!parsed.success) redirect(`${formPath}error=invalid_email`);
+
+  // Bot protection runs before Supabase sends a reset email.
+  let guard: Awaited<ReturnType<typeof guardPublicForm>>;
+  try {
+    guard = await guardPublicForm({
+      kind: "password_reset",
+      headers: await headers(),
+      email: parsed.data,
+      honeypot: String(formData.get(HONEYPOT_FIELD) ?? ""),
+      captchaToken: String(formData.get("captchaToken") ?? ""),
+    });
+  } catch (error) {
+    console.error("[auth] reset protection unavailable", error instanceof Error ? error.message : error);
+    redirect(`${formPath}error=unavailable`);
+  }
+  // Same answer as a real request, so a bot learns nothing; nothing is sent.
+  if (guard === "honeypot") redirect(`${signInPath}?message=reset_requested`);
+  if (guard === "rate_limited") redirect(`${formPath}error=rate_limited`);
+  if (guard === "captcha_failed") redirect(`${formPath}error=verification_failed`);
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) redirect(`${signInPath}?error=configuration`);

@@ -29,10 +29,13 @@ export function TurnstileWidget({
   siteKey,
   onToken,
   resetSignal,
+  action = "lead_consultation",
 }: {
   siteKey: string;
   onToken: (token: string | null) => void;
   resetSignal: number;
+  // Must match what the server verifies (captcha.ts CaptchaAction).
+  action?: "lead_consultation" | "account_signup" | "password_reset";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -41,13 +44,13 @@ export function TurnstileWidget({
     if (!containerRef.current || !window.turnstile || widgetIdRef.current) return;
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
-      action: "lead_consultation",
+      action,
       theme: "auto",
       callback: (token) => onToken(token),
       "expired-callback": () => onToken(null),
       "error-callback": () => onToken(null),
     });
-  }, [onToken, siteKey]);
+  }, [action, onToken, siteKey]);
 
   useEffect(() => {
     renderWidget();
