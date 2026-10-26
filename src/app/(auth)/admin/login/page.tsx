@@ -10,6 +10,8 @@ const ERRORS: Record<string, string> = {
   configuration: "Supabase authentication is not configured for this environment.",
   missing_credentials: "Enter both your email address and password.",
   invalid_credentials: "The email address or password is incorrect.",
+  rate_limited: "Too many sign-in attempts. Wait 15 minutes and try again.",
+  unavailable: "Sign-in is temporarily unavailable. Please try again shortly.",
   confirmation_failed: "That link is invalid or has expired. Request a new one.",
   not_staff: "This sign-in is for InsureLead platform administrators only. Brokers sign in at /login.",
 };
