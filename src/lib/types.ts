@@ -331,6 +331,12 @@ export interface BrokerSendingIdentity {
   status: SendingIdentityStatus;
   isDefault: boolean;
   createdAt: string;
+  // Phase 5: "custom" = the broker's own verified domain; "platform" =
+  // "<Name> via InsureLead" on the platform's sending domain.
+  kind: "custom" | "platform";
+  // Why it is disabled (an automatic reputation pause, or an admin).
+  statusReason?: string;
+  pausedAt?: string;
 }
 
 export interface Campaign {

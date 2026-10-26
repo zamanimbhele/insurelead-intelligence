@@ -133,6 +133,16 @@ export async function listRuntimeAllocations() {
   return getDataMode() === "demo" ? getAllocations() : fetchSupabaseAllocations(requireAdminClient());
 }
 
+// Phase 5: automatic reputation pause (pause_sending_identity()).
+export async function pauseRuntimeSendingIdentity(identityId: string, reason: string) {
+  if (getDataMode() === "demo") {
+    const { setDemoSendingIdentityStatus } = await import("./marketplace-store.ts");
+    return setDemoSendingIdentityStatus(identityId, "disabled", reason, "reputation_monitor");
+  }
+  const { error } = await requireAdminClient().rpc("pause_sending_identity", { p_identity_id: identityId, p_reason: reason });
+  if (error) throw new Error(`Unable to pause sending identity: ${error.message}`);
+}
+
 export async function listRuntimeSendingIdentities(organisationId?: string) {
   return getDataMode() === "demo"
     ? getSendingIdentities(organisationId)

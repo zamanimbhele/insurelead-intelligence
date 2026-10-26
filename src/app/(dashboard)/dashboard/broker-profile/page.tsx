@@ -11,7 +11,9 @@ import { workspaceTerms } from "@/lib/workspace";
 import { AuthorisationsSection } from "@/components/dashboard/AuthorisationsSection";
 import { BrandSettingsForm } from "@/components/dashboard/BrandSettingsForm";
 import { getDisclosureTemplate } from "@/lib/brand-runtime";
-import { COMPANY_BRAND } from "@/lib/brand";
+import { COMPANY_BRAND, campaignSenderName } from "@/lib/brand";
+import { PlatformSendingOffer } from "@/components/dashboard/PlatformSendingOffer";
+import { platformSendingDomain, warmUpDailyCap } from "@/lib/sender-reputation";
 import { currentProfileId, listAuthorisations } from "@/lib/authorisation-service";
 
 export const dynamic = "force-dynamic";
@@ -114,13 +116,32 @@ export default async function BrokerProfilePage() {
           <p className="mt-1 text-xs text-slate-400">Only verified identities can be used when campaign delivery is enabled.</p>
           <div className="mt-4 space-y-3">
             {workspace.sendingIdentities.length === 0 ? <p className="text-sm text-amber-700">No identity configured.</p> : workspace.sendingIdentities.map((item) => (
-              <div key={item.id} className="rounded-lg border border-slate-200 p-4">
-                <div className="flex justify-between gap-3"><span className="text-sm font-medium text-slate-800">{item.fromName}</span><span className="text-xs capitalize text-slate-500">{item.status}</span></div>
+              <div key={item.id} className="rounded-lg border border-slate-200 p-4" data-testid="sending-identity">
+                <div className="flex justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-800">{item.fromName}</span>
+                  <span className={`text-xs capitalize ${item.status === "verified" ? "text-emerald-700" : item.status === "disabled" ? "text-red-700" : "text-slate-500"}`}>
+                    {item.status === "disabled" && item.pausedAt ? "paused" : item.status}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm text-slate-600">{item.fromEmail}</p>
-                <p className="mt-1 text-xs text-slate-400">{item.domain}{item.isDefault ? " · default" : ""}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {item.kind === "platform" ? <span className="mr-1 rounded bg-primary-50 px-1.5 py-0.5 font-semibold text-primary-700">InsureLead sending</span> : null}
+                  {item.domain}{item.isDefault ? " · default" : ""}{item.replyToEmail ? ` · replies to ${item.replyToEmail}` : ""}
+                </p>
+                {item.kind === "platform" && item.status === "verified" && warmUpDailyCap(item.createdAt) !== undefined && (
+                  <p className="mt-1 text-xs text-slate-500">New sender: up to {warmUpDailyCap(item.createdAt)} emails a day for now, rising over the first 30 days.</p>
+                )}
+                {item.statusReason && <p className="mt-1 text-xs text-red-700" data-testid="sending-identity-reason">{item.statusReason}</p>}
               </div>
             ))}
           </div>
+          {canCreateSendingIdentity(identity) && !workspace.sendingIdentities.some((item) => item.kind === "platform") ? (
+            <PlatformSendingOffer
+              fromName={campaignSenderName(buyer.organisationName, buyer.brand)}
+              replyTo={identity.email}
+              domain={platformSendingDomain(process.env.INSURELEAD_PLATFORM_SENDING_DOMAIN, identity.mode === "demo")}
+            />
+          ) : null}
           {canCreateSendingIdentity(identity) ? <SendingIdentityForm /> : null}
         </section>
       </div>

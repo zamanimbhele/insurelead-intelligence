@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, Inbox, MailCheck, ShieldCheck, Store, UserPlus } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Inbox, MailCheck, MailWarning, ShieldCheck, Store, UserPlus } from "lucide-react";
 import { getDashboardIdentity } from "@/lib/auth";
 import { buildAdminOverview } from "@/lib/admin-overview";
 import { getCampaignDeliveryStatus } from "@/lib/campaign-delivery";
@@ -69,6 +69,7 @@ export default async function AdminHomePage() {
     listAuthorisations(identity).catch(() => []),
   ]);
   const pendingAuthorisations = authorisations.filter((item) => item.status === "pending").length;
+  const pausedSenders = directory.sendingIdentities.filter((item) => item.status === "disabled" && item.statusReason?.startsWith("Paused automatically")).length;
   const expiringAuthorisations = expiringSoon(authorisations, 30).length;
   const overview = buildAdminOverview({
     ...directory,
@@ -83,6 +84,7 @@ export default async function AdminHomePage() {
       attention: pendingAuthorisations > 0 || expiringAuthorisations > 0,
       detail: expiringAuthorisations > 0 ? `${expiringAuthorisations} expiring within 30 days` : undefined,
     },
+    { label: "Senders paused for bounces or complaints", value: pausedSenders, href: "/dashboard/brokers", icon: MailWarning, attention: pausedSenders > 0 },
     { label: "Sending identities to verify", value: overview.identitiesAwaitingVerification, href: "/dashboard/brokers", icon: MailCheck, attention: overview.identitiesAwaitingVerification > 0 },
     { label: "Invited members not yet active", value: overview.invitedMembers, href: "/dashboard/brokers", icon: UserPlus, attention: false },
     {

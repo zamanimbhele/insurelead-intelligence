@@ -1,3 +1,4 @@
+import { getRuntimeSenderReputation } from "@/lib/campaign-runtime";
 import Link from "next/link";
 import { WorkspaceTypeControl } from "@/components/dashboard/WorkspaceTypeControl";
 import { WORKSPACE_TYPES, WORKSPACE_TYPE_LABELS, type WorkspaceType } from "@/lib/workspace";
@@ -30,6 +31,9 @@ export default async function BrokerDirectoryPage({ searchParams }: { searchPara
   const canManage = isPlatformAdmin(identity);
   const [{ buyers, sendingIdentities, members }, catalogue] = await Promise.all([getDashboardBrokerDirectory(), getProductCatalogue()]);
   const productLabels = productLabelMap(catalogue);
+  // Phase 5: bounce and complaint rates for each sender (30 days).
+  const reputation = new Map(await Promise.all(sendingIdentities.map(async (item) =>
+    [item.id, await getRuntimeSenderReputation(item).catch(() => undefined)] as const)));
   const productOptions = activeProducts(catalogue).map(({ value, label }) => ({ value, label }));
   const categoryNames = (productIds: string[]) => catalogue.categories
     .filter((category) => catalogue.products.some((product) => product.categoryId === category.id && productIds.includes(product.value)))
@@ -165,8 +169,17 @@ export default async function BrokerDirectoryPage({ searchParams }: { searchPara
                 {identities.length === 0 ? (
                   <p className="mt-2 text-sm text-amber-700">No sending identity configured</p>
                 ) : identities.map((sendingIdentity) => (
-                  <div key={sendingIdentity.id} className="mt-2 flex items-center justify-between gap-3 text-sm">
-                    <span className="text-slate-600">{sendingIdentity.fromEmail}</span>
+                  <div key={sendingIdentity.id} className="mt-2 flex items-start justify-between gap-3 text-sm" data-testid="directory-sending-identity">
+                    <span className="text-slate-600">
+                      <span>{sendingIdentity.fromEmail}</span>
+                      {sendingIdentity.kind === "platform" && <span className="ml-1 rounded bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary-700">InsureLead sending</span>}
+                      {reputation.get(sendingIdentity.id) && (
+                        <span className="block text-xs text-slate-400">
+                          Last 30 days: {reputation.get(sendingIdentity.id)!.sent} sent · {(reputation.get(sendingIdentity.id)!.bounceRate * 100).toFixed(1)}% bounced · {reputation.get(sendingIdentity.id)!.complained} complaints
+                        </span>
+                      )}
+                      {sendingIdentity.statusReason && <span className="block text-xs text-red-700">{sendingIdentity.statusReason}</span>}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className={sendingIdentity.status === "verified" ? "text-emerald-700" : "text-amber-700"}>
                         {sendingIdentity.status}

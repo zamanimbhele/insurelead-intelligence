@@ -8,6 +8,7 @@ import { getCampaignDeliveryStatus } from "@/lib/campaign-delivery";
 import { getCampaignUnsubscribeStatus } from "@/lib/campaign-unsubscribe";
 import { getResendWebhookStatus } from "@/lib/campaign-webhooks";
 import { getTransactionalEmailStatus } from "@/lib/transactional-email";
+import { platformSendingDomain } from "@/lib/sender-reputation";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,9 @@ export async function GET() {
         // Staff notification email (daily task digest): "configured",
         // "missing-api-key" or "missing-from". Informational only.
         notificationEmail: getTransactionalEmailStatus(),
+        // "<Name> via InsureLead" sending: the platform domain set in
+        // INSURELEAD_PLATFORM_SENDING_DOMAIN. Informational only.
+        platformSending: platformSendingDomain(process.env.INSURELEAD_PLATFORM_SENDING_DOMAIN, mode === "demo") ? "configured" : "missing-domain",
       },
     },
     {
