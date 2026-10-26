@@ -9,6 +9,7 @@ import { verifyLeadCaptcha } from "@/lib/security/captcha";
 import { PublicSubmissionUnavailableError } from "@/lib/security/errors";
 import { checkLeadSubmissionRateLimit, getClientIp } from "@/lib/security/rate-limit";
 import { notifyLeadCreated } from "@/lib/notifications";
+import { parseLeadTracking } from "@/lib/validation/leadTracking";
 
 const HIGH_PRIORITY_INDUSTRIES = new Set([
   "Construction and Contracting",
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+    const tracking = parseLeadTracking(body);
 
     // Honeypot check - if the hidden field was filled, silently reject like a success.
     if (data.website_url && data.website_url.length > 0) {
@@ -84,8 +86,8 @@ export async function POST(req: NextRequest) {
       highPriorityIndustry: HIGH_PRIORITY_INDUSTRIES.has(data.industry ?? ""),
       employeeBand: data.employeeBand,
       turnoverBand: data.turnoverBand,
-      highIntentCampaignSource: HIGH_INTENT_CAMPAIGNS.has(body?.utm?.campaign ?? ""),
-      isDirectReferral: (body?.utm?.source ?? "") === "referral",
+      highIntentCampaignSource: HIGH_INTENT_CAMPAIGNS.has(tracking.utm.campaign ?? ""),
+      isDirectReferral: tracking.utm.source === "referral",
       isDuplicate,
       doNotContact: false,
       hasInvalidContactDetails: false,
@@ -121,9 +123,9 @@ export async function POST(req: NextRequest) {
       score: scoring.score,
       scoreBand: scoring.band,
       scoreExplanation: scoring.explanation,
-      campaignSource: body?.utm?.campaign,
-      utm: body?.utm ?? {},
-      referrer: body?.referrer,
+      campaignSource: tracking.utm.campaign,
+      utm: tracking.utm,
+      referrer: tracking.referrer,
       doNotContact: false,
       assignedBroker: undefined,
     };
@@ -137,7 +139,7 @@ export async function POST(req: NextRequest) {
       accuracyConfirmed: data.accuracyConfirmed,
       nonBindingAcknowledged: data.nonBindingAcknowledged,
       consentWordingVersion: await resolveConsentWordingVersion(),
-      sourceUrl: body?.sourceUrl ?? "",
+      sourceUrl: tracking.sourceUrl ?? "",
     };
 
     const leadId = await captureRuntimeLead(lead, consent);

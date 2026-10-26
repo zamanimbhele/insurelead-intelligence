@@ -2,6 +2,12 @@ export type InsureLeadDataMode = "demo" | "supabase";
 
 export function getDataMode(): InsureLeadDataMode {
   const configuredMode = process.env.INSURELEAD_DATA_MODE;
+  // Demo mode signs everyone in as a demo administrator. A production
+  // deployment must ask for it explicitly, never fall into it because the
+  // variable is missing.
+  if (!configuredMode && process.env.VERCEL_ENV === "production") {
+    throw new Error("INSURELEAD_DATA_MODE must be set in production");
+  }
   if (!configuredMode || configuredMode === "demo") return "demo";
   if (configuredMode === "supabase") return "supabase";
   throw new Error("INSURELEAD_DATA_MODE must be either 'demo' or 'supabase'");

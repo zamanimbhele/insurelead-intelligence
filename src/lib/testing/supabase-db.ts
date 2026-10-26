@@ -6,10 +6,18 @@
 //
 // Acting as a user: `await asUser(db, profileId)` makes auth.uid() return
 // that id for the following statements; `asService(db)` sets the
-// service_role claim. Row-level security is NOT applied (PGlite runs as
-// the owner), so tests of policies call the policy's helper functions or
-// the SECURITY DEFINER functions, which is where this codebase puts its
-// rules.
+// service_role claim. Both keep running as the table owner, so row-level
+// security is NOT applied: use them to set up data and to call SECURITY
+// DEFINER functions.
+//
+// To test what a real client can do, use `asClient(db, "anon")` or
+// `asClient(db, "authenticated", profileId)`: these switch to the same
+// database role PostgREST uses, so grants and RLS policies apply exactly
+// as they would for the public key. `asOwner(db)` switches back.
+//
+// The stand-in grants anon/authenticated/service_role the same default
+// privileges a Supabase project does (everything in public, unless a
+// migration revokes it), so a missing revoke shows up here too.
 import fs from "node:fs";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
@@ -17,8 +25,15 @@ import { PGlite } from "@electric-sql/pglite";
 const SUPABASE_STUB = `
   create role anon nologin;
   create role authenticated nologin;
-  create role service_role nologin;
+  create role service_role nologin bypassrls;
+  -- Supabase's default privileges: the API roles may use everything in
+  -- public unless a migration says otherwise.
+  grant usage on schema public to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   create schema if not exists auth;
+  grant usage on schema auth to anon, authenticated, service_role;
   create table auth.users (
     id uuid primary key,
     email text,
@@ -34,6 +49,7 @@ const SUPABASE_STUB = `
   create function auth.jwt() returns jsonb language sql stable as $$
     select jsonb_build_object('email', nullif(current_setting('test.email', true), ''), 'role', auth.role())
   $$;
+  grant execute on function auth.uid(), auth.role(), auth.jwt() to anon, authenticated, service_role;
   -- PGlite has no pgcrypto; the migrations only use digest(text, 'sha256').
   create schema if not exists extensions;
   create function public.digest(data text, algorithm text) returns bytea language sql immutable as $$
@@ -67,9 +83,21 @@ export async function createMigratedDatabase(): Promise<PGlite> {
 }
 
 export async function asUser(db: PGlite, userId: string | null, email = "") {
-  await db.exec(`select set_config('test.uid', '${userId ?? ""}', false), set_config('test.role', 'authenticated', false), set_config('test.email', '${email.replace(/'/g, "''")}', false)`);
+  await db.exec(`reset role; select set_config('test.uid', '${userId ?? ""}', false), set_config('test.role', 'authenticated', false), set_config('test.email', '${email.replace(/'/g, "''")}', false)`);
+}
+
+// Act as a real API client: grants and RLS apply.
+export async function asClient(db: PGlite, role: "anon" | "authenticated", userId: string | null = null, email = "") {
+  await db.exec("reset role");
+  await db.exec(`select set_config('test.uid', '${role === "anon" ? "" : userId ?? ""}', false), set_config('test.role', '${role}', false), set_config('test.email', '${email.replace(/'/g, "''")}', false)`);
+  await db.exec(`set role ${role}`);
+}
+
+// Back to the table owner (RLS not applied), keeping the current claims.
+export async function asOwner(db: PGlite) {
+  await db.exec("reset role");
 }
 
 export async function asService(db: PGlite) {
-  await db.exec(`select set_config('test.uid', '', false), set_config('test.role', 'service_role', false)`);
+  await db.exec(`reset role; select set_config('test.uid', '', false), set_config('test.role', 'service_role', false)`);
 }

@@ -5,6 +5,11 @@ import { getDataMode } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { attachSupabaseInvitedProfile, setSupabaseWorkspaceType } from "@/lib/supabase/data";
 import { inviteSupabaseAuthUser } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+
+// Each invitation sends an email from InsureLead's domain, so a workspace
+// may send only this many a day (checked before anything is sent).
+const TEAM_INVITE_LIMIT = { windowSeconds: 86_400, maximumRequests: 20 };
 
 // Broker self-service team invitations - the fix for the gap flagged
 // throughout BACKLOG.md/docs/BROKER_TENANCY_SETUP.md: a second team
@@ -56,6 +61,15 @@ export async function POST(request: NextRequest) {
 
   const client = await createSupabaseServerClient();
   if (!client) return NextResponse.json({ error: "Broker workspace is not configured" }, { status: 503 });
+
+  try {
+    const limit = await checkRateLimit(`team-invite-org:${identity.organisationId}`, TEAM_INVITE_LIMIT);
+    if (!limit.allowed) {
+      return NextResponse.json({ error: "This workspace has sent the maximum number of invitations for today" }, { status: 429 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Invitations are temporarily unavailable" }, { status: 503 });
+  }
 
   try {
     const userId = await inviteSupabaseAuthUser(parsed.data.email, parsed.data.displayName || undefined);
