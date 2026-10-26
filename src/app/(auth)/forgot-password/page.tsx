@@ -2,10 +2,15 @@ import Link from "next/link";
 import { KeyRound } from "lucide-react";
 import { requestPasswordReset } from "./actions";
 import { getDataMode } from "@/lib/supabase/config";
+import { FormSecurityFields } from "@/components/forms/FormSecurityFields";
+import { safeCaptchaSiteKey } from "@/lib/security/captcha";
 
 const ERRORS: Record<string, string> = {
   invalid_email: "Enter a valid email address.",
   link_expired: "That link is invalid or has expired. Request a new one below.",
+  rate_limited: "Too many reset requests. Please wait a while and try again.",
+  verification_failed: "Security verification failed. Please complete the check and try again.",
+  unavailable: "Password reset is temporarily unavailable. Please try again shortly.",
 };
 
 export const metadata = { title: "Reset your password | InsureLead Intelligence" };
@@ -42,6 +47,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
               Email address
               <input name="email" type="email" autoComplete="email" required className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2" />
             </label>
+            <FormSecurityFields siteKey={safeCaptchaSiteKey()} action="password_reset" />
             <button type="submit" className="w-full rounded-md bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">
               Send reset link
             </button>

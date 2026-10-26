@@ -30,7 +30,6 @@ export function getRateLimitStatus() {
 }
 
 export async function checkLeadSubmissionRateLimit(headers: Headers) {
-  const clientIp = getClientIp(headers);
   const windowSeconds = readBoundedInteger(
     process.env.LEAD_RATE_LIMIT_WINDOW_SECONDS,
     DEFAULT_WINDOW_SECONDS,
@@ -41,15 +40,23 @@ export async function checkLeadSubmissionRateLimit(headers: Headers) {
     DEFAULT_MAX_REQUESTS,
     100,
   );
+  return checkRateLimit(`lead-submission:${getClientIp(headers)}`, { windowSeconds, maximumRequests });
+}
+
+// Any public form: `key` names what is limited (for example
+// "signup-ip:203.0.113.5" or "reset-email:someone@example.com"). Keys are
+// stored only as an HMAC, never in the clear.
+export async function checkRateLimit(key: string, limits: { windowSeconds: number; maximumRequests: number }) {
+  const { windowSeconds, maximumRequests } = limits;
 
   if (getDataMode() === "demo") {
     const now = Date.now();
     const cutoff = now - windowSeconds * 1_000;
-    const timestamps = (demoSubmissionLog.get(clientIp) ?? []).filter(
+    const timestamps = (demoSubmissionLog.get(key) ?? []).filter(
       (timestamp) => timestamp > cutoff,
     );
     timestamps.push(now);
-    demoSubmissionLog.set(clientIp, timestamps);
+    demoSubmissionLog.set(key, timestamps);
     return { allowed: timestamps.length <= maximumRequests, retryAfterSeconds: windowSeconds };
   }
 
@@ -64,7 +71,7 @@ export async function checkLeadSubmissionRateLimit(headers: Headers) {
   }
 
   const keyHash = createHmac("sha256", secret)
-    .update(`lead-submission:${clientIp}`)
+    .update(key)
     .digest("hex");
   let allowed: boolean;
   try {

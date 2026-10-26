@@ -4,6 +4,8 @@ import { signUp } from "./actions";
 import { getDataMode, getSupabasePublicConfig } from "@/lib/supabase/config";
 import { PASSWORD_MIN_LENGTH } from "@/lib/validation/password";
 import { SIGNUP_CHOICES } from "@/lib/workspace";
+import { FormSecurityFields } from "@/components/forms/FormSecurityFields";
+import { safeCaptchaSiteKey } from "@/lib/security/captcha";
 
 const ERRORS: Record<string, string> = {
   configuration: "Broker registration is not configured for this environment.",
@@ -13,6 +15,9 @@ const ERRORS: Record<string, string> = {
   terms_required: "Accept the Terms and Privacy Notice to continue.",
   account_exists: "An account already exists for this email address. Try signing in instead.",
   signup_failed: "We could not create your account. Please try again or contact the platform team.",
+  rate_limited: "Too many sign-up attempts. Please wait a while and try again.",
+  verification_failed: "Security verification failed. Please complete the check and try again.",
+  unavailable: "Sign-up is temporarily unavailable. Please try again shortly.",
 };
 
 export const metadata = { title: "Create your account | InsureLead Intelligence" };
@@ -22,6 +27,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const configured = getDataMode() === "supabase" && Boolean(getSupabasePublicConfig());
   const error = params.error ? ERRORS[params.error] : null;
   const checkEmail = params.message === "check_email";
+  const turnstileSiteKey = safeCaptchaSiteKey();
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
@@ -92,6 +98,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
                 I agree to the <Link href="/terms" className="font-medium text-primary-700">Terms</Link> and acknowledge the <Link href="/privacy" className="font-medium text-primary-700">Privacy Notice</Link>.
               </span>
             </label>
+            <FormSecurityFields siteKey={turnstileSiteKey} action="account_signup" />
             <button type="submit" className="w-full rounded-md bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">
               Create account
             </button>
