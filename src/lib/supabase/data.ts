@@ -162,6 +162,9 @@ type SendingIdentityRow = {
   status: BrokerSendingIdentity["status"];
   is_default: boolean;
   created_at: string;
+  kind?: string | null;
+  status_reason?: string | null;
+  paused_at?: string | null;
 };
 
 type ApplicationSettingsRow = {
@@ -382,6 +385,9 @@ function mapSendingIdentity(row: SendingIdentityRow): BrokerSendingIdentity {
     status: row.status,
     isDefault: row.is_default,
     createdAt: row.created_at,
+    kind: row.kind === "platform" ? "platform" : "custom",
+    statusReason: optional(row.status_reason),
+    pausedAt: optional(row.paused_at),
   };
 }
 
@@ -531,7 +537,8 @@ export async function fetchSupabaseSendingIdentities(
 ): Promise<BrokerSendingIdentity[]> {
   let query = client
     .from("broker_sending_identities")
-    .select("id, organisation_id, domain, from_name, from_email, reply_to_email, provider, status, is_default, created_at")
+    // "*" so identities still load before migration 202610260002 runs.
+    .select("*")
     .order("created_at", { ascending: true });
   if (organisationId) query = query.eq("organisation_id", organisationId);
   const { data, error } = await query;

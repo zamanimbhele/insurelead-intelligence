@@ -101,6 +101,7 @@ const allocation: LeadAllocation = {
 };
 const sendingIdentity: BrokerSendingIdentity = {
   id: "identity_campaign_test",
+  kind: "custom",
   organisationId,
   domain: "example.test",
   fromName: "Synthetic Campaign Broker",

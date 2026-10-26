@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   ineligibleLeads: new Map<string, string>(),
   onSend: undefined as undefined | ((leadId: string) => void),
   sentTo: [] as string[],
+  reputationPause: null as string | null,
 }));
 
 vi.mock("./supabase/config.ts", () => ({ getDataMode: () => state.mode }));
@@ -73,6 +74,7 @@ vi.mock("./campaign-runtime.ts", async () => {
     },
     listRuntimeCampaignEvents: async (id: string) => state.events.filter((e) => e.campaignId === id),
     getRuntimeCampaignQuota: async () => quotaStatus(state.limits, state.usage),
+    enforceRuntimeSenderReputation: async () => state.reputationPause,
     getRuntimeRecipientSendCheck: async (_campaign: Campaign, leadId: string) => {
       state.onSend?.(leadId);
       const reason = state.ineligibleLeads.get(leadId);
@@ -112,7 +114,7 @@ beforeEach(() => {
   Object.assign(state, {
     mode: "demo", deliveryMode: "live", recipients: [], events: [], usage: { sentToday: 0, sentThisMonth: 0 },
     limits: { dailyLimit: 200, monthlyLimit: 3000 }, leaseHeld: false, campaignErrors: [],
-    ineligibleLeads: new Map(), onSend: undefined, sentTo: [],
+    ineligibleLeads: new Map(), onSend: undefined, sentTo: [], reputationPause: null,
   });
   state.campaigns.clear();
 });
@@ -125,6 +127,13 @@ describe("sendCampaignBatch", () => {
     expect(result.remaining).toBe(7);
     expect(result.quota.remainingToday).toBe(0);
     expect(state.campaigns.get("c1")?.status).toBe("sending");
+  });
+
+  it("sends nothing once the sender's reputation has crossed the limits", async () => {
+    state.reputationPause = "Paused automatically: 2 spam complaints (2.0%) in the last 30 days, above the 0.3% limit.";
+    await expect(sendCampaignBatch({ campaign: seed("approved", 5), actor: "test", trigger: "mcp", requestedBatchSize: 25 }))
+      .rejects.toThrow("spam complaints");
+    expect(state.sentTo).toEqual([]);
   });
 
   it("defers with a quota error once the limit is spent, and logs it once per day", async () => {

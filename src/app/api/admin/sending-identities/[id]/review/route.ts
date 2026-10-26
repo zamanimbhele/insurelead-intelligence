@@ -4,6 +4,7 @@ import { getDashboardIdentity, isPlatformAdmin } from "@/lib/auth";
 import { getDataMode } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { reviewSupabaseSendingIdentity } from "@/lib/supabase/data";
+import { getSendingIdentities, setDemoSendingIdentityStatus } from "@/lib/marketplace-store";
 
 const schema = z.object({ status: z.enum(["verified", "disabled"]) });
 
@@ -19,10 +20,6 @@ function safeError(error: unknown) {
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (getDataMode() === "demo") {
-    return NextResponse.json({ error: "Sending-domain verification requires Supabase mode" }, { status: 409 });
-  }
-
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "A valid status is required" }, { status: 400 });
 
@@ -30,6 +27,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!identity.authenticated) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   if (!identity.accessAllowed || !isPlatformAdmin(identity)) {
     return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  }
+
+  if (getDataMode() === "demo") {
+    // Demo: only re-enabling or disabling platform ("via InsureLead")
+    // senders; custom domains still need real DNS verification.
+    const { id } = await params;
+    const current = getSendingIdentities().find((item) => item.id === id);
+    if (!current) return NextResponse.json({ error: "Sending identity not found" }, { status: 409 });
+    if (current.kind !== "platform") {
+      return NextResponse.json({ error: "Sending-domain verification requires Supabase mode" }, { status: 409 });
+    }
+    const sendingIdentity = setDemoSendingIdentityStatus(id, parsed.data.status, parsed.data.status === "disabled" ? "Disabled by a platform administrator" : undefined,
+      identity.displayName ?? "Platform admin");
+    return NextResponse.json({ ok: true, sendingIdentity });
   }
 
   const client = await createSupabaseServerClient();

@@ -24,6 +24,7 @@ import {
   getRuntimeCampaign,
   getRuntimeCampaignEvaluation,
   getRuntimeCampaignQuota,
+  enforceRuntimeSenderReputation,
   getRuntimeRecipientSendCheck,
   listRuntimeCampaignEvents,
   listRuntimeCampaignRecipients,
@@ -124,7 +125,13 @@ export async function sendCampaignBatch(input: {
     const queued = recipients.filter((recipient) => recipient.status === "queued");
     if (!queued.length) throw new CampaignSendError("No queued, eligible recipients remain", "empty");
 
-    const quota = await getRuntimeCampaignQuota(campaign.organisationId, now);
+    // Phase 5: stop here if this sender's reputation has crossed the
+    // limits since the last batch (the identity is paused; the next run
+    // sees it unverified and pauses the campaign).
+    const reputationPause = await enforceRuntimeSenderReputation(evaluation.sendingIdentity.id, now);
+    if (reputationPause) throw new CampaignSendError(reputationPause, "blocked");
+
+    const quota = await getRuntimeCampaignQuota(campaign.organisationId, now, evaluation.sendingIdentity);
     const allowance = batchAllowance({
       requested: input.requestedBatchSize,
       configuredMaximum: configuredMaximumBatchSize(process.env.CAMPAIGN_MAX_BATCH_SIZE),

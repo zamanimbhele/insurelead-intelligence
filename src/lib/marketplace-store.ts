@@ -7,6 +7,7 @@ import { authorisedProductIds } from "./authorisations.ts";
 import { getDemoAuthorisations } from "./demo-authorisations.ts";
 import { FALLBACK_CATALOGUE } from "./products.ts";
 import { COMPANY_BRAND, missingDisclosureDetails, type OrganisationBrand } from "./brand.ts";
+import { platformSenderAddress } from "./sender-reputation.ts";
 import type {
   BrokerSendingIdentity,
   Buyer,
@@ -46,10 +47,59 @@ export function getBuyers(): Buyer[] {
 }
 export function getAllocations(): LeadAllocation[] { return readJson<LeadAllocation[]>(ALLOCATIONS_FILE, []); }
 export function getSendingIdentities(organisationId?: string): BrokerSendingIdentity[] {
-  const identities = readJson<BrokerSendingIdentity[]>(SENDING_IDENTITIES_FILE, []);
+  const identities = readJson<BrokerSendingIdentity[]>(SENDING_IDENTITIES_FILE, [])
+    .map((identity) => ({ ...identity, kind: identity.kind ?? "custom" }));
   return organisationId
     ? identities.filter((identity) => identity.organisationId === organisationId)
     : identities;
+}
+
+// Demo-mode counterpart to create_platform_sending_identity() (migration
+// 202610260002_platform_sending.sql): "<Name> via InsureLead".
+export function createPlatformSendingIdentity(
+  input: { organisationId: string; displayName: string; replyToEmail: string; domain: string },
+  actorLabel: string,
+): BrokerSendingIdentity {
+  const identities = readJson<BrokerSendingIdentity[]>(SENDING_IDENTITIES_FILE, []);
+  if (identities.some((identity) => identity.organisationId === input.organisationId && identity.kind === "platform")) {
+    throw new Error("Your organisation already has an InsureLead sending identity");
+  }
+  const address = platformSenderAddress({ displayName: input.displayName, organisationId: input.organisationId, domain: input.domain });
+  const identity: BrokerSendingIdentity = {
+    id: `sid_platform_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    organisationId: input.organisationId,
+    domain: input.domain,
+    fromName: address.fromName,
+    fromEmail: address.fromEmail,
+    replyToEmail: input.replyToEmail.toLowerCase(),
+    provider: "resend",
+    status: "verified",
+    isDefault: !identities.some((item) => item.organisationId === input.organisationId && item.isDefault),
+    createdAt: new Date().toISOString(),
+    kind: "platform",
+  };
+  identities.push(identity);
+  writeJson(SENDING_IDENTITIES_FILE, identities);
+  appendAuditLog({ entity: "sending_identity", entityId: identity.id, action: "platform_sending_identity_created", actor: actorLabel, details: identity.fromEmail });
+  return identity;
+}
+
+// Demo-mode counterparts to pause_sending_identity() and the admin
+// re-enable in review_sending_identity().
+export function setDemoSendingIdentityStatus(id: string, status: "verified" | "disabled", reason: string | undefined, actorLabel: string) {
+  const identities = readJson<BrokerSendingIdentity[]>(SENDING_IDENTITIES_FILE, []);
+  const index = identities.findIndex((identity) => identity.id === id);
+  if (index === -1) throw new Error("Sending identity not found");
+  if (identities[index].status === status && status === "disabled") return { ...identities[index], kind: identities[index].kind ?? "custom" };
+  identities[index] = {
+    ...identities[index],
+    status,
+    statusReason: status === "verified" ? undefined : reason,
+    pausedAt: status === "verified" ? undefined : new Date().toISOString(),
+  };
+  writeJson(SENDING_IDENTITIES_FILE, identities);
+  appendAuditLog({ entity: "sending_identity", entityId: id, action: status === "verified" ? "sending_identity_reviewed" : "sending_identity_paused", actor: actorLabel, details: reason ?? status });
+  return { ...identities[index], kind: identities[index].kind ?? "custom" };
 }
 
 // Demo-mode counterpart to create_broker_sending_identity() (see
@@ -91,6 +141,7 @@ export function createSendingIdentity(
     status: "pending",
     isDefault,
     createdAt: new Date().toISOString(),
+    kind: "custom",
   };
   identities.push(identity);
   writeJson(SENDING_IDENTITIES_FILE, identities);

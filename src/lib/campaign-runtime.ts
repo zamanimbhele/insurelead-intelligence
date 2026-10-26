@@ -25,6 +25,7 @@ import {
 } from "./campaign-webhooks.ts";
 import { evaluateCampaignAudience, hashCampaignEmail, validateCampaign } from "./campaign-policy.ts";
 import { quotaStatus, sastPeriodStarts } from "./campaign-quota.ts";
+import { pauseReason, senderReputation, warmUpDailyCap, type SenderReputation } from "./sender-reputation.ts";
 import {
   getRuntimeConsent,
   getRuntimeLead,
@@ -32,6 +33,7 @@ import {
   listRuntimeBuyers,
   listRuntimeLeads,
   listRuntimeSendingIdentities,
+  pauseRuntimeSendingIdentity,
 } from "./runtime-data.ts";
 import { createSupabaseAdminClient } from "./supabase/admin.ts";
 import {
@@ -57,6 +59,7 @@ import {
 } from "./supabase/campaign-data.ts";
 import { getDataMode } from "./supabase/config.ts";
 import type {
+  BrokerSendingIdentity,
   Campaign,
   CampaignContentVersion,
   CampaignEvent,
@@ -356,6 +359,21 @@ export async function processRuntimeCampaignDeliveryWebhookEvent(input: {
     details: { svixId: input.svixId, providerMessageId: input.providerMessageId, statusChanged: Boolean(nextStatus) },
   });
 
+  // Phase 5: a bounce or complaint may push the sender over its limits.
+  if (eventType === "bounced" || eventType === "complained") {
+    try {
+      const campaign = await getRuntimeCampaign(recipient.campaignId);
+      if (campaign?.sendingIdentityId) {
+        const reason = await enforceRuntimeSenderReputation(campaign.sendingIdentityId);
+        if (reason) {
+          await appendRuntimeCampaignEvent({ campaignId: campaign.id, eventType: "paused", actor: "reputation_monitor", details: { reason } });
+        }
+      }
+    } catch (error) {
+      console.error("[campaigns] sender reputation check failed", error instanceof Error ? error.message : error);
+    }
+  }
+
   return {
     outcome: "processed",
     campaignId: recipient.campaignId,
@@ -389,19 +407,49 @@ export async function getRuntimeCampaignPerformance(campaignId: string) {
 
 // --- Scheduled sending and quotas -------------------------------------
 
-export async function getRuntimeCampaignQuota(organisationId: string, now = new Date()) {
+// A platform ("via InsureLead") sender is also held to its warm-up cap
+// while it is new (sender-reputation.ts).
+export async function getRuntimeCampaignQuota(
+  organisationId: string,
+  now = new Date(),
+  sendingIdentity?: Pick<BrokerSendingIdentity, "kind" | "createdAt">,
+) {
   const buyer = (await listRuntimeBuyers()).find((candidate) => candidate.id === organisationId);
   const { dayStart, monthStart } = sastPeriodStarts(now);
   const usage = getDataMode() === "demo"
     ? getCampaignSendUsage(organisationId, dayStart, monthStart)
     : await fetchSupabaseCampaignSendUsage(requireAdminClient(), organisationId, dayStart, monthStart);
-  return quotaStatus(
-    {
-      dailyLimit: buyer?.campaignDailySendLimit ?? 0,
-      monthlyLimit: buyer?.campaignMonthlySendLimit ?? 0,
-    },
-    usage,
-  );
+  const brokerDaily = buyer?.campaignDailySendLimit ?? 0;
+  const warmUp = sendingIdentity?.kind === "platform" ? warmUpDailyCap(sendingIdentity.createdAt, now) : undefined;
+  return {
+    ...quotaStatus(
+      { dailyLimit: warmUp === undefined ? brokerDaily : Math.min(brokerDaily, warmUp), monthlyLimit: buyer?.campaignMonthlySendLimit ?? 0 },
+      usage,
+    ),
+    warmUpCap: warmUp,
+  };
+}
+
+// --- Sender reputation (phase 5) ---------------------------------------
+
+// Bounce and complaint rates for one sending identity over the last 30
+// days, across every campaign that used it.
+export async function getRuntimeSenderReputation(identity: Pick<BrokerSendingIdentity, "id" | "organisationId">, now = new Date()): Promise<SenderReputation> {
+  const campaigns = (await listRuntimeCampaigns(identity.organisationId)).filter((campaign) => campaign.sendingIdentityId === identity.id);
+  const recipients = (await Promise.all(campaigns.map((campaign) => listRuntimeCampaignRecipients(campaign.id)))).flat();
+  return senderReputation(recipients, now);
+}
+
+// Pauses the identity when its rates pass the limits. The sender's own
+// safety check then pauses any campaign still using it. Returns the
+// reason when it paused.
+export async function enforceRuntimeSenderReputation(identityId: string, now = new Date()): Promise<string | null> {
+  const identity = (await listRuntimeSendingIdentities()).find((candidate) => candidate.id === identityId);
+  if (!identity || identity.status === "disabled") return null;
+  const reason = pauseReason(await getRuntimeSenderReputation(identity, now));
+  if (!reason) return null;
+  await pauseRuntimeSendingIdentity(identity.id, reason);
+  return reason;
 }
 
 export async function claimRuntimeCampaignSendLease(campaignId: string, seconds: number) {
