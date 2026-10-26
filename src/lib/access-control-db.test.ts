@@ -356,6 +356,20 @@ describe("privileged fields and actions", () => {
   });
 });
 
+describe("what a campaign manager can do directly", () => {
+  it("creates a draft in its own workspace; delivery history is written by the server only", async () => {
+    await asClient(db, "authenticated", A_CM);
+    const draft = (await db.query<{ id: string; status: string }>(`insert into public.campaigns
+        (organisation_id, name, objective, insurance_products, audience_rules, contact_basis, sending_identity_id, created_by_label)
+      values ($1, 'Life cover awareness', 'awareness', array['business_insurance'], '{"provinces":["Gauteng"]}', 'marketing_consent', $2, 'Campaign manager A')
+      returning id, status`, [ws.A.org, ws.A.identity])).rows[0];
+    expect(draft.status).toBe("draft");
+    await expect(db.query("insert into public.campaign_delivery_events (campaign_id, event_type, actor_label) values ($1, 'draft_created', 'me')", [draft.id]))
+      .rejects.toThrow(/permission denied/);
+    await asOwner(db);
+  });
+});
+
 describe("audit log", () => {
   it("platform admins add entries in their own name only; brokers cannot add any", async () => {
     await asClient(db, "authenticated", ADMIN);
