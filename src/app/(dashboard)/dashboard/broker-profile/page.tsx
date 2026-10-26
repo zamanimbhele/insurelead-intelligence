@@ -9,6 +9,9 @@ import { getTaskDigestPreview } from "@/lib/task-digest-runtime";
 import { formatDueSast } from "@/lib/task-digest";
 import { workspaceTerms } from "@/lib/workspace";
 import { AuthorisationsSection } from "@/components/dashboard/AuthorisationsSection";
+import { BrandSettingsForm } from "@/components/dashboard/BrandSettingsForm";
+import { getDisclosureTemplate } from "@/lib/brand-runtime";
+import { COMPANY_BRAND } from "@/lib/brand";
 import { currentProfileId, listAuthorisations } from "@/lib/authorisation-service";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +31,11 @@ export default async function BrokerProfilePage() {
     );
   }
 
-  const [workspace, digestPreview, authorisations] = await Promise.all([
+  const [workspace, digestPreview, authorisations, disclosureTemplate] = await Promise.all([
     getDashboardBrokerWorkspace(identity),
     getTaskDigestPreview(identity),
     listAuthorisations(identity).catch(() => []),
+    getDisclosureTemplate(),
   ]);
   const buyer = workspace?.buyer;
   const digestItems = [...(digestPreview.digest?.overdue ?? []), ...(digestPreview.digest?.dueToday ?? [])];
@@ -72,6 +76,13 @@ export default async function BrokerProfilePage() {
           <div><dt className="text-slate-400">Campaigns</dt><dd className="mt-1 font-semibold text-slate-800">{buyer.acceptsCampaigns ? "Enabled" : "Disabled"}</dd></div>
         </dl>
       </section>
+
+      <BrandSettingsForm
+        organisationId={buyer.id}
+        initial={buyer.brand ?? COMPANY_BRAND}
+        template={disclosureTemplate}
+        canEdit={identity.role === "broker_admin"}
+      />
 
       <AuthorisationsSection
         catalogue={catalogue}

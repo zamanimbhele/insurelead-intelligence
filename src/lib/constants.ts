@@ -381,7 +381,7 @@ export const LEGAL_TEXT_DOCUMENT_DEFINITIONS: {
   {
     key: "representative_disclosure",
     title: "Representative Disclosure (campaign footer)",
-    shownOn: "Footer of campaign emails sent under a personal brand (individual advisors plan, phase 4). Not shown anywhere yet.",
+    shownOn: "Footer of campaign emails sent under a personal brand. A paragraph starting PLACEHOLDER is never included in emails.",
     defaultContent: [
       "PLACEHOLDER - confirm this wording with a compliance officer before go-live.",
       "{{advisor_name}} is a {{capacity}} of {{fsp_name}}, an authorised financial services provider (FSP {{fsp_number}}). Products are provided by the relevant product suppliers. This message is not financial advice; advice is given only after a needs analysis.",

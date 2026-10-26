@@ -42,7 +42,7 @@ confirm or replace them before real advisors use the platform.
 | --- | --- |
 | Evidence accepted per category (`accepted_evidence`) | `product_categories` table |
 | Guidance shown with the form (`evidence_guidance`) | `product_categories` table; then set `guidance_is_placeholder = false` to remove the "Placeholder guidance" label |
-| Representative disclosure wording (campaign footer, phase 4) | Dashboard → **Legal Content** → *Representative Disclosure* |
+| Representative disclosure wording (campaign footer, see `docs/PERSONAL_BRAND.md`) | Dashboard → **Legal Content** → *Representative Disclosure*; remove the `PLACEHOLDER` paragraph once confirmed |
 
 Questions for the compliance officer:
 

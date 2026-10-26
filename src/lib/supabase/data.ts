@@ -40,6 +40,7 @@ import type {
 } from "../types.ts";
 import { BUSINESS_COVER_OPTIONS } from "../constants.ts";
 import { normaliseWorkspaceType } from "../workspace.ts";
+import { COMPANY_BRAND, normaliseBrand } from "../brand.ts";
 
 const BUSINESS_COVER_IDS = new Set<string>(BUSINESS_COVER_OPTIONS.map((option) => option.value));
 import { DEFAULT_CAMPAIGN_DAILY_SEND_LIMIT, DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT } from "../campaign-quota.ts";
@@ -456,6 +457,14 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
 
   // What each organisation may sell (phase 3). Optional: before migration
   // 202610250003 runs this is unavailable and the database alone decides.
+  // Brand settings (phase 4) are read separately so brokers still load
+  // before migration 202610260001 has run.
+  const brandResult = await client
+    .from("organisations")
+    .select("id, brand_mode, disclosure_name, disclosure_capacity, disclosure_fsp_name, disclosure_fsp_number")
+    .in("organisation_type", ["broker", "insurer"]);
+  const brands = new Map(brandResult.error ? [] : ((brandResult.data ?? []) as ({ id: string } & Parameters<typeof normaliseBrand>[0] & object)[]).map((row) => [row.id, normaliseBrand(row)]));
+
   const authorised = new Map<string, string[] | undefined>(await Promise.all(
     ((organisationResult.data ?? []) as OrganisationRow[]).map(async (organisation) => {
       const { data, error } = await client.rpc("organisation_authorised_products", { p_organisation_id: organisation.id });
@@ -489,6 +498,7 @@ export async function fetchSupabaseBuyers(client: SupabaseClient): Promise<Buyer
       campaignMonthlySendLimit: preference?.campaign_monthly_send_limit ?? DEFAULT_CAMPAIGN_MONTHLY_SEND_LIMIT,
       contactEmail: organisation.contact_email,
       authorisedProducts: authorised.get(organisation.id),
+      brand: brands.get(organisation.id) ?? COMPANY_BRAND,
     };
   });
 }
@@ -590,6 +600,22 @@ export async function setSupabaseWorkspaceType(
   });
   fail("Unable to change the workspace type", error);
   return data as { id: string; workspaceType: string; changed: boolean };
+}
+
+export async function updateSupabaseBrandSettings(
+  client: SupabaseClient,
+  input: { organisationId: string; brandMode: string; displayName?: string; capacity?: string; fspName?: string; fspNumber?: string },
+) {
+  const { data, error } = await client.rpc("update_brand_settings", {
+    p_organisation_id: input.organisationId,
+    p_brand_mode: input.brandMode,
+    p_disclosure_name: input.displayName ?? null,
+    p_disclosure_capacity: input.capacity ?? null,
+    p_disclosure_fsp_name: input.fspName ?? null,
+    p_disclosure_fsp_number: input.fspNumber ?? null,
+  });
+  fail("Unable to update branding", error);
+  return data as { id: string; brandMode: string };
 }
 
 export async function updateSupabaseProfileMembership(

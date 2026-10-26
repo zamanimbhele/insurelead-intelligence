@@ -73,6 +73,9 @@ export default async function BrokerDirectoryPage({ searchParams }: { searchPara
                   <h2 className="font-semibold text-slate-900">{buyer.organisationName}</h2>
                   <p className="mt-1 text-xs text-slate-500">
                     <span data-testid="workspace-type-badge" className="mr-1 rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">{WORKSPACE_TYPE_LABELS[buyer.workspaceType]}</span>
+                    {buyer.brand?.mode === "personal" && (
+                      <span data-testid="personal-brand-badge" className="mr-1 rounded bg-violet-50 px-1.5 py-0.5 font-semibold text-violet-700">Personal brand</span>
+                    )}
                     {buyer.buyerType} · {buyer.fspNumber ?? "FSP number pending"}
                   </p>
                   {canManage && <div className="mt-2"><WorkspaceTypeControl organisationId={buyer.id} current={buyer.workspaceType} /></div>}
