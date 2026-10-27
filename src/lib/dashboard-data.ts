@@ -101,7 +101,6 @@ import {
 } from "./campaign-store";
 import {
   fetchSupabaseCampaignContentVersions,
-  appendSupabaseCampaignEvent,
   createSupabaseCampaign,
   fetchSupabaseCampaign,
   fetchSupabaseCampaignContent,
@@ -397,8 +396,11 @@ export async function createDashboardCampaignDraft(
     return campaign;
   }
   const client = await requireServerClient();
+  // The campaign row is inserted with the user's session (RLS decides).
+  // Delivery events are server-written history: signed-in users have no
+  // INSERT on campaign_delivery_events, so the server records it.
   const campaign = await createSupabaseCampaign(client, draft);
-  await appendSupabaseCampaignEvent(client, {
+  await appendRuntimeCampaignEvent({
     campaignId: campaign.id,
     eventType: "draft_created",
     actor: actorLabel,
@@ -449,13 +451,9 @@ export async function generateDashboardCampaignContent(
   const buyer = await withRequiredDisclosure(buyers.find((buyer) => buyer.id === campaign.organisationId));
   if (!buyer) throw new Error("Campaign broker not found");
   const generated = generateCampaignCopy(brandedCopyInput(buyer, { campaign, ...input, productLabels: productLabelMap(await getProductCatalogue()) }));
+  // save_campaign_content_version() records the "content_generated" event
+  // itself, in the same transaction.
   const content = await saveSupabaseCampaignContent(client, campaignId, { ...generated, generatedBy: actorLabel });
-  await appendSupabaseCampaignEvent(client, {
-    campaignId,
-    eventType: "content_generated",
-    actor: actorLabel,
-    details: { contentVersion: content.version },
-  });
   return content;
 }
 
@@ -505,7 +503,7 @@ export async function approveDashboardCampaign(
     actor: actorLabel,
     attestation,
   });
-  await appendSupabaseCampaignEvent(client, {
+  await appendRuntimeCampaignEvent({
     campaignId: campaign.id,
     eventType: "approved",
     actor: actorLabel,
