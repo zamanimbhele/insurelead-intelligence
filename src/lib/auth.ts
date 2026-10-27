@@ -3,6 +3,9 @@ import { createSupabaseServerClient } from "./supabase/server";
 import { getDataMode } from "./supabase/config";
 import { DEFAULT_DEMO_ACCOUNT, DEMO_ROLE_ACCOUNTS, DEMO_ROLE_COOKIE_NAME } from "./constants";
 import { normaliseWorkspaceType, type WorkspaceType } from "./workspace.ts";
+import { currentAssuranceLevel, readRoleWithServerKey } from "./own-role.ts";
+import { staffNeedsMfa } from "./staff-mfa.ts";
+import { isPlatformStaffRole } from "./portal.ts";
 
 export const ADMIN_ROLES = ["platform_admin", "compliance_admin"] as const;
 export const AUDIT_ROLES = ["compliance_auditor"] as const;
@@ -43,7 +46,7 @@ export type DashboardIdentity = {
   workspaceType?: WorkspaceType;
   // Demo mode: which seeded demo account is "signed in".
   demoAccountKey?: string;
-  reason?: "configuration" | "profile_missing" | "profile_suspended" | "organisation_inactive";
+  reason?: "configuration" | "profile_missing" | "profile_suspended" | "organisation_inactive" | "mfa_required";
 };
 
 export async function getDashboardIdentity(): Promise<DashboardIdentity> {
@@ -104,6 +107,23 @@ export async function getDashboardIdentity(): Promise<DashboardIdentity> {
     .select("role, organisation_id, display_name, member_status")
     .eq("id", user.id)
     .maybeSingle();
+
+  // Platform staff must complete multi-factor authentication. Until they
+  // do, the database refuses their session, so the role is read with the
+  // server key (see own-role.ts) to send them to /admin/mfa.
+  const role = profile?.role ?? (profileError || !profile ? await readRoleWithServerKey(user.id) : null);
+  if (isPlatformStaffRole(role) && staffNeedsMfa(role, await currentAssuranceLevel(supabase))) {
+    return {
+      mode: "supabase",
+      authenticated: true,
+      accessAllowed: false,
+      userId: user.id,
+      email: user.email,
+      role: role as string,
+      organisationName: "Multi-factor authentication required",
+      reason: "mfa_required",
+    };
+  }
 
   if (profileError || !profile) {
     return {

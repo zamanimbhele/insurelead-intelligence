@@ -7,10 +7,12 @@ import { DemoRoleSwitcher } from "@/components/dashboard/DemoRoleSwitcher";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardMobileNav";
 import { ADMIN_HOME, isPlatformStaffRole, portalBadge } from "@/lib/portal";
 import { workspaceTerms } from "@/lib/workspace";
+import { MFA_PAGE } from "@/lib/staff-mfa";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const identity = await getDashboardIdentity();
   if (!identity.authenticated) redirect("/login");
+  if (identity.reason === "mfa_required") redirect(MFA_PAGE);
   if (!identity.accessAllowed) redirect("/access-denied");
 
   // Platform staff get the admin portal: its own home, dark sidebar and an

@@ -3,15 +3,23 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { allowSignInAttempt, type SignInScope } from "@/lib/security/sign-in-limits";
+import { readOwnRole } from "@/lib/own-role";
+import { MFA_PAGE } from "@/lib/staff-mfa";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDataMode } from "@/lib/supabase/config";
 import { ADMIN_HOME, homeForRole, isPlatformStaffRole, safeDashboardPath } from "@/lib/portal";
 
 type ServerClient = NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
 
+// Falls back to the server key while a staff session still needs its
+// second factor (the database refuses it until then).
 async function signedInRole(supabase: ServerClient, userId: string): Promise<string | null> {
-  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
-  return (data as { role?: string } | null)?.role ?? null;
+  return readOwnRole(supabase, userId);
+}
+
+// Platform staff always go through the authenticator step next.
+function mfaStep(requested: string | null): never {
+  redirect(`${MFA_PAGE}${requested ? `?next=${encodeURIComponent(requested)}` : ""}`);
 }
 
 // Rate limits run before the password is checked (see sign-in-limits.ts).
@@ -45,7 +53,7 @@ export async function signIn(formData: FormData) {
   if (error || !data.user) redirect(`/login?error=invalid_credentials${nextParam}`);
 
   const role = await signedInRole(supabase, data.user.id);
-  if (isPlatformStaffRole(role)) redirect(requested && requested !== "/dashboard" ? requested : ADMIN_HOME);
+  if (isPlatformStaffRole(role)) mfaStep(requested && requested !== "/dashboard" ? requested : null);
   redirect(requested ?? homeForRole(role));
 }
 
@@ -74,7 +82,7 @@ export async function adminSignIn(formData: FormData) {
     await supabase.auth.signOut();
     redirect("/admin/login?error=not_staff");
   }
-  redirect(requested && requested !== "/dashboard" ? requested : ADMIN_HOME);
+  mfaStep(requested && requested !== "/dashboard" ? requested : null);
 }
 
 export async function signOut() {

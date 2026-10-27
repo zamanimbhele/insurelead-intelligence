@@ -26,6 +26,7 @@ const SUPABASE_STUB = `
   create role anon nologin;
   create role authenticated nologin;
   create role service_role nologin bypassrls;
+  create role authenticator nologin noinherit;
   -- Supabase's default privileges: the API roles may use everything in
   -- public unless a migration says otherwise.
   grant usage on schema public to anon, authenticated, service_role;
@@ -47,7 +48,13 @@ const SUPABASE_STUB = `
     select coalesce(nullif(current_setting('test.role', true), ''), 'authenticated')
   $$;
   create function auth.jwt() returns jsonb language sql stable as $$
-    select jsonb_build_object('email', nullif(current_setting('test.email', true), ''), 'role', auth.role())
+    select jsonb_build_object(
+      'email', nullif(current_setting('test.email', true), ''),
+      'role', auth.role(),
+      -- Assurance level: tests act as a fully signed-in user (aal2) unless
+      -- they call setAssuranceLevel(db, "aal1").
+      'aal', coalesce(nullif(current_setting('test.aal', true), ''), 'aal2')
+    )
   $$;
   grant execute on function auth.uid(), auth.role(), auth.jwt() to anon, authenticated, service_role;
   -- PGlite has no pgcrypto; the migrations only use digest(text, 'sha256').
@@ -91,6 +98,12 @@ export async function asClient(db: PGlite, role: "anon" | "authenticated", userI
   await db.exec("reset role");
   await db.exec(`select set_config('test.uid', '${role === "anon" ? "" : userId ?? ""}', false), set_config('test.role', '${role}', false), set_config('test.email', '${email.replace(/'/g, "''")}', false)`);
   await db.exec(`set role ${role}`);
+}
+
+// The session's authenticator assurance level: "aal1" after the password
+// only, "aal2" after a second factor. Persists until changed.
+export async function setAssuranceLevel(db: PGlite, level: "aal1" | "aal2") {
+  await db.exec(`select set_config('test.aal', '${level}', false)`);
 }
 
 // Back to the table owner (RLS not applied), keeping the current claims.

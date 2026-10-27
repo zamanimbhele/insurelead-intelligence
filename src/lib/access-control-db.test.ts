@@ -17,7 +17,7 @@
 //     of reach.
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { asClient, asOwner, asUser, createMigratedDatabase } from "./testing/supabase-db";
+import { asClient, asOwner, asUser, createMigratedDatabase, setAssuranceLevel } from "./testing/supabase-db";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const ADMIN = id(1);
@@ -184,6 +184,8 @@ describe("database setup", () => {
     const allowed = new Set([
       "can_approve_campaigns", "can_manage_campaigns", "current_organisation_id", "current_profile_role",
       "is_broker_operator", "is_compliance_auditor", "is_platform_admin",
+      // Runs before every Data API request, as the caller's role.
+      "enforce_staff_mfa",
     ]);
     const callable = await db.query<{ proname: string; trigger: boolean }>(`
       select p.proname, p.prorettype = 'trigger'::regtype as trigger from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -435,5 +437,53 @@ describe("the hardening migration", () => {
       [untraced]: null,
       [ws.B.plan]: ws.B.org,
     });
+  });
+});
+
+describe("multi-factor authentication for platform staff", () => {
+  const enforce = () => db.query("select public.enforce_staff_mfa()");
+
+  it("is checked before every Data API request", async () => {
+    const setting = await db.query<{ setconfig: string[] }>(`
+      select setconfig from pg_db_role_setting where setrole = 'authenticator'::regrole`);
+    expect(setting.rows.flatMap((row) => row.setconfig)).toContain("pgrst.db_pre_request=public.enforce_staff_mfa");
+  });
+
+  it("refuses staff sessions that have only passed the password step", async () => {
+    for (const staff of [ADMIN, AUDITOR]) {
+      await asClient(db, "authenticated", staff);
+      await setAssuranceLevel(db, "aal1");
+      await expect(enforce(), staff).rejects.toThrow("must complete multi-factor authentication");
+      await setAssuranceLevel(db, "aal2");
+      await expect(enforce(), staff).resolves.toBeDefined();
+    }
+    await asOwner(db);
+  });
+
+  it("does not affect brokers, anonymous visitors or the server", async () => {
+    await setAssuranceLevel(db, "aal1");
+    await asClient(db, "authenticated", A_ADMIN);
+    await expect(enforce()).resolves.toBeDefined();
+    await asClient(db, "anon");
+    await expect(enforce()).resolves.toBeDefined();
+    await asOwner(db);
+    await db.exec("select set_config('test.uid', '', false), set_config('test.role', 'service_role', false)");
+    await expect(enforce()).resolves.toBeDefined();
+    await setAssuranceLevel(db, "aal2");
+  });
+
+  it("keeps cross-broker data closed to an aal1 staff session even without the request check", async () => {
+    for (const staff of [ADMIN, AUDITOR]) {
+      await asClient(db, "authenticated", staff);
+      await setAssuranceLevel(db, "aal1");
+      expect((await db.query<{ admin: boolean; auditor: boolean }>("select public.is_platform_admin() as admin, public.is_compliance_auditor() as auditor")).rows[0])
+        .toEqual({ admin: false, auditor: false });
+      const leaked = (await visibleRows("leads")).concat(await visibleRows("campaigns"), await visibleRows("organisations"));
+      expect(leaked.filter((row) => [...identifiersOf(ws.A), ...identifiersOf(ws.B)].some((value) => row.includes(value)))).toEqual([]);
+
+      await setAssuranceLevel(db, "aal2");
+      expect((await visibleRows("leads")).some((row) => row.includes(ws.A.lead))).toBe(true);
+    }
+    await asOwner(db);
   });
 });
