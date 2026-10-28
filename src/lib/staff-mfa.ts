@@ -36,9 +36,28 @@ export function isMfaCode(value: unknown): value is string {
   return typeof value === "string" && /^\d{6}$/.test(value);
 }
 
-// Supabase returns the QR code as an SVG data URL; render nothing else.
-export function isQrCodeDataUrl(value: unknown): value is string {
-  return typeof value === "string" && value.startsWith("data:image/svg+xml") && value.length < 20_000;
+// supabase-js returns the QR code as "data:image/svg+xml;utf-8," followed
+// by the raw, unencoded SVG markup (tens of kilobytes; its "#" colours
+// would cut a data URL short). Returns a safely encoded data URL for an
+// <img>, or null for anything that is not an SVG.
+const SVG_DATA_PREFIX = /^data:image\/svg\+xml[^,]*,/;
+const MAX_QR_SVG_LENGTH = 500_000;
+
+export function qrCodeImage(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const prefix = value.match(SVG_DATA_PREFIX);
+  if (!prefix) return null;
+  let svg = value.slice(prefix[0].length);
+  if (/^%3C/i.test(svg)) {
+    try {
+      svg = decodeURIComponent(svg);
+    } catch {
+      return null;
+    }
+  }
+  svg = svg.trim();
+  if (!/^(<\?xml[^>]*>\s*)?<svg[\s/>]/i.test(svg) || svg.length > MAX_QR_SVG_LENGTH) return null;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 function totpFactors(factors: Factor[]) {
@@ -56,23 +75,35 @@ export async function verifiedTotpFactor(auth: MfaAuth): Promise<Factor | null> 
 // Unfinished set-ups are removed first so they cannot pile up.
 export async function beginEnrolment(auth: MfaAuth, today = new Date()) {
   const { data, error } = await auth.listFactors();
-  if (error || !data) throw new Error("Your authenticator details could not be loaded");
+  if (error || !data) {
+    console.error("[mfa] listing factors failed:", error?.message ?? "no data");
+    throw new Error("Your authenticator details could not be loaded");
+  }
   const totp = totpFactors(data.all);
   if (totp.some((factor) => factor.status === "verified")) {
     throw new Error("An authenticator is already set up for this account");
   }
   for (const factor of totp) {
-    await auth.unenroll({ factorId: factor.id });
+    const removed = await auth.unenroll({ factorId: factor.id });
+    if (removed.error) console.error("[mfa] removing an unfinished set-up failed:", removed.error.message);
   }
   const enrolled = await auth.enroll({
     factorType: "totp",
     issuer: MFA_ISSUER,
-    friendlyName: `${MFA_ISSUER} admin ${today.toISOString().slice(0, 10)}`,
+    // Unique per attempt: Supabase rejects a second factor with the same name.
+    friendlyName: `${MFA_ISSUER} admin ${today.toISOString().slice(0, 19).replace("T", " ")}`,
   });
-  if (enrolled.error || !enrolled.data || !isQrCodeDataUrl(enrolled.data.totp.qr_code)) {
+  if (enrolled.error || !enrolled.data) {
+    console.error("[mfa] enrolment refused by Supabase:", enrolled.error?.message ?? "no data");
     throw new Error("The authenticator could not be set up");
   }
-  return { factorId: enrolled.data.id, qrCode: enrolled.data.totp.qr_code, secret: enrolled.data.totp.secret };
+  const qrCode = qrCodeImage(enrolled.data.totp?.qr_code);
+  if (!qrCode) {
+    // The factor is left unverified; the next attempt removes it.
+    console.error("[mfa] enrolment returned an unexpected QR code format");
+    throw new Error("The authenticator could not be set up");
+  }
+  return { factorId: enrolled.data.id, qrCode, secret: enrolled.data.totp.secret };
 }
 
 // Checks a code for one of the signed-in user's own TOTP factors. Returns

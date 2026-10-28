@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beginEnrolment, isMfaCode, isQrCodeDataUrl, staffNeedsMfa, verifiedTotpFactor, verifyCode, type MfaAuth } from "./staff-mfa";
+import { beginEnrolment, isMfaCode, qrCodeImage, staffNeedsMfa, verifiedTotpFactor, verifyCode, type MfaAuth } from "./staff-mfa";
 
 type Factor = { id: string; factor_type: string; status: string };
 
@@ -42,9 +42,23 @@ describe("input checks", () => {
   it("accepts only 6-digit codes and SVG data-URL QR codes", () => {
     expect(isMfaCode("012345")).toBe(true);
     for (const value of ["12345", "1234567", "12345a", " 123456", 123456, null]) expect(isMfaCode(value)).toBe(false);
-    expect(isQrCodeDataUrl("data:image/svg+xml;utf-8,<svg/>")).toBe(true);
-    expect(isQrCodeDataUrl("javascript:alert(1)")).toBe(false);
-    expect(isQrCodeDataUrl("https://example.co.za/qr.png")).toBe(false);
+    expect(qrCodeImage("javascript:alert(1)")).toBeNull();
+    expect(qrCodeImage("https://example.co.za/qr.png")).toBeNull();
+    expect(qrCodeImage("data:image/svg+xml;utf-8,<script>alert(1)</script>")).toBeNull();
+    expect(qrCodeImage("data:image/png;base64,AAAA")).toBeNull();
+  });
+
+  it("re-encodes the large, raw SVG data URL supabase-js returns", () => {
+    // The shape supabase-js produces: a prefix plus raw markup with "#" colours.
+    const rects = Array.from({ length: 900 }, (_, i) => `<rect x="${i % 30}" y="${Math.floor(i / 30)}" width="1" height="1" fill="#000000"/>`).join("");
+    const raw = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">${rects}</svg>`;
+    expect(raw.length).toBeGreaterThan(20_000);
+    const image = qrCodeImage(`data:image/svg+xml;utf-8,${raw}`);
+    expect(image).toMatch(/^data:image\/svg\+xml;charset=utf-8,%3C%3Fxml/);
+    expect(image).not.toContain("#");
+    expect(decodeURIComponent(image!.slice(image!.indexOf(",") + 1))).toBe(raw);
+    // Already-encoded input is accepted too.
+    expect(qrCodeImage(`data:image/svg+xml;utf-8,${encodeURIComponent("<svg/>")}`)).toBe(`data:image/svg+xml;charset=utf-8,${encodeURIComponent("<svg/>")}`);
   });
 });
 
@@ -52,7 +66,7 @@ describe("beginEnrolment", () => {
   it("clears unfinished set-ups and enrols a new authenticator", async () => {
     const { auth, calls } = fakeAuth([{ id: "stale", factor_type: "totp", status: "unverified" }]);
     const result = await beginEnrolment(auth);
-    expect(result).toEqual({ factorId: "new-factor", qrCode: "data:image/svg+xml;utf-8,<svg/>", secret: "SECRET" });
+    expect(result).toEqual({ factorId: "new-factor", qrCode: `data:image/svg+xml;charset=utf-8,${encodeURIComponent("<svg/>")}`, secret: "SECRET" });
     expect(calls).toEqual(["unenroll:stale", "enroll:InsureLead"]);
   });
 
