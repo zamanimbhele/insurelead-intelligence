@@ -44,7 +44,7 @@ exposed through `NEXT_PUBLIC_`.
 
 | Priority | Item | Next step |
 | --- | --- | --- |
-| 1 | **No MFA for administrators** | Add Supabase TOTP enrolment and an `aal2` check on the admin sign-in, admin routes and (optionally) `is_platform_admin()` |
+| 1 | ~~No MFA for administrators~~ Done: see `docs/ADMIN_MFA.md` | |
 | 2 | Production grants not verified directly | Run `docs/sql/verify-access-control.sql` (read-only) in the Supabase SQL editor after the migration |
 | 3 | Approval and content RPCs can be called directly with the public key and a session, skipping the app's disclosure checks (scheduling still re-checks them) | Move the disclosure check into `approve_campaign_content()` |
 | 4 | Supabase Auth settings not inspected (leaked-password protection, email rate limits, sign-up confirmation) | Check in Supabase Dashboard → Authentication |

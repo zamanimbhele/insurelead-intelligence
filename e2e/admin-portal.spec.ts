@@ -16,6 +16,15 @@ test.describe("Admin portal (synthetic demo data)", () => {
     await expect(page).toHaveURL(/\/dashboard\/admin$/);
   });
 
+  test("the authenticator step is skipped in demo mode, and never redirects off-site", async ({ page }) => {
+    await page.goto("/admin/mfa");
+    await expect(page).toHaveURL(/\/dashboard\/admin$/);
+    await page.goto("/admin/mfa?next=//evil.example.com");
+    await expect(page).toHaveURL(/\/dashboard\/admin$/);
+    await page.goto("/admin/mfa?next=/dashboard/brokers");
+    await expect(page).toHaveURL(/\/dashboard\/brokers$/);
+  });
+
   test("platform staff see the admin home and the admin band on every page", async ({ page }) => {
     await page.goto("/dashboard/admin");
     await expect(page.getByRole("heading", { name: "Admin home" })).toBeVisible();

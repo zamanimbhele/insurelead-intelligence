@@ -5,6 +5,7 @@ import { adminSignIn } from "@/app/(auth)/login/actions";
 import { getDashboardIdentity } from "@/lib/auth";
 import { ADMIN_HOME, isPlatformStaffRole } from "@/lib/portal";
 import { getDataMode, getSupabasePublicConfig } from "@/lib/supabase/config";
+import { MFA_PAGE } from "@/lib/staff-mfa";
 
 const ERRORS: Record<string, string> = {
   configuration: "Supabase authentication is not configured for this environment.",
@@ -30,6 +31,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
 
   if (!demoMode && configured) {
     const identity = await getDashboardIdentity();
+    if (identity.reason === "mfa_required") redirect(MFA_PAGE);
     if (identity.authenticated && isPlatformStaffRole(identity.role)) redirect(ADMIN_HOME);
   }
   const error = params.error ? ERRORS[params.error] : null;
