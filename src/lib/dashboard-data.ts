@@ -152,8 +152,8 @@ function withCreationActivity(lead: Lead, activities: LeadActivity[]): LeadActiv
     id: `lead_created_${lead.id}`,
     leadId: lead.id,
     kind: "lead_created",
-    summary: "Lead created via public consultation form",
-    actorLabel: "Public website",
+    summary: lead.origin === "staff_added" ? "Lead added by a team member" : "Lead created via public consultation form",
+    actorLabel: lead.origin === "staff_added" ? "Team member" : "Public website",
     occurredAt: lead.createdAt,
   };
   return [...activities, creation].sort(

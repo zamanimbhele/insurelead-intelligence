@@ -80,6 +80,7 @@ type LeadRow = {
   utm: Lead["utm"] | null;
   referrer: string | null;
   do_not_contact: boolean;
+  origin?: string | null;
   assigned_broker: string | null;
   loss_reason: string | null;
   deleted_at: string | null;
@@ -327,6 +328,7 @@ export function mapLead(row: LeadRow): Lead {
     assignedBroker: optional(row.assigned_broker),
     lossReason: optional(row.loss_reason),
     deletedAt: optional(row.deleted_at),
+    origin: row.origin === "staff_added" ? "staff_added" : undefined,
     createdAt: row.created_at,
   };
 }
@@ -984,6 +986,28 @@ export async function fetchSupabaseLeadActivities(client: SupabaseClient, leadId
     .order("occurred_at", { ascending: false });
   fail("Unable to load lead activity timeline", error);
   return ((data ?? []) as LeadActivityRow[]).map(mapLeadActivity);
+}
+
+// Staff-added leads (202611130001_staff_added_leads.sql). Both run on the
+// caller's own client: add_staff_lead() takes the organisation from the
+// caller's profile and re-checks role, approval, products and consent.
+export async function addSupabaseStaffLead(
+  client: SupabaseClient,
+  payload: { lead: Record<string, unknown>; consent: Record<string, unknown>; allowDuplicate: boolean },
+): Promise<{ status: "created" | "duplicate"; leadId: string }> {
+  const { data, error } = await client.rpc("add_staff_lead", { payload });
+  fail("Unable to add lead", error);
+  const result = data as { status?: string; leadId?: string } | null;
+  if (!result?.leadId || (result.status !== "created" && result.status !== "duplicate")) {
+    throw new Error("Unable to add lead: unexpected response");
+  }
+  return { status: result.status, leadId: result.leadId };
+}
+
+export async function fetchSupabaseAuthorisedProducts(client: SupabaseClient, organisationId: string): Promise<string[]> {
+  const { data, error } = await client.rpc("organisation_authorised_products", { p_organisation_id: organisationId });
+  fail("Unable to load authorised products", error);
+  return Array.isArray(data) ? (data as string[]) : [];
 }
 
 // Follow-up workspace: open tasks and recent activity across every lead the

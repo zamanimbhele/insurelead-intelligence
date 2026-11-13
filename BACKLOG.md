@@ -314,6 +314,25 @@ Priced in the accompanying quotation.
   (complete or cancel) stays available after a lead becomes Do Not Contact, so a now-irrelevant
   task can still be cleaned up.
 
+- Staff "New lead" form completed (2026-11-13): a broker admin or agent records a lead taken by
+  phone, referral or in person at `/dashboard/leads/new` ("Add lead" on the Leads page). Until now
+  the public enquiry form was the only way a lead could exist. Migration
+  `202611130001_staff_added_leads.sql` adds `add_staff_lead()`, which takes the organisation from
+  the caller's own profile, limits products to the ones the organisation is authorised for, and
+  creates the lead with an accepted, exclusive, zero-price allocation, so the existing "allocated
+  leads" policies make it visible to that organisation only. The person adding it must say how the
+  contact agreed to be contacted (`lead_consents.contact_basis`); partner-sharing and marketing
+  consent are stored as false, so the lead cannot be offered to another broker
+  (`reserve_lead_for_buyer()` refuses it) and is never in a campaign audience. Duplicates in the
+  same workspace (same email, or same mobile number in local or +27 form) are pointed to instead of
+  created, unless the user chooses to add anyway. Limits: 60 an hour per person in the route and
+  200 a day per organisation in the database, so it cannot be used as a bulk importer.
+  Not built: the Excel/CSV importer (waiting on a decision about the lawful basis for existing
+  books of leads), editing a lead's details after it is added, and lead scoring rules for
+  individual clients. Platform admins can read staff-added leads, as they can every lead.
+  Tests: `src/lib/staff-lead-db.test.ts`, `src/lib/validation/staffLeadSchema.test.ts`,
+  `e2e/staff-new-lead.spec.ts`.
+
 ## Buyer Commerce
 - Extend the initial audited acceptance/release workspace with reassignment, dispute evidence, and
   broker-manager administration.
