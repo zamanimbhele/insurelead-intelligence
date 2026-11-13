@@ -273,6 +273,10 @@ export function logLeadInteraction(
   });
 }
 
+export function getAllLeadActivities(): LeadActivity[] {
+  return readJson<LeadActivity[]>(LEAD_ACTIVITIES_FILE, []);
+}
+
 export function getAllLeadTasks(): LeadTask[] {
   return readJson<LeadTask[]>(LEAD_TASKS_FILE, []);
 }

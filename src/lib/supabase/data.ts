@@ -986,6 +986,35 @@ export async function fetchSupabaseLeadActivities(client: SupabaseClient, leadId
   return ((data ?? []) as LeadActivityRow[]).map(mapLeadActivity);
 }
 
+// Follow-up workspace: open tasks and recent activity across every lead the
+// signed-in user can read. Both run on the caller's own client, so the
+// lead_tasks / lead_activities RLS policies decide which rows come back.
+export async function fetchSupabaseOpenLeadTasks(client: SupabaseClient, limit = 1000): Promise<LeadTask[]> {
+  const { data, error } = await client
+    .from("lead_tasks")
+    .select("*")
+    .eq("status", "open")
+    .order("due_at", { ascending: true, nullsFirst: false })
+    .limit(limit);
+  fail("Unable to load follow-ups", error);
+  return ((data ?? []) as LeadTaskRow[]).map(mapLeadTask);
+}
+
+export async function fetchSupabaseRecentLeadActivities(
+  client: SupabaseClient,
+  since: Date,
+  limit = 2000,
+): Promise<LeadActivity[]> {
+  const { data, error } = await client
+    .from("lead_activities")
+    .select("*")
+    .gte("occurred_at", since.toISOString())
+    .order("occurred_at", { ascending: false })
+    .limit(limit);
+  fail("Unable to load recent activity", error);
+  return ((data ?? []) as LeadActivityRow[]).map(mapLeadActivity);
+}
+
 export async function addSupabaseLeadNote(client: SupabaseClient, input: { leadId: string; body: string }) {
   const { data, error } = await client.rpc("add_lead_note", { p_lead_id: input.leadId, p_body: input.body });
   fail("Unable to add note", error);
