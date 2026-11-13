@@ -94,6 +94,9 @@ export interface Lead {
   doNotContact: boolean;
   assignedBroker?: string;
   lossReason?: string;
+  // How the lead entered the system. Absent means the public enquiry form.
+  // A staff-added lead is private to the practice that recorded it.
+  origin?: "public_form" | "staff_added";
   // Set only once a data_subject_requests deletion request against this
   // lead has been completed - see update_data_subject_request_status().
   // The lead row itself is never hard-deleted (other tables still
@@ -218,6 +221,10 @@ export interface ConsentRecord {
   nonBindingAcknowledged: boolean;
   consentWordingVersion: string;
   sourceUrl: string;
+  // Staff-added leads only: how the person agreed to be contacted, as
+  // stated by the team member who recorded the lead.
+  contactBasis?: string;
+  contactBasisNote?: string;
   timestamp: string;
 }
 
