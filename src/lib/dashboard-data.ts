@@ -10,6 +10,7 @@ import {
 } from "./demo-store";
 import { createSendingIdentity, getAllocations, getBuyers, getSendingIdentities } from "./marketplace-store";
 import { computeGeoHotspots } from "./hotspots";
+import { buildFollowUpQueue, summariseTeamActivity } from "./follow-ups";
 import { computeIndustryOpportunities } from "./industries";
 import { computeFyeCalendar, computeFyeMonthBreakdown, leadsForFyeFollowUp } from "./fye-planner";
 import { MONTH_NAMES } from "./aggregation-utils";
@@ -41,6 +42,8 @@ import {
   fetchSupabaseLeadActivities,
   fetchSupabaseLeadNotes,
   fetchSupabaseLeadTasks,
+  fetchSupabaseOpenLeadTasks,
+  fetchSupabaseRecentLeadActivities,
   fetchSupabaseLeads,
   fetchSupabaseLegalTextDocuments,
   fetchSupabaseLegalTextDocumentVersions,
@@ -175,6 +178,28 @@ export async function getDashboardLeadWorkspace(lead: Lead): Promise<LeadWorkspa
     fetchSupabaseLeadActivities(client, lead.id),
   ]);
   return { notes, tasks, activities: withCreationActivity(lead, activities) };
+}
+
+// Follow-up workspace: every open follow-up on the leads this user can
+// see, plus who recorded what over the last `days` days. Supabase mode
+// reads through the user's own session, so Row Level Security scopes both
+// to their organisation's allocated leads. Demo mode has no tenancy.
+export async function getDashboardFollowUps(days: number, now = new Date()) {
+  const since = new Date(now.getTime() - days * 86_400_000);
+  if (getDataMode() === "demo") {
+    const { getAllLeadActivities, getAllLeadTasks } = await import("./demo-store");
+    const queue = buildFollowUpQueue(getAllLeadTasks(), getLeads(), now);
+    return { queue, team: summariseTeamActivity(getAllLeadActivities(), queue, since) };
+  }
+
+  const client = await requireServerClient();
+  const [leads, tasks, activities] = await Promise.all([
+    fetchSupabaseLeads(client),
+    fetchSupabaseOpenLeadTasks(client),
+    fetchSupabaseRecentLeadActivities(client, since),
+  ]);
+  const queue = buildFollowUpQueue(tasks, leads, now);
+  return { queue, team: summariseTeamActivity(activities, queue, since) };
 }
 
 export async function getDashboardMarketplaceData() {

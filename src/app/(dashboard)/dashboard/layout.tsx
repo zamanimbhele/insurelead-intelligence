@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone, Database, History, FileText, Wrench, KeyRound, Home, BadgeCheck } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ShieldCheck, ArrowLeft, Store, LogOut, Building2, ClipboardList, Settings, Megaphone, Database, History, FileText, Wrench, KeyRound, Home, BadgeCheck, ListTodo } from "lucide-react";
 import { canViewCompliance, getDashboardIdentity, isBrokerUser, isComplianceAuditor, isPlatformAdmin } from "@/lib/auth";
 import { signOut } from "@/app/(auth)/login/actions";
 import { DemoRoleSwitcher } from "@/components/dashboard/DemoRoleSwitcher";
@@ -26,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ...(admin ? [{ href: ADMIN_HOME, label: "Admin home", icon: Home }] : []),
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/dashboard/leads", label: "Leads", icon: Users },
+    { href: "/dashboard/follow-ups", label: "Follow-ups", icon: ListTodo },
     ...(isPlatformAdmin(identity)
       ? [{ href: "/dashboard/marketplace", label: "Lead Marketplace", icon: Store }]
       : []),
